@@ -7,8 +7,9 @@
   },
   "scripts": {
     "build": "pnpm -r build",
-    "typecheck": "pnpm -r typecheck",
-    "test": "vitest run"
+    "typecheck": "pnpm -r build && pnpm -r typecheck",
+    "test": "vitest run",
+    "flightrec": "node packages/cli/dist/index.js"
   },
   "devDependencies": {
     "@types/node": "20",

@@ -96,6 +96,7 @@ export function openDb(file = defaultDbPath()): Db {
     }
   }
   db.pragma("journal_mode = WAL");
+  db.pragma("synchronous = NORMAL");
   db.pragma("foreign_keys = ON");
   const version = db.pragma("user_version", { simple: true }) as number;
   if (version > SCHEMA_VERSION) {

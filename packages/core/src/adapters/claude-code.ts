@@ -86,6 +86,26 @@ function capStrings(v: unknown, depth = 0): unknown {
   return v;
 }
 
+/**
+ * Drop bulky values that add nothing to `raw`: base64 image data and thinking signatures.
+ * On real logs these were ~2/3 of all bytes. The original log file keeps them.
+ */
+function slimRaw(v: unknown): unknown {
+  if (Array.isArray(v)) return v.map(slimRaw);
+  if (!isObj(v)) return v;
+  const out: Obj = {};
+  for (const [k, x] of Object.entries(v)) {
+    const bulky =
+      typeof x === "string" &&
+      x.length > 256 &&
+      ((k === "data" && v.type === "base64") || // image source block
+        (k === "base64" && typeof v.dimensions === "object") || // Read result for an image
+        (k === "signature" && v.type === "thinking"));
+    out[k] = bulky ? `[omitted: ${(x as string).length} chars]` : slimRaw(x);
+  }
+  return out;
+}
+
 function contentText(content: unknown): string {
   if (typeof content === "string") return content;
   if (!Array.isArray(content)) return "";
@@ -246,7 +266,7 @@ async function parseTranscript(file: string, subagentId: string | null): Promise
     if (!lineText) continue;
     let o: unknown;
     try {
-      o = JSON.parse(lineText);
+      o = slimRaw(JSON.parse(lineText));
     } catch {
       warn("invalid JSON");
       continue;
