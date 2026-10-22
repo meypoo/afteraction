@@ -75,8 +75,12 @@ export interface SourceAdapter {
   id: SourceId;
   /** Format versions this adapter was tested against. */
   testedVersions: string[];
+  /** Default location searched when no root is given. */
+  defaultRoot(): string;
   discover(root?: string): Promise<string[]>;
   parse(file: string): AsyncIterable<NormalizedRecord>;
+  /** Cheap value that changes whenever the file (or anything parse() reads with it) changes. */
+  fingerprint(file: string): Promise<string>;
 }
 
 /** Excerpts stored in payloads are capped to keep the DB small; full data stays in `raw`. */

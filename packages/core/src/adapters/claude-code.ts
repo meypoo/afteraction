@@ -463,6 +463,8 @@ function mostCommonModel(transcripts: Transcript[]): string | null {
 export const claudeCodeAdapter: SourceAdapter = {
   id: "claude_code",
   testedVersions: ["2.1.229", "2.1.304"],
+  defaultRoot: defaultClaudeRoot,
+  fingerprint: claudeFingerprint,
 
   async discover(root = defaultClaudeRoot()) {
     let dirs: string[];
