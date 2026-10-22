@@ -1,6 +1,10 @@
 export * from "./model.js";
 export * from "./db.js";
 export * from "./ingest.js";
+export * from "./format.js";
+export * from "./risk.js";
+export * from "./cost.js";
+export * from "./receipt.js";
 export { claudeCodeAdapter, defaultClaudeRoot } from "./adapters/claude-code.js";
 
 import { claudeCodeAdapter } from "./adapters/claude-code.js";

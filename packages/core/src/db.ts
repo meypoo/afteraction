@@ -11,7 +11,7 @@ export function defaultDbPath(): string {
   return path.join(os.homedir(), ".flightrec", "flightrec.db");
 }
 
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS sessions (
@@ -31,7 +31,8 @@ CREATE TABLE IF NOT EXISTS sessions (
   max_risk TEXT NOT NULL DEFAULT 'none',
   source_file TEXT NOT NULL,
   source_hash TEXT NOT NULL,
-  event_count INTEGER NOT NULL DEFAULT 0
+  event_count INTEGER NOT NULL DEFAULT 0,
+  unpriced_models TEXT NOT NULL DEFAULT '[]'
 );
 CREATE INDEX IF NOT EXISTS sessions_started ON sessions(started_at);
 CREATE INDEX IF NOT EXISTS sessions_source_file ON sessions(source_file);
@@ -49,6 +50,7 @@ CREATE TABLE IF NOT EXISTS events (
   tokens_out INTEGER,
   cache_read INTEGER,
   cache_write INTEGER,
+  usage_extra TEXT,
   model TEXT,
   risk_level TEXT NOT NULL DEFAULT 'none',
   risk_rules TEXT NOT NULL DEFAULT '[]'
@@ -71,6 +73,9 @@ CREATE TABLE IF NOT EXISTS parse_warnings (
   message TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS parse_warnings_source ON parse_warnings(source_file);
+CREATE INDEX IF NOT EXISTS events_risk ON events(risk_level) WHERE risk_level != 'none';
+
+CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 
 CREATE VIEW IF NOT EXISTS file_touches AS
   SELECT session_id,
@@ -102,9 +107,22 @@ export function openDb(file = defaultDbPath()): Db {
   if (version > SCHEMA_VERSION) {
     throw new Error(`Database ${file} was created by a newer flightrec (schema ${version}).`);
   }
+  if (version > 0 && version < SCHEMA_VERSION) {
+    // Everything here is derived from the agents' own logs, so an older layout is rebuilt, not migrated.
+    db.exec(`DROP VIEW IF EXISTS file_touches; DROP TABLE IF EXISTS events; DROP TABLE IF EXISTS sessions;
+      DROP TABLE IF EXISTS ingest_files; DROP TABLE IF EXISTS parse_warnings; DROP TABLE IF EXISTS meta;`);
+  }
   db.exec(SCHEMA);
   db.pragma(`user_version = ${SCHEMA_VERSION}`);
   return db;
+}
+
+export function getMeta(db: Db, key: string): string | undefined {
+  return (db.prepare("SELECT value FROM meta WHERE key = ?").get(key) as { value: string } | undefined)?.value;
+}
+
+export function setMeta(db: Db, key: string, value: string): void {
+  db.prepare("INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(key, value);
 }
 
 export function getFingerprint(db: Db, sourceFile: string): string | undefined {
@@ -117,12 +135,15 @@ export function getFingerprint(db: Db, sourceFile: string): string | undefined {
 /** Replace everything stored for one source file in a single transaction. */
 export function replaceSession(
   db: Db,
-  args: { sourceFile: string; source: string; fingerprint: string; session: Session | null; events: NormalizedEvent[]; warnings: ParseWarning[] },
+  args: {
+    sourceFile: string; source: string; fingerprint: string; session: Session | null; events: NormalizedEvent[];
+    warnings: ParseWarning[]; unpricedModels?: string[];
+  },
 ): void {
   const { sourceFile, session, events, warnings } = args;
   const insertEvent = db.prepare(`INSERT INTO events
-    (id, session_id, seq, ts, kind, summary, payload, raw, tokens_in, tokens_out, cache_read, cache_write, model, risk_level, risk_rules)
-    VALUES (@id, @session_id, @seq, @ts, @kind, @summary, @payload, @raw, @tokens_in, @tokens_out, @cache_read, @cache_write, @model, @risk_level, @risk_rules)`);
+    (id, session_id, seq, ts, kind, summary, payload, raw, tokens_in, tokens_out, cache_read, cache_write, usage_extra, model, risk_level, risk_rules)
+    VALUES (@id, @session_id, @seq, @ts, @kind, @summary, @payload, @raw, @tokens_in, @tokens_out, @cache_read, @cache_write, @usage_extra, @model, @risk_level, @risk_rules)`);
   const insertWarning = db.prepare("INSERT INTO parse_warnings (source_file, file, line, message) VALUES (?, ?, ?, ?)");
 
   db.transaction(() => {
@@ -132,15 +153,19 @@ export function replaceSession(
       db.prepare("DELETE FROM sessions WHERE id = ?").run(session.id); // same session id from another file: last wins
       db.prepare(`INSERT INTO sessions
         (id, source, project_path, git_branch, started_at, ended_at, model, title, total_input_tokens, total_output_tokens,
-         total_cache_read_tokens, total_cache_write_tokens, est_cost_usd, max_risk, source_file, source_hash, event_count)
+         total_cache_read_tokens, total_cache_write_tokens, est_cost_usd, max_risk, source_file, source_hash, event_count,
+         unpriced_models)
         VALUES (@id, @source, @project_path, @git_branch, @started_at, @ended_at, @model, @title, @total_input_tokens,
          @total_output_tokens, @total_cache_read_tokens, @total_cache_write_tokens, @est_cost_usd, @max_risk, @source_file,
-         @source_hash, @event_count)`).run({ ...session, event_count: events.length });
+         @source_hash, @event_count, @unpriced_models)`).run({
+        ...session, event_count: events.length, unpriced_models: JSON.stringify(args.unpricedModels ?? []),
+      });
       for (const e of events) {
         insertEvent.run({
           ...e,
           payload: JSON.stringify(e.payload),
           raw: JSON.stringify(e.raw ?? null),
+          usage_extra: e.usage_extra ? JSON.stringify(e.usage_extra) : null,
           risk_rules: JSON.stringify(e.risk_rules),
         });
       }
@@ -155,6 +180,8 @@ export function replaceSession(
 
 export interface SessionRow extends Session {
   event_count: number;
+  /** JSON array of models whose tokens could not be priced (why est_cost_usd is null). */
+  unpriced_models: string;
 }
 
 export interface ListOptions {
@@ -218,24 +245,74 @@ export function resolveSession(db: Db, query: string): string | null {
   return rows.length === 1 ? rows[0]!.id : null;
 }
 
-interface EventRow extends Omit<NormalizedEvent, "payload" | "raw" | "risk_rules"> {
+interface EventRow extends Omit<NormalizedEvent, "payload" | "raw" | "risk_rules" | "usage_extra"> {
   payload: string;
   raw: string;
   risk_rules: string;
+  usage_extra: string | null;
 }
 
-export function getEvents(db: Db, sessionId: string, opts: { withRaw?: boolean; kinds?: EventKind[] } = {}): NormalizedEvent[] {
-  const cols = opts.withRaw ? "*" : "id, session_id, seq, ts, kind, summary, payload, 'null' AS raw, tokens_in, tokens_out, cache_read, cache_write, model, risk_level, risk_rules";
-  const kindFilter = opts.kinds?.length ? `AND kind IN (${opts.kinds.map(() => "?").join(",")})` : "";
-  const rows = db
-    .prepare(`SELECT ${cols} FROM events WHERE session_id = ? ${kindFilter} ORDER BY seq`)
-    .all(sessionId, ...(opts.kinds ?? [])) as EventRow[];
-  return rows.map((r) => ({
+function fromRow(r: EventRow): NormalizedEvent {
+  return {
     ...r,
     payload: JSON.parse(r.payload) as Record<string, unknown>,
     raw: JSON.parse(r.raw) as unknown,
     risk_rules: JSON.parse(r.risk_rules) as string[],
-  }));
+    usage_extra: r.usage_extra ? (JSON.parse(r.usage_extra) as NormalizedEvent["usage_extra"]) : null,
+  };
+}
+
+const EVENT_COLS = ["id", "session_id", "seq", "ts", "kind", "summary", "payload", "tokens_in", "tokens_out", "cache_read",
+  "cache_write", "usage_extra", "model", "risk_level", "risk_rules"];
+const eventCols = (prefix = "") => EVENT_COLS.map((c) => prefix + c).join(", ") + ", 'null' AS raw";
+
+export function getEvents(db: Db, sessionId: string, opts: { withRaw?: boolean; kinds?: EventKind[] } = {}): NormalizedEvent[] {
+  const cols = opts.withRaw ? "*" : eventCols();
+  const kindFilter = opts.kinds?.length ? `AND kind IN (${opts.kinds.map(() => "?").join(",")})` : "";
+  const rows = db
+    .prepare(`SELECT ${cols} FROM events WHERE session_id = ? ${kindFilter} ORDER BY seq`)
+    .all(sessionId, ...(opts.kinds ?? [])) as EventRow[];
+  return rows.map(fromRow);
+}
+
+export interface RiskRow extends NormalizedEvent {
+  title: string;
+  project_path: string | null;
+  source: string;
+}
+
+/** Flagged events across sessions, worst first. `level` means that level or worse. */
+export function listRisks(db: Db, opts: { since?: string; level?: RiskLevel } = {}): RiskRow[] {
+  const levels = RISK_ORDER.slice(Math.max(1, RISK_ORDER.indexOf(opts.level ?? "low")));
+  const params: unknown[] = [...levels];
+  let since = "";
+  if (opts.since) {
+    since = "AND COALESCE(e.ts, s.started_at) >= ?";
+    params.push(parseSince(opts.since));
+  }
+  const rows = db
+    .prepare(`SELECT ${eventCols("e.")}, s.title, s.project_path, s.source
+      FROM events e JOIN sessions s ON s.id = e.session_id
+      WHERE e.risk_level IN (${levels.map(() => "?").join(",")}) ${since}
+      ORDER BY CASE e.risk_level WHEN 'critical' THEN 4 WHEN 'high' THEN 3 WHEN 'medium' THEN 2 ELSE 1 END DESC, e.ts DESC`)
+    .all(...params) as (EventRow & { title: string; project_path: string | null; source: string })[];
+  return rows.map((r) => ({ ...fromRow(r), title: r.title, project_path: r.project_path, source: r.source }));
+}
+
+/** Rewrite stored risk results and cost for one session (after rules or prices change). */
+export function updateDerived(
+  db: Db,
+  sessionId: string,
+  events: Pick<NormalizedEvent, "id" | "risk_level" | "risk_rules">[],
+  session: { max_risk: RiskLevel; est_cost_usd: number | null; unpriced_models: string[] },
+): void {
+  const upd = db.prepare("UPDATE events SET risk_level = ?, risk_rules = ? WHERE id = ?");
+  db.transaction(() => {
+    for (const e of events) upd.run(e.risk_level, JSON.stringify(e.risk_rules), e.id);
+    db.prepare("UPDATE sessions SET max_risk = ?, est_cost_usd = ?, unpriced_models = ? WHERE id = ?").run(
+      session.max_risk, session.est_cost_usd, JSON.stringify(session.unpriced_models), sessionId,
+    );
+  })();
 }
 
 export interface FileTouch {

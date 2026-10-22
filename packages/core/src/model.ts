@@ -55,9 +55,19 @@ export interface NormalizedEvent {
   tokens_out: number | null;
   cache_read: number | null;
   cache_write: number | null;
+  /** Billing details beyond the four token counts; only set where the log has them. */
+  usage_extra: UsageExtra | null;
   model: string | null;
   risk_level: RiskLevel;
   risk_rules: string[];
+}
+
+export interface UsageExtra {
+  /** Part of cache_write that went to the 1-hour cache (priced higher than 5-minute). */
+  cache_write_1h?: number;
+  web_search_requests?: number;
+  speed?: string;
+  inference_geo?: string;
 }
 
 export interface ParseWarning {

@@ -32,6 +32,7 @@
       "tokens_out": null,
       "cache_read": null,
       "cache_write": null,
+      "usage_extra": null,
       "model": null,
       "risk_level": "none",
       "risk_rules": []
@@ -51,6 +52,9 @@
       "tokens_out": 3821,
       "cache_read": 30466,
       "cache_write": 14036,
+      "usage_extra": {
+        "cache_write_1h": 14036
+      },
       "model": "claude-opus-5",
       "risk_level": "none",
       "risk_rules": []
@@ -77,6 +81,7 @@
       "tokens_out": null,
       "cache_read": null,
       "cache_write": null,
+      "usage_extra": null,
       "model": "claude-opus-5",
       "risk_level": "none",
       "risk_rules": []
@@ -96,6 +101,9 @@
       "tokens_out": 3537,
       "cache_read": 44502,
       "cache_write": 3895,
+      "usage_extra": {
+        "cache_write_1h": 3895
+      },
       "model": "claude-opus-5",
       "risk_level": "none",
       "risk_rules": []
@@ -112,6 +120,8 @@
         "path": "C:\\Users\\USER\\projects\\demo-app\\src\\file2.sql",
         "content_excerpt": "<content placeholder, 9409 chars>",
         "bytes": 33,
+        "lines_added": 1,
+        "lines_removed": 0,
         "is_error": false,
         "duration_ms": 7,
         "operation": "create"
@@ -120,6 +130,7 @@
       "tokens_out": null,
       "cache_read": null,
       "cache_write": null,
+      "usage_extra": null,
       "model": "claude-opus-5",
       "risk_level": "none",
       "risk_rules": []
@@ -138,6 +149,9 @@
       "tokens_out": 15,
       "cache_read": 48397,
       "cache_write": 3605,
+      "usage_extra": {
+        "cache_write_1h": 3605
+      },
       "model": "claude-opus-5",
       "risk_level": "none",
       "risk_rules": []
@@ -156,6 +170,7 @@
       "tokens_out": null,
       "cache_read": null,
       "cache_write": null,
+      "usage_extra": null,
       "model": null,
       "risk_level": "none",
       "risk_rules": []
@@ -174,6 +189,9 @@
       "tokens_out": 2276,
       "cache_read": 30466,
       "cache_write": 22419,
+      "usage_extra": {
+        "cache_write_1h": 22419
+      },
       "model": "claude-opus-5",
       "risk_level": "none",
       "risk_rules": []
@@ -201,6 +219,7 @@
       "tokens_out": null,
       "cache_read": null,
       "cache_write": null,
+      "usage_extra": null,
       "model": "claude-opus-5",
       "risk_level": "none",
       "risk_rules": []
@@ -228,6 +247,9 @@
       "tokens_out": 268,
       "cache_read": 52885,
       "cache_write": 2421,
+      "usage_extra": {
+        "cache_write_1h": 2421
+      },
       "model": "claude-opus-5",
       "risk_level": "none",
       "risk_rules": []
@@ -244,6 +266,8 @@
         "path": "C:\\Users\\USER\\projects\\demo-app\\src\\file3.py",
         "content_excerpt": "<content placeholder, 19138 chars>",
         "bytes": 34,
+        "lines_added": 1,
+        "lines_removed": 0,
         "is_error": false,
         "duration_ms": 7,
         "operation": "create"
@@ -252,6 +276,9 @@
       "tokens_out": 7846,
       "cache_read": 55306,
       "cache_write": 3401,
+      "usage_extra": {
+        "cache_write_1h": 3401
+      },
       "model": "claude-opus-5",
       "risk_level": "none",
       "risk_rules": []
@@ -270,6 +297,9 @@
       "tokens_out": 1850,
       "cache_read": 82987,
       "cache_write": 1301,
+      "usage_extra": {
+        "cache_write_1h": 1301
+      },
       "model": "claude-opus-5",
       "risk_level": "none",
       "risk_rules": []
@@ -291,6 +321,9 @@
       "tokens_out": 444,
       "cache_read": 86215,
       "cache_write": 719,
+      "usage_extra": {
+        "cache_write_1h": 719
+      },
       "model": "claude-opus-5",
       "risk_level": "none",
       "risk_rules": []
@@ -307,6 +340,8 @@
         "path": "C:\\Users\\USER\\projects\\demo-app\\src\\file3.py",
         "old_excerpt": "<old_string placeholder, 72 chars>",
         "new_excerpt": "<new_string placeholder, 234 chars>",
+        "lines_added": 2,
+        "lines_removed": 1,
         "is_error": false,
         "duration_ms": 7,
         "unified_diff": "@@ -152,7 +152,9 @@\n placeholder line\n placeholder line\n placeholder line\n-placeholder line\n+placeholder line\n+placeholder line\n"
@@ -315,6 +350,9 @@
       "tokens_out": 302,
       "cache_read": 86934,
       "cache_write": 1713,
+      "usage_extra": {
+        "cache_write_1h": 1713
+      },
       "model": "claude-opus-5",
       "risk_level": "none",
       "risk_rules": []
@@ -331,6 +369,8 @@
         "path": "C:\\Users\\USER\\projects\\demo-app\\src\\file3.py",
         "old_excerpt": "<old_string placeholder, 153 chars>",
         "new_excerpt": "<new_string placeholder, 276 chars>",
+        "lines_added": 2,
+        "lines_removed": 1,
         "is_error": false,
         "duration_ms": 7,
         "unified_diff": "@@ -186,7 +186,12 @@\n placeholder line\n placeholder line\n placeholder line\n-placeholder line\n+placeholder line\n+placeholder line\n"
@@ -339,6 +379,9 @@
       "tokens_out": 310,
       "cache_read": 88647,
       "cache_write": 398,
+      "usage_extra": {
+        "cache_write_1h": 398
+      },
       "model": "claude-opus-5",
       "risk_level": "none",
       "risk_rules": []
@@ -357,6 +400,7 @@
       "tokens_out": null,
       "cache_read": null,
       "cache_write": null,
+      "usage_extra": null,
       "model": null,
       "risk_level": "none",
       "risk_rules": []
@@ -378,6 +422,9 @@
       "tokens_out": 1537,
       "cache_read": 94240,
       "cache_write": 3885,
+      "usage_extra": {
+        "cache_write_1h": 3885
+      },
       "model": "claude-opus-5",
       "risk_level": "none",
       "risk_rules": []
@@ -423,6 +470,9 @@
       "tokens_out": 921,
       "cache_read": 123546,
       "cache_write": 1289,
+      "usage_extra": {
+        "cache_write_1h": 1289
+      },
       "model": "claude-opus-5",
       "risk_level": "none",
       "risk_rules": []
@@ -448,6 +498,9 @@
       "tokens_out": 66,
       "cache_read": 129343,
       "cache_write": 343,
+      "usage_extra": {
+        "cache_write_1h": 343
+      },
       "model": "claude-opus-5",
       "risk_level": "none",
       "risk_rules": []
@@ -474,6 +527,9 @@
       "tokens_out": 998,
       "cache_read": 159385,
       "cache_write": 455,
+      "usage_extra": {
+        "cache_write_1h": 455
+      },
       "model": "claude-opus-5",
       "risk_level": "none",
       "risk_rules": []
@@ -493,6 +549,7 @@
       "tokens_out": null,
       "cache_read": null,
       "cache_write": null,
+      "usage_extra": null,
       "model": null,
       "risk_level": "none",
       "risk_rules": []
@@ -512,6 +569,7 @@
       "tokens_out": 159,
       "cache_read": 0,
       "cache_write": 32938,
+      "usage_extra": null,
       "model": "claude-opus-5",
       "risk_level": "none",
       "risk_rules": []
@@ -539,6 +597,7 @@
       "tokens_out": null,
       "cache_read": null,
       "cache_write": null,
+      "usage_extra": null,
       "model": "claude-opus-5",
       "risk_level": "none",
       "risk_rules": []
@@ -561,6 +620,7 @@
       "tokens_out": null,
       "cache_read": null,
       "cache_write": null,
+      "usage_extra": null,
       "model": "claude-opus-5",
       "risk_level": "none",
       "risk_rules": []
@@ -580,6 +640,7 @@
       "tokens_out": 7125,
       "cache_read": 65238,
       "cache_write": 425,
+      "usage_extra": null,
       "model": "claude-opus-5",
       "risk_level": "none",
       "risk_rules": []
@@ -601,6 +662,7 @@
       "tokens_out": null,
       "cache_read": null,
       "cache_write": null,
+      "usage_extra": null,
       "model": null,
       "risk_level": "none",
       "risk_rules": []
@@ -620,6 +682,7 @@
       "tokens_out": 0,
       "cache_read": 0,
       "cache_write": 0,
+      "usage_extra": null,
       "model": "<synthetic>",
       "risk_level": "none",
       "risk_rules": []
@@ -647,6 +710,9 @@
       "tokens_out": 422,
       "cache_read": 176203,
       "cache_write": 4097,
+      "usage_extra": {
+        "cache_write_1h": 4097
+      },
       "model": "claude-opus-5-5",
       "risk_level": "none",
       "risk_rules": []
@@ -673,6 +739,9 @@
       "tokens_out": 806,
       "cache_read": 346088,
       "cache_write": 2756,
+      "usage_extra": {
+        "cache_write_1h": 2756
+      },
       "model": "claude-opus-5-5",
       "risk_level": "none",
       "risk_rules": []
@@ -695,6 +764,9 @@
       "tokens_out": 219,
       "cache_read": 348844,
       "cache_write": 1782,
+      "usage_extra": {
+        "cache_write_1h": 1782
+      },
       "model": "claude-opus-5-5",
       "risk_level": "none",
       "risk_rules": []
@@ -713,6 +785,7 @@
       "tokens_out": null,
       "cache_read": null,
       "cache_write": null,
+      "usage_extra": null,
       "model": null,
       "risk_level": "none",
       "risk_rules": []
@@ -740,6 +813,9 @@
       "tokens_out": 268,
       "cache_read": 485768,
       "cache_write": 3451,
+      "usage_extra": {
+        "cache_write_1h": 3451
+      },
       "model": "claude-opus-5-5",
       "risk_level": "none",
       "risk_rules": []
@@ -761,6 +837,7 @@
       "tokens_out": null,
       "cache_read": null,
       "cache_write": null,
+      "usage_extra": null,
       "model": null,
       "risk_level": "none",
       "risk_rules": []
@@ -787,6 +864,9 @@
       "tokens_out": 584,
       "cache_read": 583571,
       "cache_write": 1327,
+      "usage_extra": {
+        "cache_write_1h": 1327
+      },
       "model": "claude-opus-5-5",
       "risk_level": "none",
       "risk_rules": []
@@ -805,6 +885,7 @@
       "tokens_out": null,
       "cache_read": null,
       "cache_write": null,
+      "usage_extra": null,
       "model": null,
       "risk_level": "none",
       "risk_rules": []
@@ -835,6 +916,9 @@
       "tokens_out": 181,
       "cache_read": 831188,
       "cache_write": 636,
+      "usage_extra": {
+        "cache_write_1h": 636
+      },
       "model": "claude-opus-5-5",
       "risk_level": "none",
       "risk_rules": []
@@ -862,6 +946,9 @@
       "tokens_out": 215,
       "cache_read": 125469,
       "cache_write": 3151,
+      "usage_extra": {
+        "cache_write_1h": 3151
+      },
       "model": "claude-opus-5-5",
       "risk_level": "none",
       "risk_rules": []
@@ -885,6 +972,9 @@
       "tokens_out": 78,
       "cache_read": 128962,
       "cache_write": 1482,
+      "usage_extra": {
+        "cache_write_1h": 1482
+      },
       "model": "claude-opus-5-5",
       "risk_level": "none",
       "risk_rules": []
@@ -904,6 +994,7 @@
       "tokens_out": null,
       "cache_read": null,
       "cache_write": null,
+      "usage_extra": null,
       "model": null,
       "risk_level": "none",
       "risk_rules": []
@@ -922,6 +1013,7 @@
       "tokens_out": null,
       "cache_read": null,
       "cache_write": null,
+      "usage_extra": null,
       "model": null,
       "risk_level": "none",
       "risk_rules": []
@@ -947,6 +1039,9 @@
       "tokens_out": 57,
       "cache_read": 179648,
       "cache_write": 460,
+      "usage_extra": {
+        "cache_write_1h": 460
+      },
       "model": "claude-opus-5-5",
       "risk_level": "none",
       "risk_rules": []
@@ -966,6 +1061,7 @@
       "tokens_out": null,
       "cache_read": null,
       "cache_write": null,
+      "usage_extra": null,
       "model": null,
       "risk_level": "none",
       "risk_rules": []
@@ -992,6 +1088,9 @@
       "tokens_out": 2777,
       "cache_read": 68461,
       "cache_write": 721,
+      "usage_extra": {
+        "cache_write_1h": 721
+      },
       "model": "claude-sonnet-5-5",
       "risk_level": "none",
       "risk_rules": []
@@ -1010,6 +1109,7 @@
       "tokens_out": null,
       "cache_read": null,
       "cache_write": null,
+      "usage_extra": null,
       "model": null,
       "risk_level": "none",
       "risk_rules": []
@@ -1037,6 +1137,9 @@
       "tokens_out": 160,
       "cache_read": 230815,
       "cache_write": 2516,
+      "usage_extra": {
+        "cache_write_1h": 2516
+      },
       "model": "claude-opus-5-5",
       "risk_level": "none",
       "risk_rules": []

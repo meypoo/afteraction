@@ -1,10 +1,16 @@
 import { Command, InvalidArgumentError, Option } from "commander";
-import { existsSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {
   ADAPTERS,
+  buildReceipt,
+  COST_LABEL,
   defaultDbPath,
+  listRisks,
+  loadPrices,
+  maskSecrets,
+  RULES,
   fileTouches,
   getEvents,
   getSession,
@@ -14,12 +20,19 @@ import {
   resolveSession,
   sourceCounts,
   warningSummary,
+  baseName,
+  fmtDateTime,
+  fmtDuration,
+  fmtTime,
+  fmtTokens,
+  table,
+  truncate,
   type Db,
   type IngestReport,
   type RiskLevel,
   type SourceConfig,
 } from "@flightrec/core";
-import { baseName, fmtDateTime, fmtDuration, fmtTime, fmtTokens, table, truncate } from "./format.js";
+
 
 export const VERSION = "0.1.0";
 
@@ -73,12 +86,21 @@ async function runIngest(db: Db, opts: GlobalOpts, full: boolean, io: Io): Promi
   io.out(
     `Ingested ${report.filesSeen} files: ${report.filesParsed} parsed, ${report.filesSkipped} unchanged` +
       (report.filesFailed ? `, ${report.filesFailed} failed` : "") +
-      ` · ${report.events} events · ${report.warnings} warnings · ${(report.ms / 1000).toFixed(1)}s`,
+      ` · ${report.events} events · ${report.warnings} warnings` +
+      (report.recomputed ? ` · re-scored ${report.recomputed} sessions (rules or prices changed)` : "") +
+      ` · ${(report.ms / 1000).toFixed(1)}s`,
   );
   return report;
 }
 
 const AGENT_LABEL: Record<string, string> = { claude_code: "Claude Code", codex: "Codex" };
+
+const fmtCost = (usd: number | null) => (usd === null ? "—" : usd > 0 && usd < 0.01 ? "<$0.01" : `$${usd.toFixed(2)}`);
+
+function costNote(): string {
+  const p = loadPrices();
+  return `Cost: ${COST_LABEL.toLowerCase()} · prices as of ${p.last_updated}${p.confirmed ? "" : " (not yet confirmed)"} · — means a model without a price`;
+}
 const RISKS: RiskLevel[] = ["none", "low", "medium", "high", "critical"];
 
 /** Holds the database opened by a command so the caller can close it, even after an error. */
@@ -133,7 +155,7 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
       if (!rows.length) return io.out('No sessions found. Run "flightrec ingest" first, or loosen the filters.');
       io.out(
         table(
-          ["STARTED", "AGENT", "PROJECT", "DURATION", "EVENTS", "TOKENS", "RISK", "ID", "TITLE"],
+          ["STARTED", "AGENT", "PROJECT", "DURATION", "EVENTS", "TOKENS", "EST. COST", "RISK", "ID", "TITLE"],
           rows.map((s) => [
             fmtDateTime(s.started_at),
             AGENT_LABEL[s.source] ?? s.source,
@@ -141,12 +163,15 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
             fmtDuration(s.started_at, s.ended_at),
             String(s.event_count),
             fmtTokens(s.total_input_tokens + s.total_output_tokens + s.total_cache_read_tokens + s.total_cache_write_tokens),
+            fmtCost(s.est_cost_usd),
             s.max_risk,
             s.id.replace(/^[a-z]+:/, "").slice(0, 8),
             truncate(s.title, 60),
           ]),
         ),
       );
+      io.out("");
+      io.out(costNote());
     });
 
   program
@@ -154,7 +179,8 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
     .description("print a session's timeline")
     .argument("<session-id>", "full id, uuid, or a unique prefix")
     .option("--json", "print JSON (session, events, files)")
-    .action((query: string, opts: { json?: boolean }, cmd: Command) => {
+    .option("--reveal", "show secrets instead of masking them")
+    .action((query: string, opts: { json?: boolean; reveal?: boolean }, cmd: Command) => {
       const d = openFor(cmd);
       const id = resolveSession(d, query);
       if (!id) throw new CliError(`No single session matches "${query}". Use "flightrec list" to see ids.`);
@@ -162,7 +188,10 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
       const events = getEvents(d, id);
       if (opts.json) return io.out(JSON.stringify({ session: s, events, files: fileTouches(d, id) }, null, 2));
       const files = fileTouches(d, id);
-      io.out(s.title);
+      const mask = (t: string) => (opts.reveal ? t : maskSecrets(t));
+      const flagged = events.filter((e) => e.risk_level !== "none").length;
+      const unpriced = JSON.parse(s.unpriced_models) as string[];
+      io.out(mask(s.title));
       io.out(
         [
           `${AGENT_LABEL[s.source] ?? s.source} · ${s.model ?? "unknown model"}`,
@@ -170,6 +199,9 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
           `${fmtDateTime(s.started_at)} → ${fmtDateTime(s.ended_at)} (${fmtDuration(s.started_at, s.ended_at)})`,
           `tokens: ${fmtTokens(s.total_input_tokens)} in · ${fmtTokens(s.total_output_tokens)} out · ` +
             `${fmtTokens(s.total_cache_read_tokens)} cache read · ${fmtTokens(s.total_cache_write_tokens)} cache write`,
+          `est. cost: ${fmtCost(s.est_cost_usd)} (${COST_LABEL.toLowerCase()})` +
+            (unpriced.length ? ` · no price for ${unpriced.join(", ")}` : ""),
+          `risk: ${s.max_risk}${flagged ? ` (${flagged} flagged events)` : ""}`,
           `${events.length} events · ${files.length} files touched · id ${s.id}`,
         ].join("\n"),
       );
@@ -177,7 +209,60 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
       for (const e of events) {
         const nested = e.payload.subagent_id && e.kind !== "subagent_end" ? "  ↳ " : "";
         const failed = e.payload.is_error === true ? " ✗" : "";
-        io.out(`${String(e.seq).padStart(4)}  ${fmtTime(e.ts)}  ${e.kind.padEnd(17)} ${nested}${truncate(e.summary, 100)}${failed}`);
+        const risk = e.risk_level !== "none" ? `  ⚠ ${e.risk_level}: ${e.risk_rules.join(", ")}` : "";
+        io.out(`${String(e.seq).padStart(4)}  ${fmtTime(e.ts)}  ${e.kind.padEnd(17)} ${nested}${mask(truncate(e.summary, 100))}${failed}${risk}`);
+      }
+    });
+
+  program
+    .command("risks")
+    .description("list flagged events across sessions, grouped by rule")
+    .option("--since <when>", "only events since, e.g. 7d, 24h, 2026-01-31")
+    .addOption(new Option("--level <level>", "minimum severity").choices(RISKS.slice(1)).default("low"))
+    .option("--reveal", "show secrets instead of masking them")
+    .option("--json", "print JSON")
+    .action((opts: { since?: string; level: RiskLevel; reveal?: boolean; json?: boolean }, cmd: Command) => {
+      let rows;
+      try {
+        rows = listRisks(openFor(cmd), { since: opts.since, level: opts.level });
+      } catch (e) {
+        throw new CliError(e instanceof Error ? e.message : String(e));
+      }
+      if (opts.json) return io.out(JSON.stringify(rows, null, 2));
+      if (!rows.length) return io.out("No flagged events.");
+      const mask = (t: string) => (opts.reveal ? t : maskSecrets(t));
+      for (const rule of RULES) {
+        const hits = rows.filter((r) => r.risk_rules.includes(rule.id));
+        if (!hits.length) continue;
+        io.out(`${rule.severity.toUpperCase()}  ${rule.id} (${hits.length}) · ${rule.description}`);
+        for (const h of hits.slice(0, 20)) {
+          io.out(
+            `  ${fmtDateTime(h.ts)}  ${h.session_id.replace(/^[a-z]+:/, "").slice(0, 8)}  ` +
+              `${truncate(baseName(h.project_path), 18).padEnd(18)}  ${mask(truncate(h.summary, 90))}`,
+          );
+        }
+        if (hits.length > 20) io.out(`  … and ${hits.length - 20} more (use --json for all)`);
+        io.out("");
+      }
+      io.out(`${rows.length} flagged events. Rules are heuristics: check each hit before acting on it.`);
+    });
+
+  program
+    .command("receipt")
+    .description("Markdown summary of a session for a PR comment (secrets and home paths redacted)")
+    .argument("<session-id>", "full id, uuid, or a unique prefix")
+    .option("-o, --output <file>", "write to a file instead of stdout")
+    .option("--no-redact", "keep secrets and home-directory paths")
+    .action((query: string, opts: { output?: string; redact: boolean }, cmd: Command) => {
+      const d = openFor(cmd);
+      const id = resolveSession(d, query);
+      if (!id) throw new CliError(`No single session matches "${query}". Use "flightrec list" to see ids.`);
+      const md = buildReceipt(getSession(d, id)!, getEvents(d, id), { version: VERSION, redact: opts.redact });
+      if (opts.output) {
+        writeFileSync(opts.output, md, "utf8");
+        io.out(`Receipt written to ${opts.output}`);
+      } else {
+        io.out(md.trimEnd());
       }
     });
 

@@ -14,6 +14,7 @@ import {
   type ParseWarning,
   type Session,
   type SourceAdapter,
+  type UsageExtra,
 } from "../model.js";
 
 type Obj = Record<string, unknown>;
@@ -54,6 +55,7 @@ interface Draft {
   raw: unknown;
   model: string | null;
   tokens?: { in: number; out: number; cacheRead: number; cacheWrite: number };
+  usageExtra?: UsageExtra;
 }
 
 interface MessageUsage {
@@ -130,6 +132,24 @@ function unifiedDiff(patch: unknown): string | undefined {
   return out.length ? excerpt(out.join("\n") + "\n") : undefined;
 }
 
+const lineCount = (s: string) => (s ? s.split("\n").length - (s.endsWith("\n") ? 1 : 0) : 0);
+
+/** +/- line counts from the full structuredPatch (the stored diff excerpt may be truncated). */
+function patchLineCounts(patch: unknown): [number, number] | undefined {
+  if (!Array.isArray(patch) || patch.length === 0) return undefined;
+  let added = 0;
+  let removed = 0;
+  for (const h of patch) {
+    if (!isObj(h) || !Array.isArray(h.lines)) continue;
+    for (const l of h.lines) {
+      if (typeof l !== "string") continue;
+      if (l.startsWith("+")) added++;
+      else if (l.startsWith("-")) removed++;
+    }
+  }
+  return [added, removed];
+}
+
 function toolUseDraft(block: Obj, line: Obj, ts: string | null, model: string | null): Draft {
   const name = str(block.name) ?? "(unnamed tool)";
   const input = isObj(block.input) ? block.input : {};
@@ -160,6 +180,9 @@ function toolUseDraft(block: Obj, line: Obj, ts: string | null, model: string | 
         path: p,
         content_excerpt: excerpt(content),
         bytes: Buffer.byteLength(content, "utf8"),
+        // Until the result says otherwise (an update with a patch), count the whole file as added.
+        lines_added: lineCount(content),
+        lines_removed: 0,
       });
     }
     case "Edit": {
@@ -169,6 +192,8 @@ function toolUseDraft(block: Obj, line: Obj, ts: string | null, model: string | 
         old_excerpt: excerpt(input.old_string),
         new_excerpt: excerpt(input.new_string),
         replace_all: input.replace_all === true ? true : undefined,
+        lines_added: lineCount(str(input.new_string) ?? ""),
+        lines_removed: lineCount(str(input.old_string) ?? ""),
       });
     }
     case "WebFetch": {
@@ -219,13 +244,13 @@ function applyResult(d: Draft, block: Obj, line: Obj, ts: string | null): void {
       if (isObj(tur) && tur.type === "image") p.image = true;
       break;
     case "file_write":
-      if (isObj(tur)) {
-        if (typeof tur.type === "string") p.operation = tur.type;
-        p.unified_diff = unifiedDiff(tur.structuredPatch);
-      }
-      break;
     case "file_edit":
-      if (isObj(tur)) p.unified_diff = unifiedDiff(tur.structuredPatch);
+      if (isObj(tur)) {
+        if (d.kind === "file_write" && typeof tur.type === "string") p.operation = tur.type;
+        p.unified_diff = unifiedDiff(tur.structuredPatch);
+        const counts = patchLineCounts(tur.structuredPatch);
+        if (counts) [p.lines_added, p.lines_removed] = counts;
+      }
       break;
     case "subagent_start":
       if (isObj(tur)) {
@@ -424,8 +449,23 @@ async function parseTranscript(file: string, subagentId: string | null): Promise
       cacheRead: num(usage.cache_read_input_tokens),
       cacheWrite: num(usage.cache_creation_input_tokens),
     };
+    const extra = usageExtra(usage);
+    if (extra) first.usageExtra = extra;
   }
   return t;
+}
+
+/** Billing-relevant usage fields beyond the four token counts; omitted when default. */
+function usageExtra(usage: Obj): UsageExtra | undefined {
+  const x: UsageExtra = {};
+  const cc = usage.cache_creation;
+  if (isObj(cc) && num(cc.ephemeral_1h_input_tokens) > 0) x.cache_write_1h = num(cc.ephemeral_1h_input_tokens);
+  const stu = usage.server_tool_use;
+  if (isObj(stu) && num(stu.web_search_requests) > 0) x.web_search_requests = num(stu.web_search_requests);
+  if (typeof usage.speed === "string" && usage.speed !== "standard") x.speed = usage.speed;
+  const geo = usage.inference_geo;
+  if (typeof geo === "string" && geo !== "global" && geo !== "not_available") x.inference_geo = geo;
+  return Object.keys(x).length ? x : undefined;
 }
 
 interface SubagentFile {
@@ -563,6 +603,7 @@ export const claudeCodeAdapter: SourceAdapter = {
         tokens_out: tk?.out ?? null,
         cache_read: tk?.cacheRead ?? null,
         cache_write: tk?.cacheWrite ?? null,
+        usage_extra: d.usageExtra ?? null,
         model: d.model,
         risk_level: "none",
         risk_rules: [],
