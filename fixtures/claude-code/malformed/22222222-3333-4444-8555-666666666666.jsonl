@@ -1,0 +1,13 @@
+{"type":"custom-title","customTitle":"<customTitle placeholder>","sessionId":"22222222-3333-4444-8555-666666666666"}
+{"parentUuid":null,"isSidechain":false,"promptId":"promptId_1","type":"user","message":{"role":"user","content":"<prompt placeholder>"},"uuid":"00000000-0000-4000-9000-000000000001","timestamp":"2026-01-20T09:00:00.000Z","userType":"external","entrypoint":"cli","cwd":"C:\\Users\\USER\\projects\\demo-app","sessionId":"22222222-3333-4444-8555-666666666666","version":"2.1.300","gitBranch":"main"}
+{"parentUuid":"00000000-0000-4000-9000-000000000001","isSidechain":false,"type":"assistant","message":{"model":"claude-opus-5-5","id":"msg_1","type":"message","role":"assistant","content":[{"type":"text","text":"<text placeholder>"}],"stop_reason":"end_turn","usage":{"input_tokens":10,"output_tokens":5,"cache_read_input_tokens":0,"cache_creation_input_tokens":0}},"uuid":"00000000-0000-4000-9000-000000000002","timestamp":"2026-01-20T09:00:01.000Z"
+
+[1,2,3]
+"just a string"
+not json at all
+{"type":"some-future-line-type","sessionId":"22222222-3333-4444-8555-666666666666","timestamp":"2026-01-20T09:00:02.000Z","whatever":{"nested":true}}
+{"parentUuid":"00000000-0000-4000-9000-000000000001","isSidechain":false,"type":"assistant","message":{"model":"claude-opus-5-5","id":"msg_2","type":"message","role":"assistant","content":[{"type":"some_future_block","data":"<placeholder>"}],"stop_reason":"end_turn","usage":{"input_tokens":3,"output_tokens":2}},"uuid":"00000000-0000-4000-9000-000000000003","timestamp":"2026-01-20T09:00:03.000Z","sessionId":"22222222-3333-4444-8555-666666666666"}
+{"parentUuid":"00000000-0000-4000-9000-000000000003","type":"assistant","uuid":"00000000-0000-4000-9000-000000000004","timestamp":"2026-01-20T09:00:04.000Z","sessionId":"22222222-3333-4444-8555-666666666666"}
+{"parentUuid":"00000000-0000-4000-9000-000000000004","type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_does_not_exist","content":"<orphan result placeholder>","is_error":true}]},"toolUseResult":"Error: <placeholder>","uuid":"00000000-0000-4000-9000-000000000005","timestamp":"not-a-timestamp","sessionId":"22222222-3333-4444-8555-666666666666"}
+{"parentUuid":"00000000-0000-4000-9000-000000000005","isSidechain":false,"type":"user","message":{"role":"user","content":"<last prompt placeholder>"},"uuid":"00000000-0000-4000-9000-000000000006","timestamp":"2026-01-20T09:00:06.000Z","sessionId":"22222222-3333-4444-8555-666666666666"}
+{"type":"assistant","message":{"model":"claude-opus-5-5","id":"msg_3","role":"assistant","content":[{"type":"text","text":"<truncated last line
