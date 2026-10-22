@@ -1,0 +1,1045 @@
+{
+  "session": {
+    "id": "claude:11111111-2222-4333-8444-555555555555",
+    "source": "claude_code",
+    "project_path": "C:\\Users\\USER\\projects\\demo-app",
+    "git_branch": "main",
+    "started_at": "2026-01-15T10:00:00.014Z",
+    "ended_at": "2026-01-16T09:54:42.287Z",
+    "model": "claude-opus-5",
+    "title": "<content placeholder, 1416 chars>",
+    "total_input_tokens": 54,
+    "total_output_tokens": 37242,
+    "total_cache_read_tokens": 4683574,
+    "total_cache_write_tokens": 115622,
+    "est_cost_usd": null,
+    "max_risk": "none",
+    "source_file": "<fixture>",
+    "source_hash": "<hash>"
+  },
+  "events": [
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:0",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 0,
+      "ts": "2026-01-15T10:00:00.014Z",
+      "kind": "user_message",
+      "summary": "<content placeholder, 1416 chars>",
+      "payload": {
+        "text": "<content placeholder, 1416 chars>"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:1",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 1,
+      "ts": "2026-01-15T10:00:10.035Z",
+      "kind": "thinking",
+      "summary": "(thinking; text not recorded)",
+      "payload": {
+        "text": "",
+        "redacted": true
+      },
+      "tokens_in": 2,
+      "tokens_out": 3821,
+      "cache_read": 30466,
+      "cache_write": 14036,
+      "model": "claude-opus-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:2",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 2,
+      "ts": "2026-01-15T10:00:39.042Z",
+      "kind": "shell_command",
+      "summary": "$ npm test",
+      "payload": {
+        "tool_use_id": "toolu_00000000000000000001",
+        "command": "npm test",
+        "shell": "bash",
+        "description": "<description placeholder, 26 chars>",
+        "cwd": "C:\\Users\\USER\\projects\\demo-app",
+        "is_error": true,
+        "error": "<toolUseResult placeholder, 93 chars>",
+        "duration_ms": 1007,
+        "exit_code": null
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "model": "claude-opus-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:3",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 3,
+      "ts": "2026-01-15T10:00:46.056Z",
+      "kind": "thinking",
+      "summary": "(thinking; text not recorded)",
+      "payload": {
+        "text": "",
+        "redacted": true
+      },
+      "tokens_in": 2,
+      "tokens_out": 3537,
+      "cache_read": 44502,
+      "cache_write": 3895,
+      "model": "claude-opus-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:4",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 4,
+      "ts": "2026-01-15T10:01:12.063Z",
+      "kind": "file_write",
+      "summary": "Write C:\\Users\\USER\\projects\\demo-app\\src\\file2.sql",
+      "payload": {
+        "tool_use_id": "toolu_00000000000000000002",
+        "path": "C:\\Users\\USER\\projects\\demo-app\\src\\file2.sql",
+        "content_excerpt": "<content placeholder, 9409 chars>",
+        "bytes": 33,
+        "is_error": false,
+        "duration_ms": 7,
+        "operation": "create"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "model": "claude-opus-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:5",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 5,
+      "ts": "2026-01-15T10:01:13.077Z",
+      "kind": "assistant_message",
+      "summary": "<text placeholder, 24 chars>",
+      "payload": {
+        "text": "<text placeholder, 24 chars>"
+      },
+      "tokens_in": 2,
+      "tokens_out": 15,
+      "cache_read": 48397,
+      "cache_write": 3605,
+      "model": "claude-opus-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:6",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 6,
+      "ts": "2026-01-15T15:09:55.091Z",
+      "kind": "user_message",
+      "summary": "<content placeholder, 2183 chars>",
+      "payload": {
+        "text": "<content placeholder, 2183 chars>"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:7",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 7,
+      "ts": "2026-01-15T15:10:25.105Z",
+      "kind": "assistant_message",
+      "summary": "<text placeholder, 487 chars>",
+      "payload": {
+        "text": "<text placeholder, 487 chars>"
+      },
+      "tokens_in": 2,
+      "tokens_out": 2276,
+      "cache_read": 30466,
+      "cache_write": 22419,
+      "model": "claude-opus-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:8",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 8,
+      "ts": "2026-01-15T15:10:26.112Z",
+      "kind": "shell_command",
+      "summary": "$ git status",
+      "payload": {
+        "tool_use_id": "toolu_00000000000000000003",
+        "command": "git status",
+        "shell": "bash",
+        "description": "<description placeholder, 41 chars>",
+        "cwd": "C:\\Users\\USER\\projects\\demo-app",
+        "is_error": false,
+        "duration_ms": 1007,
+        "stdout_excerpt": "<stdout placeholder, 174 chars>",
+        "stderr_excerpt": "",
+        "exit_code": null
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "model": "claude-opus-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:9",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 9,
+      "ts": "2026-01-15T15:10:30.126Z",
+      "kind": "shell_command",
+      "summary": "$ ls src",
+      "payload": {
+        "tool_use_id": "toolu_00000000000000000004",
+        "command": "ls src",
+        "shell": "bash",
+        "description": "<description placeholder, 43 chars>",
+        "cwd": "C:\\Users\\USER\\projects\\demo-app",
+        "is_error": false,
+        "duration_ms": 5007,
+        "stdout_excerpt": "<stdout placeholder, 255 chars>",
+        "stderr_excerpt": "",
+        "exit_code": null
+      },
+      "tokens_in": 2,
+      "tokens_out": 268,
+      "cache_read": 52885,
+      "cache_write": 2421,
+      "model": "claude-opus-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:10",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 10,
+      "ts": "2026-01-15T15:11:51.147Z",
+      "kind": "file_write",
+      "summary": "Write C:\\Users\\USER\\projects\\demo-app\\src\\file3.py",
+      "payload": {
+        "tool_use_id": "toolu_00000000000000000005",
+        "path": "C:\\Users\\USER\\projects\\demo-app\\src\\file3.py",
+        "content_excerpt": "<content placeholder, 19138 chars>",
+        "bytes": 34,
+        "is_error": false,
+        "duration_ms": 7,
+        "operation": "create"
+      },
+      "tokens_in": 2,
+      "tokens_out": 7846,
+      "cache_read": 55306,
+      "cache_write": 3401,
+      "model": "claude-opus-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:11",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 11,
+      "ts": "2026-01-15T15:14:46.161Z",
+      "kind": "assistant_message",
+      "summary": "<text placeholder, 174 chars>",
+      "payload": {
+        "text": "<text placeholder, 174 chars>"
+      },
+      "tokens_in": 2,
+      "tokens_out": 1850,
+      "cache_read": 82987,
+      "cache_write": 1301,
+      "model": "claude-opus-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:12",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 12,
+      "ts": "2026-01-15T15:15:10.168Z",
+      "kind": "file_read",
+      "summary": "Read C:\\Users\\USER\\projects\\demo-app\\src\\file3.py",
+      "payload": {
+        "tool_use_id": "toolu_00000000000000000006",
+        "path": "C:\\Users\\USER\\projects\\demo-app\\src\\file3.py",
+        "is_error": false,
+        "duration_ms": 7
+      },
+      "tokens_in": 2,
+      "tokens_out": 444,
+      "cache_read": 86215,
+      "cache_write": 719,
+      "model": "claude-opus-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:13",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 13,
+      "ts": "2026-01-15T15:15:14.182Z",
+      "kind": "file_edit",
+      "summary": "Edit C:\\Users\\USER\\projects\\demo-app\\src\\file3.py",
+      "payload": {
+        "tool_use_id": "toolu_00000000000000000007",
+        "path": "C:\\Users\\USER\\projects\\demo-app\\src\\file3.py",
+        "old_excerpt": "<old_string placeholder, 72 chars>",
+        "new_excerpt": "<new_string placeholder, 234 chars>",
+        "is_error": false,
+        "duration_ms": 7,
+        "unified_diff": "@@ -152,7 +152,9 @@\n placeholder line\n placeholder line\n placeholder line\n-placeholder line\n+placeholder line\n+placeholder line\n"
+      },
+      "tokens_in": 2,
+      "tokens_out": 302,
+      "cache_read": 86934,
+      "cache_write": 1713,
+      "model": "claude-opus-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:14",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 14,
+      "ts": "2026-01-15T15:15:17.196Z",
+      "kind": "file_edit",
+      "summary": "Edit C:\\Users\\USER\\projects\\demo-app\\src\\file3.py",
+      "payload": {
+        "tool_use_id": "toolu_00000000000000000008",
+        "path": "C:\\Users\\USER\\projects\\demo-app\\src\\file3.py",
+        "old_excerpt": "<old_string placeholder, 153 chars>",
+        "new_excerpt": "<new_string placeholder, 276 chars>",
+        "is_error": false,
+        "duration_ms": 7,
+        "unified_diff": "@@ -186,7 +186,12 @@\n placeholder line\n placeholder line\n placeholder line\n-placeholder line\n+placeholder line\n+placeholder line\n"
+      },
+      "tokens_in": 2,
+      "tokens_out": 310,
+      "cache_read": 88647,
+      "cache_write": 398,
+      "model": "claude-opus-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:15",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 15,
+      "ts": "2026-01-15T15:22:27.210Z",
+      "kind": "user_message",
+      "summary": "<content placeholder, 2317 chars>",
+      "payload": {
+        "text": "<content placeholder, 2317 chars>"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:16",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 16,
+      "ts": "2026-01-15T15:23:43.217Z",
+      "kind": "file_read",
+      "summary": "Read C:\\Users\\USER\\projects\\demo-app\\src\\file2.sql",
+      "payload": {
+        "tool_use_id": "toolu_00000000000000000009",
+        "path": "C:\\Users\\USER\\projects\\demo-app\\src\\file2.sql",
+        "is_error": false,
+        "duration_ms": 7
+      },
+      "tokens_in": 2,
+      "tokens_out": 1537,
+      "cache_read": 94240,
+      "cache_write": 3885,
+      "model": "claude-opus-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:17",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 17,
+      "ts": "2026-01-15T15:39:00.231Z",
+      "kind": "tool_call",
+      "summary": "AskUserQuestion",
+      "payload": {
+        "tool_use_id": "toolu_00000000000000000010",
+        "tool_name": "AskUserQuestion",
+        "input": {
+          "questions": [
+            {
+              "question": "<question placeholder, 69 chars>",
+              "header": "<header placeholder, 6 chars>",
+              "multiSelect": false,
+              "options": [
+                {
+                  "label": "<label placeholder, 33 chars>",
+                  "description": "<description placeholder, 294 chars>"
+                },
+                {
+                  "label": "<label placeholder, 11 chars>",
+                  "description": "<description placeholder, 214 chars>"
+                },
+                {
+                  "label": "<label placeholder, 4 chars>",
+                  "description": "<description placeholder, 163 chars>"
+                }
+              ]
+            }
+          ]
+        },
+        "is_error": false,
+        "duration_ms": 20007,
+        "result_excerpt": "<content placeholder, 192 chars>"
+      },
+      "tokens_in": 2,
+      "tokens_out": 921,
+      "cache_read": 123546,
+      "cache_write": 1289,
+      "model": "claude-opus-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:18",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 18,
+      "ts": "2026-01-15T15:41:08.245Z",
+      "kind": "tool_call",
+      "summary": "mcp__example__tool_1",
+      "payload": {
+        "tool_use_id": "toolu_00000000000000000011",
+        "tool_name": "mcp__example__tool_1",
+        "input": {
+          "name": "<name placeholder, 13 chars>"
+        },
+        "is_error": true,
+        "error": "<toolUseResult placeholder, 475 chars>",
+        "duration_ms": 7007
+      },
+      "tokens_in": 2,
+      "tokens_out": 66,
+      "cache_read": 129343,
+      "cache_write": 343,
+      "model": "claude-opus-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:19",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 19,
+      "ts": "2026-01-16T09:42:25.259Z",
+      "kind": "subagent_start",
+      "summary": "Subagent: <description placeholder, 29 chars>",
+      "payload": {
+        "tool_use_id": "toolu_00000000000000000012",
+        "description": "<description placeholder, 29 chars>",
+        "subagent_type": "general-purpose",
+        "prompt_excerpt": "<prompt placeholder, 2260 chars>",
+        "run_in_background": true,
+        "is_error": false,
+        "duration_ms": 2007,
+        "agent_id": "a0000000000000001",
+        "status": "async_launched"
+      },
+      "tokens_in": 2,
+      "tokens_out": 998,
+      "cache_read": 159385,
+      "cache_write": 455,
+      "model": "claude-opus-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:20",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 20,
+      "ts": "2026-01-16T09:42:27.679Z",
+      "kind": "user_message",
+      "summary": "<content placeholder, 2260 chars>",
+      "payload": {
+        "text": "<content placeholder, 2260 chars>",
+        "subagent_id": "a0000000000000001"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:21",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 21,
+      "ts": "2026-01-16T09:42:29.700Z",
+      "kind": "assistant_message",
+      "summary": "<text placeholder, 45 chars>",
+      "payload": {
+        "text": "<text placeholder, 45 chars>",
+        "subagent_id": "a0000000000000001"
+      },
+      "tokens_in": 2,
+      "tokens_out": 159,
+      "cache_read": 0,
+      "cache_write": 32938,
+      "model": "claude-opus-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:22",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 22,
+      "ts": "2026-01-16T09:42:30.707Z",
+      "kind": "shell_command",
+      "summary": "$ node scripts/check.js",
+      "payload": {
+        "tool_use_id": "toolu_00000000000000000028",
+        "command": "node scripts/check.js",
+        "shell": "bash",
+        "description": "<description placeholder, 14 chars>",
+        "cwd": "C:\\Users\\USER\\projects\\demo-app",
+        "subagent_id": "a0000000000000001",
+        "is_error": false,
+        "duration_ms": 7,
+        "stdout_excerpt": "<content placeholder, 1012 chars>",
+        "exit_code": null
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "model": "claude-opus-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:23",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 23,
+      "ts": "2026-01-16T09:42:30.721Z",
+      "kind": "file_read",
+      "summary": "Read C:\\Users\\USER\\projects\\demo-app\\src\\file2.sql",
+      "payload": {
+        "tool_use_id": "toolu_00000000000000000029",
+        "path": "C:\\Users\\USER\\projects\\demo-app\\src\\file2.sql",
+        "subagent_id": "a0000000000000001",
+        "is_error": false,
+        "duration_ms": 7
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "model": "claude-opus-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:24",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 24,
+      "ts": "2026-01-16T09:45:29.735Z",
+      "kind": "assistant_message",
+      "summary": "<text placeholder, 11888 chars>",
+      "payload": {
+        "text": "<text placeholder, 11888 chars>",
+        "subagent_id": "a0000000000000001"
+      },
+      "tokens_in": 2,
+      "tokens_out": 7125,
+      "cache_read": 65238,
+      "cache_write": 425,
+      "model": "claude-opus-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:25",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 25,
+      "ts": "2026-01-16T09:45:29.735Z",
+      "kind": "subagent_end",
+      "summary": "Subagent finished: <description placeholder, 29 chars>",
+      "payload": {
+        "agent_id": "a0000000000000001",
+        "subagent_id": "a0000000000000001",
+        "agent_type": "general-purpose",
+        "description": "<description placeholder, 29 chars>"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:26",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 26,
+      "ts": "2026-01-15T10:04:47.294Z",
+      "kind": "error",
+      "summary": "API error: <text placeholder, 55 chars>",
+      "payload": {
+        "source": "api",
+        "message": "<text placeholder, 55 chars>"
+      },
+      "tokens_in": 0,
+      "tokens_out": 0,
+      "cache_read": 0,
+      "cache_write": 0,
+      "model": "<synthetic>",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:27",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 27,
+      "ts": "2026-01-15T10:06:04.371Z",
+      "kind": "shell_command",
+      "summary": "$ npm run build",
+      "payload": {
+        "tool_use_id": "toolu_00000000000000000014",
+        "command": "npm run build",
+        "shell": "powershell",
+        "description": "<description placeholder, 17 chars>",
+        "cwd": "C:\\Users\\USER\\projects\\demo-app",
+        "is_error": false,
+        "duration_ms": 7007,
+        "stdout_excerpt": "<stdout placeholder, 61 chars>",
+        "stderr_excerpt": "",
+        "exit_code": null
+      },
+      "tokens_in": 2,
+      "tokens_out": 422,
+      "cache_read": 176203,
+      "cache_write": 4097,
+      "model": "claude-opus-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:28",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 28,
+      "ts": "2026-01-15T10:06:18.385Z",
+      "kind": "tool_call",
+      "summary": "ToolSearch",
+      "payload": {
+        "tool_use_id": "toolu_00000000000000000015",
+        "tool_name": "ToolSearch",
+        "input": {
+          "query": "TODO",
+          "max_results": 2
+        },
+        "is_error": false,
+        "duration_ms": 7007,
+        "result_excerpt": "[tool_reference]\n[tool_reference]"
+      },
+      "tokens_in": 2,
+      "tokens_out": 806,
+      "cache_read": 346088,
+      "cache_write": 2756,
+      "model": "claude-opus-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:29",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 29,
+      "ts": "2026-01-15T10:06:32.399Z",
+      "kind": "web_fetch",
+      "summary": "Fetch https://example.com/docs",
+      "payload": {
+        "tool_use_id": "toolu_00000000000000000016",
+        "url": "https://example.com/docs",
+        "is_error": false,
+        "duration_ms": 7007,
+        "result_excerpt": "<content placeholder, 1880 chars>"
+      },
+      "tokens_in": 2,
+      "tokens_out": 219,
+      "cache_read": 348844,
+      "cache_write": 1782,
+      "model": "claude-opus-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:30",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 30,
+      "ts": "2026-01-15T10:06:46.413Z",
+      "kind": "user_message",
+      "summary": "<content placeholder, 576 chars>",
+      "payload": {
+        "text": "<content placeholder, 576 chars>"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:31",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 31,
+      "ts": "2026-01-15T10:06:53.420Z",
+      "kind": "tool_call",
+      "summary": "Grep",
+      "payload": {
+        "tool_use_id": "toolu_00000000000000000017",
+        "tool_name": "Grep",
+        "input": {
+          "pattern": "TODO",
+          "path": "C:\\Users\\USER\\projects\\demo-app\\src\\file9.py",
+          "output_mode": "content"
+        },
+        "is_error": false,
+        "duration_ms": 7007,
+        "result_excerpt": "<content placeholder, 730 chars>"
+      },
+      "tokens_in": 2,
+      "tokens_out": 268,
+      "cache_read": 485768,
+      "cache_write": 3451,
+      "model": "claude-opus-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:32",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 32,
+      "ts": "2026-01-15T10:07:07.434Z",
+      "kind": "error",
+      "summary": "API error (retry 1/10)",
+      "payload": {
+        "source": "api",
+        "message": "{\"message\":\"<message placeholder, 17 chars>\",\"formatted\":\"<formatted placeholder, 67 chars>\",\"connection\":{\"code\":\"<code placeholder, 9 chars>\",\"message\":\"<message placeholder, 39 chars>\",\"isSSLError\":false},\"isNetworkDown\":true,\"rateLimits\":null,\"noResponse\":null}",
+        "retry_attempt": 1,
+        "max_retries": 10
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:33",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 33,
+      "ts": "2026-01-15T10:07:14.441Z",
+      "kind": "tool_call",
+      "summary": "WebSearch",
+      "payload": {
+        "tool_use_id": "toolu_00000000000000000018",
+        "tool_name": "WebSearch",
+        "input": {
+          "query": "TODO",
+          "mode": "standard"
+        },
+        "is_error": false,
+        "duration_ms": 7007,
+        "result_excerpt": "<content placeholder, 3287 chars>"
+      },
+      "tokens_in": 2,
+      "tokens_out": 584,
+      "cache_read": 583571,
+      "cache_write": 1327,
+      "model": "claude-opus-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:34",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 34,
+      "ts": "2026-01-15T10:07:28.455Z",
+      "kind": "user_message",
+      "summary": "<text placeholder, 42 chars>",
+      "payload": {
+        "text": "<text placeholder, 42 chars>"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:35",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 35,
+      "ts": "2026-01-15T10:07:35.462Z",
+      "kind": "tool_call",
+      "summary": "SendUserFile",
+      "payload": {
+        "tool_use_id": "toolu_00000000000000000019",
+        "tool_name": "SendUserFile",
+        "input": {
+          "files": [
+            "<files placeholder, 40 chars>"
+          ],
+          "caption": "<caption placeholder, 144 chars>",
+          "status": "normal",
+          "display": "<display placeholder, 6 chars>"
+        },
+        "is_error": false,
+        "duration_ms": 7007,
+        "result_excerpt": "<content placeholder, 118 chars>"
+      },
+      "tokens_in": 2,
+      "tokens_out": 181,
+      "cache_read": 831188,
+      "cache_write": 636,
+      "model": "claude-opus-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:36",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 36,
+      "ts": "2026-01-15T10:08:10.497Z",
+      "kind": "tool_call",
+      "summary": "Monitor",
+      "payload": {
+        "tool_use_id": "toolu_00000000000000000020",
+        "tool_name": "Monitor",
+        "input": {
+          "command": "git diff --stat",
+          "description": "<description placeholder, 37 chars>",
+          "timeout_ms": 1800000
+        },
+        "is_error": false,
+        "duration_ms": 7007,
+        "result_excerpt": "<content placeholder, 302 chars>"
+      },
+      "tokens_in": 2,
+      "tokens_out": 215,
+      "cache_read": 125469,
+      "cache_write": 3151,
+      "model": "claude-opus-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:37",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 37,
+      "ts": "2026-01-15T10:08:24.511Z",
+      "kind": "tool_call",
+      "summary": "ReadNotifications",
+      "payload": {
+        "tool_use_id": "toolu_00000000000000000021",
+        "tool_name": "ReadNotifications",
+        "input": {},
+        "is_error": false,
+        "duration_ms": 7007,
+        "result_excerpt": "<content placeholder, 24 chars>"
+      },
+      "tokens_in": 2,
+      "tokens_out": 78,
+      "cache_read": 128962,
+      "cache_write": 1482,
+      "model": "claude-opus-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:38",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 38,
+      "ts": "2026-01-15T10:08:45.532Z",
+      "kind": "user_message",
+      "summary": "<content placeholder, 245 chars>",
+      "payload": {
+        "text": "<content placeholder, 245 chars>",
+        "meta": true
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:39",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 39,
+      "ts": "2026-01-15T10:08:52.539Z",
+      "kind": "user_message",
+      "summary": "<content placeholder, 130 chars>",
+      "payload": {
+        "text": "<content placeholder, 130 chars>"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:40",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 40,
+      "ts": "2026-01-15T10:09:41.588Z",
+      "kind": "tool_call",
+      "summary": "TaskStop",
+      "payload": {
+        "tool_use_id": "toolu_00000000000000000025",
+        "tool_name": "TaskStop",
+        "input": {
+          "task_id": "<task_id placeholder, 9 chars>"
+        },
+        "is_error": false,
+        "duration_ms": 7007,
+        "result_excerpt": "<content placeholder, 475 chars>"
+      },
+      "tokens_in": 2,
+      "tokens_out": 57,
+      "cache_read": 179648,
+      "cache_write": 460,
+      "model": "claude-opus-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:41",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 41,
+      "ts": "2026-01-15T10:09:55.602Z",
+      "kind": "user_message",
+      "summary": "<text placeholder, 271 chars>",
+      "payload": {
+        "text": "<text placeholder, 271 chars>",
+        "images": 1
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:42",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 42,
+      "ts": "2026-01-15T10:10:16.623Z",
+      "kind": "tool_call",
+      "summary": "ExitPlanMode",
+      "payload": {
+        "tool_use_id": "toolu_00000000000000000026",
+        "tool_name": "ExitPlanMode",
+        "input": {
+          "plan": "<plan placeholder, 6402 chars>",
+          "planFilePath": "C:\\Users\\USER\\projects\\demo-app\\src\\file14.md"
+        },
+        "is_error": false,
+        "duration_ms": 7007,
+        "result_excerpt": "<content placeholder, 6681 chars>"
+      },
+      "tokens_in": 2,
+      "tokens_out": 2777,
+      "cache_read": 68461,
+      "cache_write": 721,
+      "model": "claude-sonnet-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:43",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 43,
+      "ts": "2026-01-15T10:10:51.658Z",
+      "kind": "user_message",
+      "summary": "<content placeholder, 61 chars>",
+      "payload": {
+        "text": "<content placeholder, 61 chars>"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "claude:11111111-2222-4333-8444-555555555555:44",
+      "session_id": "claude:11111111-2222-4333-8444-555555555555",
+      "seq": 44,
+      "ts": "2026-01-15T10:10:58.665Z",
+      "kind": "tool_call",
+      "summary": "Artifact",
+      "payload": {
+        "tool_use_id": "toolu_00000000000000000027",
+        "tool_name": "Artifact",
+        "input": {
+          "action": "<action placeholder, 10 chars>",
+          "intent": "<intent placeholder, 5 chars>",
+          "design_systems": false
+        },
+        "is_error": false,
+        "duration_ms": 7007,
+        "result_excerpt": "<content placeholder, 36162 chars>"
+      },
+      "tokens_in": 2,
+      "tokens_out": 160,
+      "cache_read": 230815,
+      "cache_write": 2516,
+      "model": "claude-opus-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    }
+  ]
+}
