@@ -1,6 +1,29 @@
-# Flight Recorder
+<h1 align="center">Flight Recorder</h1>
 
-**See exactly what your coding agent did: every command, file, risk and dollar, replayed locally.**
+<p align="center">
+  <b>See exactly what your coding agent did: every command, file, risk and dollar, replayed locally.</b>
+</p>
+
+<p align="center">
+  <a href="https://github.com/meypoo/flightrecorder/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/meypoo/flightrecorder/actions/workflows/ci.yml/badge.svg"></a>
+  <img alt="Node 20+" src="https://img.shields.io/badge/node-%3E%3D20-339933?logo=node.js&logoColor=white">
+  <img alt="100% local" src="https://img.shields.io/badge/data-100%25%20local-0f766e">
+  <img alt="Claude Code" src="https://img.shields.io/badge/agents-Claude%20Code-d97757">
+</p>
+
+<p align="center">
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#what-you-get">Features</a> ·
+  <a href="#in-the-terminal">Terminal UI</a> ·
+  <a href="#commands">Commands</a> ·
+  <a href="#privacy">Privacy</a>
+</p>
+
+<p align="center">
+  <img src="docs/demo.gif" alt="Flight Recorder replaying a Claude Code session" width="900">
+</p>
+
+## Quick start
 
 ```sh
 npx flightrec
@@ -9,13 +32,13 @@ npx flightrec
 That reads your Claude Code session logs, stores them in a local SQLite database and opens a replay UI at
 http://localhost:4317. Nothing leaves your machine.
 
-![Flight Recorder replaying a session](docs/demo.gif)
-
 Want to look around first without touching your own logs?
 
 ```sh
 npx flightrec --demo
 ```
+
+Prefer the terminal, or working over SSH? `npx flightrec tui` opens the same data full-screen.
 
 ## Why
 
@@ -38,7 +61,28 @@ Coding agents run for hours and write detailed logs, but in raw JSONL nobody rea
 - **Costs:** estimated spend by day, project and model, and the most expensive sessions.
 - **Receipts:** a Markdown summary of a session for a PR comment, with secrets and home paths redacted.
 
-![Sessions list](docs/sessions.png)
+<table>
+  <tr>
+    <td width="50%"><img src="docs/sessions.png" alt="Sessions list with cost and risk columns"><br><sub><b>Sessions:</b> every run across your projects, with cost and risk at a glance.</sub></td>
+    <td width="50%"><img src="docs/replay.png" alt="Replay of a session with a flagged cat .env command"><br><sub><b>Replay:</b> step through the timeline; risky events are flagged and secrets masked.</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/costs-light.png" alt="Costs page in the light theme"><br><sub><b>Costs:</b> estimated spend by day, project and model (light theme shown).</sub></td>
+    <td width="50%"><img src="docs/tui.png" alt="flightrec tui showing a session timeline in the terminal"><br><sub><b>Terminal:</b> the same replay in <code>flightrec tui</code>.</sub></td>
+  </tr>
+</table>
+
+## In the terminal
+
+```sh
+flightrec tui                 # browse all sessions
+flightrec tui latest          # jump straight into the newest one
+flightrec tui --demo          # try it on sample data
+```
+
+`j`/`k` move, `enter` opens a session or event, `r`/`R` jump to the next or previous risk, `/` filters, `s` reveals
+masked secrets, `esc` goes back and `q` quits. It needs an interactive terminal; in scripts use `flightrec list` and
+`flightrec show`.
 
 ## Supported agents
 
