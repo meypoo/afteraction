@@ -92,3 +92,16 @@ id, path, title and text is synthetic (`aaaaaaaa-…-00000000000N` uuids, `c:\Us
 - `malformed/brain/…0003/…/transcript.jsonl`: by line, 1 prompt, 2 truncated JSON, 3 blank, 4 array,
   5 not JSON, 6 orphan result, 7 unencoded argument + invalid timestamp + non-object tool call,
   8 unknown step type, 9 prompt without wrapper tags and no trailing newline.
+
+### `opencode/`
+
+- `opencode.sql`: the real OpenCode 1.19.4 `CREATE TABLE` statements for `project`, `session`,
+  `message` and `part`, plus synthetic rows in the shapes of a real session. Kept as SQL because
+  `*.db` is git-ignored; the tests build `opencode.db` from it in a temp folder.
+  - Session `ses_fixture…0001`: prompt, text, `bash` (exit 0 and 1), `read` of a file and of a
+    directory, an unmapped tool (`glob`), a `patch` part, an automatic compaction (compaction part,
+    summary message, synthetic "Continue" prompt) and an empty reasoning part.
+    `expected/ses_fixture…0001.json` is its normalized snapshot.
+  - Session `ses_fixture…0002` (malformed): invalid and non-object message and part JSON, an unknown
+    part type, a tool in `error` status, a message `error`, usage with no parts, bad times and tokens,
+    an empty title.

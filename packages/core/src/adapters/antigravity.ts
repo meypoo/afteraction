@@ -504,7 +504,7 @@ async function antigravityFingerprint(file: string): Promise<string> {
 
 export const antigravityAdapter: SourceAdapter = {
   id: "antigravity",
-  testedVersions: ["Antigravity IDE, data written 2025-11 to 2026-09 (transcript.jsonl from 2026-09)"],
+  testedVersions: ["IDE data 2025-11 – 2026-09"],
 
   defaultRoot: defaultAntigravityRoot,
 

@@ -17,7 +17,7 @@ async function cli(...args: string[]) {
   return { code, out: out.join("\n"), err: err.join("\n") };
 }
 
-const ENV_KEYS = ["HOME", "USERPROFILE", "CODEX_HOME"] as const;
+const ENV_KEYS = ["HOME", "USERPROFILE", "CODEX_HOME", "XDG_DATA_HOME"] as const;
 let savedEnv: Partial<Record<(typeof ENV_KEYS)[number], string>>;
 
 beforeEach(() => {
@@ -28,6 +28,7 @@ beforeEach(() => {
   savedEnv = Object.fromEntries(ENV_KEYS.map((k) => [k, process.env[k]]));
   process.env.HOME = process.env.USERPROFILE = path.join(tmp, "home");
   delete process.env.CODEX_HOME;
+  delete process.env.XDG_DATA_HOME;
 });
 
 afterEach(() => {

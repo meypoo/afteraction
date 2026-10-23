@@ -7,7 +7,7 @@ observation, it says so.
 | Source | Status |
 |---|---|
 | Claude Code | 27 files, 56,416 lines, versions `2.1.229` – `2.1.304`, Windows 11, entrypoints `cli` and `claude-desktop`. 0 lines failed to parse as JSON. |
-| OpenCode | Schema only: `1.18.29` installed, database has 0 sessions (2026-10-23). |
+| OpenCode | 1 real session on `1.19.4` (one SQLite database for all sessions), 2026-10-23. |
 | Google Antigravity | 9 conversations (2025-11 – 2026-09). Conversation files are encrypted; 1 has a readable `transcript.jsonl` (138 lines, 0 parse errors), the rest are metadata only (2026-10-23). |
 | Codex | 24 files from Codex Desktop `0.163.0-alpha.11.2`, Windows 11, inspected 2026-10-23. 22 were imports of Claude Code sessions. No Codex CLI rollouts on this machine; CLI-only shapes are from Codex's open-source schema. |
 
@@ -342,36 +342,70 @@ response items and are ignored.
 
 ## OpenCode
 
-Inspected 2026-10-23, OpenCode `1.18.29` (npm global install), Windows 11.
+Inspected 2026-10-23: schema on `1.18.29`, then one real session on `1.19.4` (npm global install,
+Windows 11, provider `opencode`, model `big-pickle`): 1 session, ~70 messages, ~270 parts, including an
+automatic compaction.
 
 ### Location
 
 `~/.local/share/opencode/opencode.db` (SQLite, WAL mode, so `-wal`/`-shm` sit next to it and
-hold recent writes). `~/.local/share/opencode/log/opencode.log` is a process log, not a transcript.
-No JSON `storage/` directory exists in this version; older OpenCode releases are said to have used
-one (inference, not observed).
+hold recent writes). Same path on Windows. `XDG_DATA_HOME` is assumed to move it (inference, not
+observed). `log/opencode.log` is a process log; `snapshot/` holds git snapshots of the worktree.
+No JSON `storage/` directory in these versions.
 
-### Schema (observed, no rows yet)
+### Tables read
 
-The database on this machine has **0 sessions, 0 messages, 0 parts**: OpenCode was installed but
-never used. Only the schema can be documented:
+- `session`: `id`, `project_id`, `parent_id` (child sessions, not observed), `directory`
+  (forward slashes: `D:/proj`), `title` (generated), `version`, `agent`, `model`
+  (`{"id","providerID"}`), `cost`, `tokens_input/output/reasoning/cache_read/cache_write` (sums of the
+  message usage), `time_created`/`time_updated` (Unix **milliseconds**).
+- `message`: `id`, `session_id`, `time_created`, `data` (JSON). Ids sort by time (`msg_…`).
+- `part`: `id`, `message_id`, `session_id`, `data` (JSON). Ids sort in order within a message.
 
-- `session`: `id`, `project_id`, `parent_id` (subagent sessions point at their parent), `directory`,
-  `title`, `version`, `agent`, `model`, `cost`, `tokens_input/output/reasoning/cache_read/cache_write`,
-  `summary_additions/deletions/files`, `time_created`/`time_updated` (integers, unit unverified).
-- `message`: `id`, `session_id`, `time_created`, `data` (JSON text, shape unverified).
-- `part`: `id`, `message_id`, `session_id`, `time_created`, `data` (JSON text, shape unverified;
-  inferred to hold text, reasoning and tool-call parts).
-- `project`: `id`, `worktree`, `vcs`, `name`.
-- Also `todo`, `permission`, `session_share`, `event`/`event_sequence`, `session_message`,
-  `session_input`, and `account`/`credential`/`control_account` tables. The adapter must never read
-  the account or credential tables: they hold access tokens.
+Never read: `account`, `credential`, `control_account` (access tokens). Other tables (`event`,
+`todo`, `permission`, `session_share`, `session_message`, `session_input`) are not needed.
 
-Implication for the adapter: unlike Claude Code and Codex, OpenCode is one database, not one file
-per session. `discover()` would return the database path and `parse()` would yield many sessions.
+### `message.data`
 
-**Blocked:** the `message.data` and `part.data` JSON shapes need a real session before a parser is
-written.
+```json
+{ "role": "user", "time": {"created": 1792761653662}, "agent": "build",
+  "model": {"providerID": "opencode", "modelID": "big-pickle"}, "summary": {"diffs": [...]} }
+{ "role": "assistant", "parentID": "msg_…", "mode": "build" | "compaction", "agent": "build",
+  "path": {"cwd": "D:\proj", "root": "D:\proj"}, "modelID": "big-pickle", "providerID": "opencode",
+  "cost": 0, "tokens": {"total", "input", "output", "reasoning", "cache": {"read", "write"}},
+  "time": {"created", "completed"}, "finish": "tool-calls" | "stop", "summary": true }
+```
+
+`summary: true` with `mode: "compaction"` marks the compaction summary message. The user message's
+`summary.diffs` is a worktree diff, not the user's work.
+
+### `part.data` types
+
+| `type` | Content |
+|---|---|
+| `text` | `text`, `time.{start,end}`; `synthetic: true` for the injected "Continue…" after compaction |
+| `reasoning` | `text` (can be empty), `time` |
+| `tool` | `tool`, `callID`, `state: {status, input, output, metadata, title, time: {start, end}}` |
+| `step-start` / `step-finish` | `snapshot` hash; `step-finish` repeats the message's `tokens` and `cost` |
+| `patch` | `hash`, `files`: files that changed in the worktree during the step |
+| `compaction` | `auto`, `overflow`, `tail_start_id` (in a user message) |
+
+**`patch` parts are not the agent's edits.** During the real session they listed files that another
+program changed in the same folder at the same time. The adapter ignores them.
+
+Tools seen: `bash` (`input.command`, optional `input.timeout`; `metadata.exit`, `metadata.output`,
+`metadata.truncated`) and `read` (`input.filePath`, a file or a directory; `metadata.display.type`).
+Only `completed` status was seen. `write`, `edit` and other tools have not been seen yet, so they are
+kept as `tool_call` with their input until a real session shows their shape.
+
+### What the adapter does
+
+- One session per row: `discover()` returns `<db>#<session id>` for each, because ingest works per
+  file. The fingerprint is the session's update time plus its message and part counts.
+- Usage is per assistant message and goes on its first event; reasoning tokens count as output.
+  Model is `modelID`, so models in `prices.json` get a cost; others show "—".
+- `project_path` is the first assistant `path.cwd` (backslashes, matching other agents), else
+  `session.directory`.
 
 ---
 
