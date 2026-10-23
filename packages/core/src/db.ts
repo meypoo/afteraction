@@ -432,3 +432,32 @@ export function costSummary(db: Db, opts: { since?: string } = {}): CostSummary 
   const total_usd = by_project.reduce((a, r) => a + r.usd, 0);
   return { total_usd, unpriced_sessions, by_day, by_project, by_model, top_sessions };
 }
+
+/**
+ * Delete stored sessions (events, search entries, warnings) that ended before `before`, or all of them.
+ * Ingest fingerprints are kept, so purged logs only come back if they change or on `ingest --full`.
+ */
+export function purgeSessions(db: Db, opts: { before?: string } = {}): { sessions: number; events: number } {
+  const cutoff = opts.before ? parseSince(opts.before) : null;
+  const rows = (
+    cutoff
+      ? db.prepare("SELECT id, source_file, event_count FROM sessions WHERE COALESCE(ended_at, started_at, '') < ?").all(cutoff)
+      : db.prepare("SELECT id, source_file, event_count FROM sessions").all()
+  ) as { id: string; source_file: string; event_count: number }[];
+  db.transaction(() => {
+    for (const r of rows) {
+      db.prepare("DELETE FROM search WHERE session_id = ?").run(r.id);
+      db.prepare("DELETE FROM parse_warnings WHERE source_file = ?").run(r.source_file);
+      db.prepare("DELETE FROM sessions WHERE id = ?").run(r.id); // events cascade
+      db.prepare("UPDATE ingest_files SET session_id = NULL WHERE source_file = ?").run(r.source_file);
+    }
+  })();
+  if (rows.length) {
+    try {
+      db.exec("VACUUM"); // give the space back to the OS
+    } catch {
+      // VACUUM needs free temp space; the rows are deleted either way
+    }
+  }
+  return { sessions: rows.length, events: rows.reduce((a, r) => a + r.event_count, 0) };
+}

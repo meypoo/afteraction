@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { appendFileSync, cpSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { appendFileSync, cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -143,6 +143,35 @@ describe("flightrec cli", () => {
     const file = path.join(tmp, "receipt.md");
     expect((await cli("receipt", "1111", "-o", file)).out).toBe(`Receipt written to ${file}`);
     expect(readFileSync(file, "utf8")).toContain("Agent session receipt");
+  });
+
+  it("purge only deletes with --yes", async () => {
+    await cli("ingest");
+    const dry = await cli("purge", "--before", "2026-02-01");
+    expect(dry.code).toBe(0);
+    expect(dry.out).toMatch(/Would delete 1 sessions .* Re-run with --yes/);
+    expect((await cli("list")).out).toContain("11111111");
+    const real = await cli("purge", "--before", "2026-02-01", "--yes");
+    expect(real.out).toMatch(/Deleted 1 sessions/);
+    expect((await cli("list")).out).toMatch(/No sessions found/);
+    expect((await cli("purge", "--before", "soon")).code).toBe(1);
+  });
+
+  it("reads sources and db from a config file, with flags taking precedence", async () => {
+    const cfg = path.join(tmp, "config.json");
+    writeFileSync(cfg, JSON.stringify({ db: path.join(tmp, "from-config.db"), sources: { claude: path.join(tmp, "projects") } }));
+    dbArgs = ["--config", cfg];
+    expect((await cli("ingest")).out).toMatch(/1 parsed/);
+    expect(existsSync(path.join(tmp, "from-config.db"))).toBe(true);
+    const doctor = await cli("doctor");
+    expect(doctor.out).toContain(path.join(tmp, "from-config.db"));
+    dbArgs = ["--config", cfg, "--db", path.join(tmp, "flag.db")];
+    await cli("ingest");
+    expect(existsSync(path.join(tmp, "flag.db"))).toBe(true);
+    writeFileSync(cfg, "{ not json");
+    const bad = await cli("ingest");
+    expect(bad.code).toBe(1);
+    expect(bad.err).toMatch(/config/i);
   });
 
   it("validates --source", async () => {

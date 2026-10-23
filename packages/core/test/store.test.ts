@@ -16,6 +16,7 @@ import {
   loadPrices,
   openDb,
   parseSince,
+  purgeSessions,
   resolveSession,
   warningSummary,
   type Db,
@@ -209,6 +210,26 @@ describe("queries", () => {
     const f2 = touches.find((t) => t.path.endsWith("file2.sql"));
     // One Read by the main agent, one by the subagent (folded into the session).
     expect(f2).toMatchObject({ writes: 1, reads: 2, edits: 0 });
+  });
+});
+
+describe("purge", () => {
+  it("deletes stored sessions older than a cutoff and keeps them from coming back unchanged", async () => {
+    await ingest(db, { sources: sources() });
+    expect(purgeSessions(db, { before: "2026-01-01T00:00:00Z" })).toEqual({ sessions: 0, events: 0 });
+    const n = getEvents(db, DEMO_ID).length;
+    expect(purgeSessions(db, { before: "2026-02-01T00:00:00Z" })).toEqual({ sessions: 1, events: n });
+    expect(listSessions(db)).toEqual([]);
+    expect(listSessions(db, { q: "npm" })).toEqual([]); // search index cleared too
+    expect(await ingest(db, { sources: sources() })).toMatchObject({ filesParsed: 0, filesSkipped: 1 });
+    expect(await ingest(db, { sources: sources(), full: true })).toMatchObject({ filesParsed: 1 });
+    expect(listSessions(db)).toHaveLength(1);
+  });
+
+  it("deletes everything without a cutoff", async () => {
+    await ingest(db, { sources: sources() });
+    expect(purgeSessions(db).sessions).toBe(1);
+    expect(listSessions(db)).toEqual([]);
   });
 });
 

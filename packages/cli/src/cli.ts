@@ -1,6 +1,6 @@
 import { Command, InvalidArgumentError, Option } from "commander";
 import { spawn } from "node:child_process";
-import { existsSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import os from "node:os";
@@ -20,6 +20,8 @@ import {
   ingest,
   listSessions,
   openDb,
+  parseSince,
+  purgeSessions,
   resolveSession,
   sourceCounts,
   warningSummary,
@@ -76,6 +78,41 @@ export class CliError extends Error {}
 interface GlobalOpts {
   db?: string;
   source: string[];
+  config?: string;
+}
+
+/** ~/.flightrec/config.json (or --config): defaults that command-line flags override. */
+interface Config {
+  db?: string;
+  port?: number;
+  sources?: Record<string, string>;
+}
+
+const expandHome = (p: string) => (p === "~" || /^~[\\/]/.test(p) ? path.join(os.homedir(), p.slice(1)) : p);
+
+function loadConfig(explicit?: string): Config {
+  const file = explicit ?? path.join(os.homedir(), ".flightrec", "config.json");
+  if (!existsSync(file)) {
+    if (explicit) throw new CliError(`Config file not found: ${file}`);
+    return {};
+  }
+  let cfg: unknown;
+  try {
+    cfg = JSON.parse(readFileSync(file, "utf8"));
+  } catch (e) {
+    throw new CliError(`Invalid config file ${file}: ${e instanceof Error ? e.message : String(e)}`);
+  }
+  if (typeof cfg !== "object" || cfg === null || Array.isArray(cfg)) throw new CliError(`Invalid config file ${file}: expected a JSON object`);
+  const c = cfg as Config;
+  for (const name of Object.keys(c.sources ?? {})) {
+    if (!ADAPTERS[name]) throw new CliError(`Invalid config file ${file}: unknown source "${name}" (known: ${Object.keys(ADAPTERS).join(", ")})`);
+  }
+  return c;
+}
+
+function dbPathFor(g: GlobalOpts): string {
+  const cfg = loadConfig(g.config);
+  return g.db ?? (cfg.db ? expandHome(cfg.db) : defaultDbPath());
 }
 
 function parseSourceFlag(value: string, prev: string[]): string[] {
@@ -87,8 +124,8 @@ function parseSourceFlag(value: string, prev: string[]): string[] {
 }
 
 function sourcesFrom(opts: GlobalOpts): SourceConfig[] {
-  const expandHome = (p: string) => (p === "~" || /^~[\\/]/.test(p) ? path.join(os.homedir(), p.slice(1)) : p);
-  const overrides = new Map(opts.source.map((s) => [s.slice(0, s.indexOf("=")), expandHome(s.slice(s.indexOf("=") + 1))]));
+  const overrides = new Map(Object.entries(loadConfig(opts.config).sources ?? {}).map(([k, v]) => [k, expandHome(v)]));
+  for (const s of opts.source) overrides.set(s.slice(0, s.indexOf("=")), expandHome(s.slice(s.indexOf("=") + 1)));
   return Object.entries(ADAPTERS).map(([name, adapter]) => ({ adapter, root: overrides.get(name) }));
 }
 
@@ -136,7 +173,7 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
   const program = new Command();
   const openFor = (cmd: Command): Db => {
     const g = cmd.optsWithGlobals<GlobalOpts>();
-    state.db ??= openDb(g.db ?? defaultDbPath());
+    state.db ??= openDb(dbPathFor(g));
     return state.db;
   };
 
@@ -146,11 +183,13 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
     .version(VERSION)
     .option("--db <path>", "database file", undefined)
     .option("--source <name=path>", "override a log location, e.g. claude=~/.claude/projects (repeatable)", parseSourceFlag, [])
-    .option("--port <n>", "web UI port", (v) => Number.parseInt(v, 10), DEFAULT_PORT)
+    .option("--config <path>", "config file (default ~/.flightrec/config.json)")
+    .option("--port <n>", `web UI port (default ${DEFAULT_PORT})`, (v) => Number.parseInt(v, 10))
     .option("--no-open", "don't open the browser")
     .configureOutput({ writeOut: (s) => io.out(s.trimEnd()), writeErr: (s) => io.err(s.trimEnd()) })
-    .action(async (opts: { port: number; open: boolean }, cmd: Command) => {
+    .action(async (opts: { port?: number; open: boolean }, cmd: Command) => {
       const db = openFor(cmd);
+      opts.port ??= loadConfig(cmd.optsWithGlobals<GlobalOpts>().config).port ?? DEFAULT_PORT;
       await runIngest(db, cmd.optsWithGlobals<GlobalOpts>(), false, io);
       if (!Number.isInteger(opts.port) || opts.port < 1 || opts.port > 65535) throw new CliError(`Invalid --port "${opts.port}"`);
       let server;
@@ -312,11 +351,35 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
     });
 
   program
+    .command("purge")
+    .description("delete stored sessions (your agents' own log files are never touched)")
+    .option("--before <when>", "only sessions that ended before this, e.g. 30d or 2026-01-31 (default: all)")
+    .option("--yes", "actually delete; without it, only report what would go")
+    .action((opts: { before?: string; yes?: boolean }, cmd: Command) => {
+      const d = openFor(cmd);
+      let cutoff: string | undefined;
+      try {
+        cutoff = opts.before ? parseSince(opts.before) : undefined;
+      } catch (e) {
+        throw new CliError(e instanceof Error ? e.message.replace("--since", "--before") : String(e));
+      }
+      const matching = listSessions(d).filter((s) => !cutoff || (s.ended_at ?? s.started_at ?? "") < cutoff);
+      const what = `${matching.length} sessions (${matching.reduce((a, s) => a + s.event_count, 0)} events)` +
+        (cutoff ? ` that ended before ${cutoff.slice(0, 10)}` : "");
+      if (!opts.yes) {
+        io.out(`Would delete ${what} from the flightrec database. Re-run with --yes to delete.`);
+        return;
+      }
+      const r = purgeSessions(d, { before: cutoff });
+      io.out(`Deleted ${r.sessions} sessions (${r.events} events). Unchanged logs stay out until "flightrec ingest --full".`);
+    });
+
+  program
     .command("doctor")
     .description("show discovered log sources, stored counts and parse warnings")
     .action(async (_opts, cmd: Command) => {
       const g = cmd.optsWithGlobals<GlobalOpts>();
-      const dbPath = g.db ?? defaultDbPath();
+      const dbPath = dbPathFor(g);
       io.out(`flightrec ${VERSION} · node ${process.versions.node} · ${process.platform}`);
       io.out("");
       io.out("Sources:");
