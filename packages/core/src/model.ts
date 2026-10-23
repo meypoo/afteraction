@@ -57,6 +57,8 @@ export interface NormalizedEvent {
   cache_write: number | null;
   /** Billing details beyond the four token counts; only set where the log has them. */
   usage_extra: UsageExtra | null;
+  /** Estimated cost of this event's API call; set at ingest from prices.json (null: no price). */
+  est_cost_usd?: number | null;
   model: string | null;
   risk_level: RiskLevel;
   risk_rules: string[];

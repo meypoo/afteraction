@@ -11,7 +11,7 @@ export function defaultDbPath(): string {
   return path.join(os.homedir(), ".flightrec", "flightrec.db");
 }
 
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS sessions (
@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS events (
   cache_read INTEGER,
   cache_write INTEGER,
   usage_extra TEXT,
+  est_cost_usd REAL,
   model TEXT,
   risk_level TEXT NOT NULL DEFAULT 'none',
   risk_rules TEXT NOT NULL DEFAULT '[]'
@@ -76,6 +77,9 @@ CREATE INDEX IF NOT EXISTS parse_warnings_source ON parse_warnings(source_file);
 CREATE INDEX IF NOT EXISTS events_risk ON events(risk_level) WHERE risk_level != 'none';
 
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+
+-- Full-text search over session titles, prompts and shell commands.
+CREATE VIRTUAL TABLE IF NOT EXISTS search USING fts5(session_id UNINDEXED, kind UNINDEXED, text);
 
 CREATE VIEW IF NOT EXISTS file_touches AS
   SELECT session_id,
@@ -110,7 +114,8 @@ export function openDb(file = defaultDbPath()): Db {
   if (version > 0 && version < SCHEMA_VERSION) {
     // Everything here is derived from the agents' own logs, so an older layout is rebuilt, not migrated.
     db.exec(`DROP VIEW IF EXISTS file_touches; DROP TABLE IF EXISTS events; DROP TABLE IF EXISTS sessions;
-      DROP TABLE IF EXISTS ingest_files; DROP TABLE IF EXISTS parse_warnings; DROP TABLE IF EXISTS meta;`);
+      DROP TABLE IF EXISTS ingest_files; DROP TABLE IF EXISTS parse_warnings; DROP TABLE IF EXISTS meta;
+      DROP TABLE IF EXISTS search;`);
   }
   db.exec(SCHEMA);
   db.pragma(`user_version = ${SCHEMA_VERSION}`);
@@ -142,11 +147,14 @@ export function replaceSession(
 ): void {
   const { sourceFile, session, events, warnings } = args;
   const insertEvent = db.prepare(`INSERT INTO events
-    (id, session_id, seq, ts, kind, summary, payload, raw, tokens_in, tokens_out, cache_read, cache_write, usage_extra, model, risk_level, risk_rules)
-    VALUES (@id, @session_id, @seq, @ts, @kind, @summary, @payload, @raw, @tokens_in, @tokens_out, @cache_read, @cache_write, @usage_extra, @model, @risk_level, @risk_rules)`);
+    (id, session_id, seq, ts, kind, summary, payload, raw, tokens_in, tokens_out, cache_read, cache_write, usage_extra, est_cost_usd, model, risk_level, risk_rules)
+    VALUES (@id, @session_id, @seq, @ts, @kind, @summary, @payload, @raw, @tokens_in, @tokens_out, @cache_read, @cache_write, @usage_extra, @est_cost_usd, @model, @risk_level, @risk_rules)`);
+  const insertSearch = db.prepare("INSERT INTO search (session_id, kind, text) VALUES (?, ?, ?)");
   const insertWarning = db.prepare("INSERT INTO parse_warnings (source_file, file, line, message) VALUES (?, ?, ?, ?)");
 
   db.transaction(() => {
+    const old = db.prepare("SELECT id FROM sessions WHERE source_file = ? OR id = ?").all(sourceFile, session?.id ?? "") as { id: string }[];
+    for (const { id } of old) db.prepare("DELETE FROM search WHERE session_id = ?").run(id);
     db.prepare("DELETE FROM sessions WHERE source_file = ?").run(sourceFile);
     db.prepare("DELETE FROM parse_warnings WHERE source_file = ?").run(sourceFile);
     if (session) {
@@ -166,9 +174,14 @@ export function replaceSession(
           payload: JSON.stringify(e.payload),
           raw: JSON.stringify(e.raw ?? null),
           usage_extra: e.usage_extra ? JSON.stringify(e.usage_extra) : null,
+          est_cost_usd: e.est_cost_usd ?? null,
           risk_rules: JSON.stringify(e.risk_rules),
         });
+        const text =
+          e.kind === "user_message" && e.payload.meta !== true ? e.payload.text : e.kind === "shell_command" ? e.payload.command : null;
+        if (typeof text === "string" && text) insertSearch.run(session.id, e.kind, text);
       }
+      insertSearch.run(session.id, "title", session.title);
     }
     for (const w of warnings) insertWarning.run(sourceFile, w.file, w.line, w.message);
     db.prepare(`INSERT INTO ingest_files (source_file, source, fingerprint, session_id, ingested_at)
@@ -187,10 +200,21 @@ export interface SessionRow extends Session {
 export interface ListOptions {
   /** ISO timestamp or relative duration like "7d"; matches sessions active at or after it. */
   since?: string;
+  /** Sessions that started before this ISO timestamp or date. */
+  until?: string;
   project?: string;
   risk?: RiskLevel;
   source?: string;
+  /** Full-text search over titles, prompts and shell commands. */
+  q?: string;
   limit?: number;
+  offset?: number;
+}
+
+/** Turn free text into a safe FTS5 query: every word must match, as a prefix. */
+export function ftsQuery(text: string): string | null {
+  const words = text.match(/[\p{L}\p{N}_]+/gu);
+  return words?.length ? words.map((w) => `"${w}"*`).join(" ") : null;
 }
 
 const RISK_ORDER: RiskLevel[] = ["none", "low", "medium", "high", "critical"];
@@ -222,13 +246,24 @@ export function listSessions(db: Db, opts: ListOptions = {}): SessionRow[] {
     where.push("source = @source");
     params.source = opts.source;
   }
+  if (opts.until) {
+    where.push("COALESCE(started_at, '') < @until");
+    params.until = parseSince(opts.until);
+  }
   if (opts.risk) {
     // --risk high means "high or worse"
     const levels = RISK_ORDER.slice(RISK_ORDER.indexOf(opts.risk));
     where.push(`max_risk IN (${levels.map((l) => `'${l}'`).join(",")})`);
   }
+  if (opts.q !== undefined) {
+    const q = ftsQuery(opts.q);
+    if (!q) return [];
+    where.push("id IN (SELECT session_id FROM search WHERE search MATCH @q)");
+    params.q = q;
+  }
+  const limit = opts.limit ? `LIMIT ${Math.trunc(opts.limit)} OFFSET ${Math.trunc(opts.offset ?? 0)}` : "";
   const sql = `SELECT * FROM sessions ${where.length ? "WHERE " + where.join(" AND ") : ""}
-    ORDER BY COALESCE(started_at, '') DESC ${opts.limit ? "LIMIT " + Math.trunc(opts.limit) : ""}`;
+    ORDER BY COALESCE(started_at, '') DESC ${limit}`;
   return db.prepare(sql).all(params) as SessionRow[];
 }
 
@@ -263,7 +298,7 @@ function fromRow(r: EventRow): NormalizedEvent {
 }
 
 const EVENT_COLS = ["id", "session_id", "seq", "ts", "kind", "summary", "payload", "tokens_in", "tokens_out", "cache_read",
-  "cache_write", "usage_extra", "model", "risk_level", "risk_rules"];
+  "cache_write", "usage_extra", "est_cost_usd", "model", "risk_level", "risk_rules"];
 const eventCols = (prefix = "") => EVENT_COLS.map((c) => prefix + c).join(", ") + ", 'null' AS raw";
 
 export function getEvents(db: Db, sessionId: string, opts: { withRaw?: boolean; kinds?: EventKind[] } = {}): NormalizedEvent[] {
@@ -273,6 +308,11 @@ export function getEvents(db: Db, sessionId: string, opts: { withRaw?: boolean; 
     .prepare(`SELECT ${cols} FROM events WHERE session_id = ? ${kindFilter} ORDER BY seq`)
     .all(sessionId, ...(opts.kinds ?? [])) as EventRow[];
   return rows.map(fromRow);
+}
+
+export function getEvent(db: Db, id: string, opts: { withRaw?: boolean } = {}): NormalizedEvent | undefined {
+  const row = db.prepare(`SELECT ${opts.withRaw ? "*" : eventCols()} FROM events WHERE id = ?`).get(id) as EventRow | undefined;
+  return row ? fromRow(row) : undefined;
 }
 
 export interface RiskRow extends NormalizedEvent {
@@ -303,12 +343,12 @@ export function listRisks(db: Db, opts: { since?: string; level?: RiskLevel } = 
 export function updateDerived(
   db: Db,
   sessionId: string,
-  events: Pick<NormalizedEvent, "id" | "risk_level" | "risk_rules">[],
+  events: Pick<NormalizedEvent, "id" | "risk_level" | "risk_rules" | "est_cost_usd">[],
   session: { max_risk: RiskLevel; est_cost_usd: number | null; unpriced_models: string[] },
 ): void {
-  const upd = db.prepare("UPDATE events SET risk_level = ?, risk_rules = ? WHERE id = ?");
+  const upd = db.prepare("UPDATE events SET risk_level = ?, risk_rules = ?, est_cost_usd = ? WHERE id = ?");
   db.transaction(() => {
-    for (const e of events) upd.run(e.risk_level, JSON.stringify(e.risk_rules), e.id);
+    for (const e of events) upd.run(e.risk_level, JSON.stringify(e.risk_rules), e.est_cost_usd ?? null, e.id);
     db.prepare("UPDATE sessions SET max_risk = ?, est_cost_usd = ?, unpriced_models = ? WHERE id = ?").run(
       session.max_risk, session.est_cost_usd, JSON.stringify(session.unpriced_models), sessionId,
     );
@@ -348,4 +388,47 @@ export function sourceCounts(db: Db): { source: string; sessions: number; events
   return db
     .prepare("SELECT source, COUNT(*) AS sessions, COALESCE(SUM(event_count), 0) AS events FROM sessions GROUP BY source")
     .all() as { source: string; sessions: number; events: number }[];
+}
+
+export function listProjects(db: Db): { project_path: string; sessions: number }[] {
+  return db
+    .prepare("SELECT project_path, COUNT(*) AS sessions FROM sessions WHERE project_path IS NOT NULL GROUP BY project_path ORDER BY sessions DESC")
+    .all() as { project_path: string; sessions: number }[];
+}
+
+export interface CostSummary {
+  total_usd: number;
+  /** Sessions left out of totals because a model had no price. */
+  unpriced_sessions: number;
+  by_day: { day: string; usd: number }[];
+  by_project: { project_path: string | null; usd: number; sessions: number }[];
+  by_model: { model: string; usd: number; tokens: number }[];
+  top_sessions: SessionRow[];
+}
+
+/** Cost breakdowns from per-event estimates. Days are UTC dates of the events. */
+export function costSummary(db: Db, opts: { since?: string } = {}): CostSummary {
+  const since = opts.since ? parseSince(opts.since) : "";
+  const evWhere = "e.est_cost_usd IS NOT NULL AND COALESCE(e.ts, '') >= @since";
+  const p = { since };
+  const by_day = db
+    .prepare(`SELECT substr(e.ts, 1, 10) AS day, SUM(e.est_cost_usd) AS usd FROM events e
+      WHERE ${evWhere} AND e.ts IS NOT NULL GROUP BY day ORDER BY day`)
+    .all(p) as { day: string; usd: number }[];
+  const by_model = db
+    .prepare(`SELECT e.model AS model, SUM(e.est_cost_usd) AS usd,
+        SUM(COALESCE(e.tokens_in,0) + COALESCE(e.tokens_out,0) + COALESCE(e.cache_read,0) + COALESCE(e.cache_write,0)) AS tokens
+      FROM events e WHERE ${evWhere} AND e.model IS NOT NULL AND e.est_cost_usd > 0 GROUP BY e.model ORDER BY usd DESC`)
+    .all(p) as { model: string; usd: number; tokens: number }[];
+  const sWhere = "COALESCE(ended_at, started_at, '') >= @since";
+  const by_project = db
+    .prepare(`SELECT project_path, SUM(est_cost_usd) AS usd, COUNT(*) AS sessions FROM sessions
+      WHERE ${sWhere} AND est_cost_usd IS NOT NULL GROUP BY project_path ORDER BY usd DESC`)
+    .all(p) as { project_path: string | null; usd: number; sessions: number }[];
+  const top_sessions = db
+    .prepare(`SELECT * FROM sessions WHERE ${sWhere} AND est_cost_usd IS NOT NULL ORDER BY est_cost_usd DESC LIMIT 10`)
+    .all(p) as SessionRow[];
+  const unpriced_sessions = (db.prepare(`SELECT COUNT(*) AS n FROM sessions WHERE ${sWhere} AND est_cost_usd IS NULL`).get(p) as { n: number }).n;
+  const total_usd = by_project.reduce((a, r) => a + r.usd, 0);
+  return { total_usd, unpriced_sessions, by_day, by_project, by_model, top_sessions };
 }

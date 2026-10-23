@@ -1,6 +1,6 @@
 // Incremental ingestion: discover files, skip unchanged ones, re-parse the rest.
 import { createHash } from "node:crypto";
-import { loadPrices, sessionCost, type Prices } from "./cost.js";
+import { eventCost, loadPrices, sessionCost, type Prices } from "./cost.js";
 import { getEvents, getFingerprint, getMeta, listSessions, replaceSession, setMeta, updateDerived, type Db } from "./db.js";
 import type { NormalizedEvent, ParseWarning, Session, SourceAdapter } from "./model.js";
 import { applyRisks, RULES } from "./risk.js";
@@ -70,6 +70,7 @@ export async function ingest(db: Db, opts: IngestOptions): Promise<IngestReport>
           }
         }
         applyRisks(events, session);
+        for (const e of events) e.est_cost_usd = eventCost(e, prices).usd;
         const cost = sessionCost(events, prices);
         if (session) session.est_cost_usd = cost.usd;
         replaceSession(db, { sourceFile: file, source: adapter.id, fingerprint, session, events, warnings, unpricedModels: cost.unpricedModels });
@@ -100,6 +101,7 @@ export function recomputeDerived(db: Db, prices: Prices): number {
   for (const s of listSessions(db)) {
     const events = getEvents(db, s.id);
     applyRisks(events, s);
+    for (const e of events) e.est_cost_usd = eventCost(e, prices).usd;
     const cost = sessionCost(events, prices);
     updateDerived(db, s.id, events, { max_risk: s.max_risk, est_cost_usd: cost.usd, unpriced_models: cost.unpricedModels });
     n++;

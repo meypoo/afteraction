@@ -5,7 +5,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { claudeCodeAdapter } from "../src/adapters/claude-code.js";
 import {
+  costSummary,
   fileTouches,
+  getEvent,
+  listProjects,
   getEvents,
   ingest,
   listRisks,
@@ -156,6 +159,39 @@ describe("queries", () => {
     expect(listSessions(db, { since: "2026-02-01T00:00:00Z" })).toHaveLength(0);
     expect(listSessions(db, { risk: "high" })).toHaveLength(0);
     expect(listSessions(db, { risk: "none" })).toHaveLength(1);
+  });
+
+  it("searches titles, prompts and commands with full-text search", () => {
+    expect(listSessions(db, { q: "npm" })).toHaveLength(1); // shell command "npm test"
+    expect(listSessions(db, { q: "scripts/check" })).toHaveLength(1); // subagent command, word-split
+    expect(listSessions(db, { q: "content placeholder" })).toHaveLength(1); // prompt text
+    expect(listSessions(db, { q: "kubernetes" })).toHaveLength(0);
+    expect(listSessions(db, { q: '"); DROP' })).toHaveLength(0); // hostile input is just words
+    expect(listSessions(db, { q: "   " })).toHaveLength(0);
+  });
+
+  it("filters by start date upper bound", () => {
+    expect(listSessions(db, { until: "2026-01-15T00:00:00Z" })).toHaveLength(0);
+    expect(listSessions(db, { until: "2026-01-16" })).toHaveLength(1);
+  });
+
+  it("summarises costs by day, project and model", () => {
+    const c = costSummary(db);
+    expect(c.total_usd).toBeCloseTo(3.14159155, 6);
+    expect(c.unpriced_sessions).toBe(0);
+    expect(c.by_day.reduce((a, d) => a + d.usd, 0)).toBeCloseTo(3.14159155, 6);
+    expect(c.by_day.map((d) => d.day)).toEqual(["2026-01-15", "2026-01-16"]);
+    expect(c.by_model.map((m) => m.model).sort()).toEqual(["claude-opus-5", "claude-opus-5-5", "claude-sonnet-5-5"]);
+    expect(c.by_model.reduce((a, m) => a + m.usd, 0)).toBeCloseTo(3.14159155, 6);
+    expect(c.by_project).toEqual([{ project_path: "C:\\Users\\USER\\projects\\demo-app", usd: expect.closeTo(3.14159155, 6), sessions: 1 }]);
+    expect(c.top_sessions.map((s) => s.id)).toEqual([DEMO_ID]);
+    expect(listProjects(db)).toEqual([{ project_path: "C:\\Users\\USER\\projects\\demo-app", sessions: 1 }]);
+  });
+
+  it("fetches one event, with raw only on request", () => {
+    expect(getEvent(db, `${DEMO_ID}:2`)).toMatchObject({ kind: "shell_command", raw: null });
+    expect(getEvent(db, `${DEMO_ID}:2`, { withRaw: true })!.raw).toMatchObject({ tool_use: { type: "assistant" } });
+    expect(getEvent(db, "nope")).toBeUndefined();
   });
 
   it("resolves full ids, bare uuids and unique prefixes", () => {
