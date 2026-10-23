@@ -89,7 +89,7 @@ masked secrets, `esc` goes back and `q` quits. It needs an interactive terminal;
 | Agent | Logs read from | Status |
 |---|---|---|
 | Claude Code | `~/.claude/projects/` | Supported, including subagents |
-| Codex CLI | `~/.codex/sessions/` | Planned |
+| Codex (CLI and Desktop) | `~/.codex/sessions/` | Supported; sessions Codex imported from other agents are skipped |
 
 ## Commands
 
@@ -97,7 +97,7 @@ masked secrets, `esc` goes back and `q` quits. It needs an interactive terminal;
 flightrec                          # ingest new logs, then open the UI
 flightrec --demo                   # sample sessions, nothing saved
 flightrec ingest [--full]          # ingest only
-flightrec list [--since 7d] [--project <path>] [--risk high] [--search <text>]
+flightrec list [--since 7d] [--project <path>] [--agent codex] [--risk high] [--search <text>]
 flightrec show <session-id>        # timeline in the terminal
 flightrec tui [session-id]         # full-screen browser in the terminal (j/k, r for next risk; works over SSH)
 flightrec risks [--since 7d]       # flagged events, grouped by rule

@@ -17,13 +17,26 @@ async function cli(...args: string[]) {
   return { code, out: out.join("\n"), err: err.join("\n") };
 }
 
+const ENV_KEYS = ["HOME", "USERPROFILE", "CODEX_HOME"] as const;
+let savedEnv: Partial<Record<(typeof ENV_KEYS)[number], string>>;
+
 beforeEach(() => {
   tmp = mkdtempSync(path.join(os.tmpdir(), "flightrec-cli-"));
   cpSync(path.join(FIXTURES, "projects"), path.join(tmp, "projects"), { recursive: true });
   dbArgs = ["--db", path.join(tmp, "flightrec.db"), "--source", `claude=${path.join(tmp, "projects")}`];
+  // Keep adapters without a --source away from the real agent logs in the user's home.
+  savedEnv = Object.fromEntries(ENV_KEYS.map((k) => [k, process.env[k]]));
+  process.env.HOME = process.env.USERPROFILE = path.join(tmp, "home");
+  delete process.env.CODEX_HOME;
 });
 
-afterEach(() => rmSync(tmp, { recursive: true, force: true }));
+afterEach(() => {
+  for (const k of ENV_KEYS) {
+    if (savedEnv[k] === undefined) delete process.env[k];
+    else process.env[k] = savedEnv[k];
+  }
+  rmSync(tmp, { recursive: true, force: true });
+});
 
 /** Add a pipe-to-shell command whose output leaks a key to the demo session. */
 function appendRisky() {
@@ -67,6 +80,20 @@ describe("flightrec cli", () => {
     expect((await cli("list", "--risk", "high")).out).toMatch(/No sessions found/);
     const json = JSON.parse((await cli("list", "--json")).out) as { id: string }[];
     expect(json.map((s) => s.id)).toEqual(["claude:11111111-2222-4333-8444-555555555555"]);
+  });
+
+  it("ingests Codex rollouts and filters the list by agent", async () => {
+    const codex = path.resolve(FIXTURES, "../codex");
+    dbArgs.push("--source", `codex=${codex}`);
+    const ingest = await cli("ingest");
+    expect(ingest.out).toMatch(/Ingested 4 files: 4 parsed/); // the imported rollout yields no session
+    const ids = async (agent?: string) =>
+      (JSON.parse((await cli("list", "--json", ...(agent ? ["--agent", agent] : []))).out) as { id: string }[]).map((s) => s.id.split(":")[0]);
+    expect((await ids()).sort()).toEqual(["claude", "codex", "codex"]);
+    expect(await ids("codex")).toEqual(["codex", "codex"]);
+    expect(await ids("claude")).toEqual(["claude"]);
+    expect((await cli("list")).out).toContain("Codex");
+    expect((await cli("list", "--agent", "cursor")).code).not.toBe(0);
   });
 
   it("rejects bad filter values", async () => {

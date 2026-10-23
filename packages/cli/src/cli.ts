@@ -250,14 +250,15 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
     .description("list ingested sessions, newest first")
     .option("--since <when>", "only sessions active since, e.g. 7d, 24h, 2026-01-31")
     .option("--project <path>", "only sessions whose project path contains this")
+    .addOption(new Option("--agent <name>", "only sessions from this agent").choices(Object.keys(ADAPTERS)))
     .addOption(new Option("--risk <level>", "only sessions at or above this risk").choices(RISKS))
     .option("--search <text>", "only sessions whose prompts, messages or commands match")
     .option("--limit <n>", "max rows", (v) => Number.parseInt(v, 10), 50)
     .option("--json", "print JSON")
-    .action((opts: { since?: string; project?: string; risk?: RiskLevel; search?: string; limit: number; json?: boolean }, cmd: Command) => {
+    .action((opts: { since?: string; project?: string; agent?: string; risk?: RiskLevel; search?: string; limit: number; json?: boolean }, cmd: Command) => {
       let rows;
       try {
-        rows = listSessions(openFor(cmd), { ...opts, q: opts.search });
+        rows = listSessions(openFor(cmd), { ...opts, source: opts.agent ? ADAPTERS[opts.agent]!.id : undefined, q: opts.search });
       } catch (e) {
         throw new CliError(e instanceof Error ? e.message : String(e));
       }

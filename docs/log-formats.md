@@ -9,7 +9,7 @@ observation, it says so.
 | Claude Code | 27 files, 56,416 lines, versions `2.1.229` – `2.1.304`, Windows 11, entrypoints `cli` and `claude-desktop`. 0 lines failed to parse as JSON. |
 | OpenCode | Schema only: `1.18.29` installed, database has 0 sessions (2026-10-23). |
 | Google Antigravity | Transcripts encrypted on disk; only metadata readable (2026-10-23). |
-| Codex CLI | **Not inspected.** Codex is not installed on this machine: no `~/.codex`, no `CODEX_HOME`, no `codex` on PATH, nothing in either WSL distro. No format is documented below until real logs exist. |
+| Codex | 24 files from Codex Desktop `0.163.0-alpha.11.2`, Windows 11, inspected 2026-10-23. 22 were imports of Claude Code sessions. No Codex CLI rollouts on this machine; CLI-only shapes are from Codex's open-source schema. |
 
 ---
 
@@ -212,10 +212,131 @@ prompts and request bodies and are large.
 
 ---
 
-## Codex CLI
+## Codex (CLI and Desktop)
 
-Not available on this machine. The spec's location `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl`
-is unverified. The Codex adapter (M4) needs real logs before its format can be documented here.
+Inspected on 2026-10-23 on Windows 11: 24 rollout files from **Codex Desktop**, `cli_version`
+`0.163.0-alpha.11.2`, `originator: "Codex Desktop"`, `source: "vscode"`. No Codex CLI rollouts were on
+the machine. The CLI rows below (`function_call` shells, `exec_command_end`, `patch_apply_end`,
+`token_count`, the pre-envelope format) come from Codex's open-source rollout schema, not from observed
+files; the fixtures for them are hand-written and marked as such.
+
+### Locations
+
+```
+~/.codex/                         # or $CODEX_HOME
+  sessions/YYYY/MM/DD/rollout-<local time>-<thread id>.jsonl   # one thread per file
+  archived_sessions/rollout-*.jsonl                            # inference: archived threads move here
+  session_index.jsonl, *.sqlite, plugins/, …                   # app state, not logs: ignore
+  external_agent_session_imports.json                          # see "Imported sessions" below
+```
+
+- The spec's location is correct. The folder date and file-name time are **local** time
+  (`rollout-2026-10-23T21-12-21-…` for a thread created at 12:12:21Z in Asia/Tokyo); line timestamps are UTC.
+- The thread id (a UUIDv7) is the file-name suffix and `session_meta.payload.id`.
+- Discovery walks only `sessions/` and `archived_sessions/` when the root has them, because `~/.codex`
+  also holds large plugin and cache folders.
+
+### Imported sessions (important)
+
+Codex Desktop can import other agents' sessions. On this machine 22 of 24 rollouts were copies of
+**Claude Code** transcripts, listed in `~/.codex/external_agent_session_imports.json`
+(`source_path` → `imported_thread_id`). Ingesting them would count those sessions twice.
+
+An imported rollout's turns all have `turn_id: "external-import-turn-N"` in `task_started` (and in
+`item_completed`); their `response_item`s carry no turn id, so the adapter tracks the current turn from
+`task_started`. Lines inside import turns are skipped. A file with nothing else yields no session.
+If someone continues an imported thread in Codex, only the new turns are kept.
+
+### Line envelope
+
+Every line is `{"timestamp": ISO-8601 UTC, "type": …, "payload": {…}}`. Desktop lines also have an
+`ordinal`. Line types seen:
+
+| `type` | Count (24 files) | Use |
+|---|---|---|
+| `session_meta` | 1 per file, first line | `id`, `cwd`, `cli_version`, `originator`, `git.branch`. Also `base_instructions` (large; dropped from `raw`). |
+| `turn_context` | 1 per turn | `model` (e.g. `gpt-5.6-terra`), `cwd`, `approval_policy`, `sandbox_policy`. |
+| `response_item` | most lines | The model conversation, see below. |
+| `event_msg` | many | UI stream; mostly mirrors response items. Used for command results, errors and usage. |
+| `token_usage_record` | 1 per model response (Desktop) | `usage` for that response. |
+| `world_state` | a few | App state snapshots (AGENTS.md text, approved command prefixes). Ignored. |
+| `compacted` | CLI schema only | Summary that replaced earlier history; kept as a `user_message` with `compact_summary`. |
+
+Early CLI rollouts (schema) had no envelope: a bare `{id, timestamp, instructions, git}` first line,
+then bare response items and `{"record_type": "state"}` lines. The adapter reads those too.
+
+### `response_item` payloads
+
+| `payload.type` | Notes |
+|---|---|
+| `message` | `role` `user` / `assistant` / `developer`. Content parts `input_text` / `output_text` / `input_image`. Assistant messages have `phase` (`commentary`, `final_answer`). |
+| `reasoning` | `summary: [{type: "summary_text", text}]`, `encrypted_content`. Of 13 real items, 9 had an empty summary; none had readable full text. |
+| `custom_tool_call` / `custom_tool_call_output` | Free-form tool input. In Desktop the only one seen is `exec` (below). In the CLI schema `apply_patch` uses it. |
+| `function_call` / `function_call_output` | JSON `arguments` string. CLI shells: `shell` / `container.exec` / `shell_command` / `exec_command` with `command` (argv array or string) or `cmd`, and `workdir`. |
+| `local_shell_call` | CLI schema: `action: {type: "exec", command: [...], working_directory}`. |
+| `web_search_call` | CLI schema: `action: {type: "search", query}`. |
+| `additional_tools` | Tool definitions sent to the model. Ignored. |
+
+**User messages that are not typed by the person.** Desktop marks each message with
+`internal_chat_message_metadata_passthrough.content_item_kinds`; the typed prompt is `user.text`.
+Others seen: `agents_md.instructions`, `environments.environment_context`,
+`additional_content.codex_apps_open_page`. Without that field (CLI), injected context starts with
+`<environment_context>`, `<user_instructions>` or `# AGENTS.md instructions`. Both become
+`user_message` with `meta: true`; the title is the first typed prompt.
+
+**Desktop `exec` scripts.** Codex Desktop calls tools from a JavaScript cell:
+`custom_tool_call {name: "exec", input: "const r = await tools.exec_command({cmd, workdir}); text(r.output);"}`.
+The commands and patches the script ran are logged separately, after the call and before its output, as
+`event_msg {type: "item_completed", item: {type: "CommandExecution" | "FileChange"}}`. The adapter turns
+those items into `shell_command` / file events (marked `via: "exec"`) and drops the script call itself;
+a script that ran no command (e.g. listing tools) stays a `tool_call` named `exec`.
+
+`CommandExecution`: `command` argv (`[".../pwsh.exe", "-Command", "<script>"]`), `cwd` as a
+`file:///D:/…` URL, `parsed_cmd`, `status` (`completed`, inferred also `failed`/`declined`),
+`aggregated_output`, `exit_code`, `duration {secs, nanos}`.
+
+`FileChange`: `changes: {"<abs path>": {type: "add", content} | {type: "update", unified_diff, move_path} | {type: "delete"}}`.
+Only `add` was observed; the other shapes are inferred from the CLI schema.
+
+`item_completed` also carries `UserMessage`, `AgentMessage` and `Reasoning` items. They duplicate
+response items and are ignored.
+
+### Results and usage
+
+- CLI shell results: `function_call_output.output` is either a JSON string
+  `{"output": …, "metadata": {"exit_code", "duration_seconds"}}` or plain text
+  `Exit code: N\nWall time: … seconds\nOutput:\n…`. `event_msg/exec_command_end` (same `call_id`) has
+  `exit_code`, `aggregated_output` and `duration`, and wins when present.
+- CLI patch results: `event_msg/patch_apply_end {call_id, success, stdout, stderr}`.
+- Usage, Desktop: `token_usage_record.usage` = `{input_tokens, cached_input_tokens,
+  cache_write_input_tokens, output_tokens, reasoning_output_tokens, total_tokens}`, one per response.
+  `event_msg/token_count` repeats the same numbers (`last_token_usage`) and is ignored when records exist.
+- Usage, CLI: `event_msg/token_count.info.last_token_usage`; `info` can be `null`, and a count can repeat
+  with unchanged `total_token_usage`, which is skipped.
+- OpenAI's `input_tokens` **includes** `cached_input_tokens`. The adapter stores
+  `tokens_in = input − cached` and `cache_read = cached`, matching the Claude Code meaning.
+  `reasoning_output_tokens` is part of `output_tokens`.
+- `prices.json` has no OpenAI models yet, so Codex sessions show no cost estimate.
+
+### Mapping
+
+| Source | Event |
+|---|---|
+| typed user `message` | `user_message` |
+| injected user `message` | `user_message`, `meta: true` |
+| `developer` / `system` `message` | not an event |
+| assistant `message` | `assistant_message` |
+| `reasoning` | `thinking` (`summary_only` when only the summary exists, `redacted` when empty) |
+| shell `function_call` / `local_shell_call` / `CommandExecution` | `shell_command` |
+| `apply_patch` / `FileChange` add | `file_write`, `operation: "create"` (one event per file) |
+| `apply_patch` / `FileChange` update | `file_edit` with `unified_diff` |
+| `apply_patch` / `FileChange` delete | `file_write`, `operation: "delete"` |
+| `web_search_call` | `tool_call` named `web_search` (`web_fetch` if it has a URL) |
+| other tool calls | `tool_call` |
+| output with no known call | `tool_result` |
+| `event_msg/turn_aborted`, `error`, `stream_error` | `error` |
+| unknown line or response item type | `unknown` (with warning) |
+| unknown `event_msg` type | warning only, once per type per file |
 
 ---
 

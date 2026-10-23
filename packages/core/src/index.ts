@@ -6,11 +6,14 @@ export * from "./risk.js";
 export * from "./cost.js";
 export * from "./receipt.js";
 export { claudeCodeAdapter, defaultClaudeRoot } from "./adapters/claude-code.js";
+export { codexAdapter, defaultCodexRoot, parseApplyPatch } from "./adapters/codex.js";
 
 import { claudeCodeAdapter } from "./adapters/claude-code.js";
+import { codexAdapter } from "./adapters/codex.js";
 import type { SourceAdapter } from "./model.js";
 
 /** Adapters by the name used in `--source name=path`. */
 export const ADAPTERS: Record<string, SourceAdapter> = {
   claude: claudeCodeAdapter,
+  codex: codexAdapter,
 };
