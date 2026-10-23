@@ -263,12 +263,14 @@ function fileDrafts(changes: FileChange[], base: Omit<Draft, "kind" | "summary" 
 
 function toTokens(u: Obj): Tokens {
   // OpenAI counts cached tokens inside input_tokens; the model stores them separately.
+  // Inference: cache writes are counted inside input_tokens the same way (every real log had 0 writes).
   const cached = num(u.cached_input_tokens);
+  const written = num(u.cache_write_input_tokens);
   return {
-    in: Math.max(0, num(u.input_tokens) - cached),
+    in: Math.max(0, num(u.input_tokens) - cached - written),
     out: num(u.output_tokens),
     cacheRead: cached,
-    cacheWrite: num(u.cache_write_input_tokens),
+    cacheWrite: written,
   };
 }
 

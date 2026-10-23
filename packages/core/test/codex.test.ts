@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { codexAdapter, parseApplyPatch } from "../src/adapters/codex.js";
 import type { NormalizedEvent, ParseWarning, Session } from "../src/model.js";
 import { applyRisks } from "../src/risk.js";
+import { loadPrices, sessionCost } from "../src/cost.js";
 
 const FIXTURES = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../fixtures/codex");
 const CLI_ID = "0198a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b";
@@ -170,6 +171,12 @@ describe("codex adapter: Codex Desktop rollout", () => {
       model: "gpt-5.6-terra", title: "Add a SECURITY.md and check git status.",
       total_input_tokens: 12000, total_cache_read_tokens: 112500, total_output_tokens: 340,
     });
+  });
+
+  it("gets a cost estimate from the OpenAI prices", async () => {
+    const { events } = await collect(DESKTOP);
+    // gpt-5.6-terra: 12,000 input × $2 + 112,500 cached × $0.20 + 340 output × $12, per 1M tokens.
+    expect(sessionCost(events, loadPrices()).usd).toBeCloseTo((12_000 * 2 + 112_500 * 0.2 + 340 * 12) / 1e6, 8);
   });
 
   it("feeds the risk rules: a recursive delete inside a PowerShell command is flagged", async () => {

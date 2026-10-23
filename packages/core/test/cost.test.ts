@@ -29,7 +29,8 @@ describe("priceFor", () => {
     expect(priceFor("claude-opus-5-5", prices)).toBe(prices.models["claude-opus-5-5"]);
     expect(priceFor("claude-haiku-4-5-20251001", prices)).toBe(prices.models["claude-haiku-4-5"]);
     expect(priceFor("claude-opus-5-5-fancy", prices)).toBeNull();
-    expect(priceFor("gpt-5", prices)).toBeNull();
+    expect(priceFor("gpt-5", prices)).toBe(prices.models["gpt-5"]);
+    expect(priceFor("gpt-5-codex", prices)).toBeNull(); // not on OpenAI's price list
     expect(priceFor(null, prices)).toBeNull();
   });
 });
@@ -58,6 +59,18 @@ describe("eventCost", () => {
     expect(eventCost(us, prices).usd).toBeCloseTo(2 * 1.1);
     const web = ev("claude-sonnet-5-5", { usage_extra: { web_search_requests: 3 } });
     expect(eventCost(web, prices).usd).toBeCloseTo(0.03);
+  });
+
+  it("prices OpenAI models from the published Standard rates, including cached input and cache writes", () => {
+    // gpt-5.6-terra: $2 input, $0.20 cached, $2.50 30-minute write, $12 output.
+    const short = ev("gpt-5.6-terra", { tokens_in: 50_000, cache_read: 50_000, cache_write: 50_000, tokens_out: M });
+    expect(eventCost(short, prices).usd).toBeCloseTo((50_000 * 2 + 50_000 * 0.2 + 50_000 * 2.5) / M + 12);
+    // Above 272K prompt tokens the long-context rates apply: $4 input, $0.40 cached, $18 output.
+    const long = ev("gpt-5.6-terra", { tokens_in: 100_000, cache_read: 200_000, tokens_out: 1000 });
+    expect(eventCost(long, prices).usd).toBeCloseTo((100_000 * 4 + 200_000 * 0.4 + 1000 * 18) / M);
+    // No cached-input price listed (pro models): cached tokens cost full input.
+    expect(eventCost(ev("gpt-5-pro", { cache_read: 100_000 }), prices).usd).toBeCloseTo(1.5);
+    expect(eventCost(ev("gpt-5.3-codex", { tokens_in: 100_000, cache_read: 100_000, tokens_out: M }), prices).usd).toBeCloseTo(0.175 + 0.0175 + 14);
   });
 
   it("returns null for unknown models and for fast mode without fast prices", () => {

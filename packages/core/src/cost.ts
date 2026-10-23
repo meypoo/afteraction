@@ -9,7 +9,9 @@ export interface Rates {
   input: number;
   output: number;
   cache_read: number;
+  /** Short-lived cache writes: Anthropic's 5-minute cache, OpenAI's 30-minute cache. */
   cache_write_5m: number;
+  /** Long-lived cache writes: Anthropic's 1-hour cache, OpenAI's 12-hour cache. */
   cache_write_1h: number;
 }
 

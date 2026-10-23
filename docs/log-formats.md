@@ -314,9 +314,14 @@ response items and are ignored.
 - Usage, CLI: `event_msg/token_count.info.last_token_usage`; `info` can be `null`, and a count can repeat
   with unchanged `total_token_usage`, which is skipped.
 - OpenAI's `input_tokens` **includes** `cached_input_tokens`. The adapter stores
-  `tokens_in = input − cached` and `cache_read = cached`, matching the Claude Code meaning.
+  `tokens_in = input − cached − cache_write` and `cache_read = cached`, matching the Claude Code meaning.
+  That cache writes are also inside `input_tokens` is an inference: every real record had 0 writes.
   `reasoning_output_tokens` is part of `output_tokens`.
-- `prices.json` has no OpenAI models yet, so Codex sessions show no cost estimate.
+- Prices: `prices.json` has OpenAI's Standard-tier text models (`openai_source`, checked 2026-10-23).
+  OpenAI's 30-minute and 12-hour cache-write prices go in `cache_write_5m` / `cache_write_1h`; logs don't say
+  which cache was written, so writes are priced at the 30-minute rate. Models with no cached or write price
+  are charged the input rate for those tokens. Above 272K prompt tokens the long-context rates apply.
+  `gpt-5-codex` and other Codex models missing from OpenAI's page stay unpriced rather than guessed.
 
 ### Mapping
 
