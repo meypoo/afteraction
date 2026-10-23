@@ -7,6 +7,7 @@ import os from "node:os";
 import path from "node:path";
 import {
   ADAPTERS,
+  AGENT_LABELS,
   buildReceipt,
   COST_LABEL,
   defaultDbPath,
@@ -157,7 +158,7 @@ async function runIngest(db: Db, opts: GlobalOpts, full: boolean, io: Io): Promi
   return report;
 }
 
-const AGENT_LABEL: Record<string, string> = { claude_code: "Claude Code", codex: "Codex" };
+const AGENT_LABEL: Record<string, string> = AGENT_LABELS;
 
 const fmtCost = (usd: number | null) => (usd === null ? "—" : usd > 0 && usd < 0.01 ? "<$0.01" : `$${usd.toFixed(2)}`);
 

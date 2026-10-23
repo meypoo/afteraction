@@ -1,0 +1,484 @@
+{
+  "session": {
+    "id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001",
+    "source": "antigravity",
+    "project_path": "c:\\Users\\USER\\projects\\demo-app",
+    "git_branch": null,
+    "started_at": "2026-01-15T10:00:00.000Z",
+    "ended_at": "2026-01-15T11:00:00.500Z",
+    "model": null,
+    "title": "Fix login form",
+    "total_input_tokens": 0,
+    "total_output_tokens": 0,
+    "total_cache_read_tokens": 0,
+    "total_cache_write_tokens": 0,
+    "est_cost_usd": null,
+    "max_risk": "none",
+    "source_file": "<fixture>",
+    "source_hash": "<hash>"
+  },
+  "events": [
+    {
+      "id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001:0",
+      "session_id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001",
+      "seq": 0,
+      "ts": "2026-01-15T10:00:00Z",
+      "kind": "user_message",
+      "summary": "The login form times out. Please fix it.",
+      "payload": {
+        "text": "The login form times out. Please fix it."
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001:1",
+      "session_id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001",
+      "seq": 1,
+      "ts": "2026-01-15T10:00:05Z",
+      "kind": "thinking",
+      "summary": "<thinking placeholder, 300 chars>",
+      "payload": {
+        "text": "<thinking placeholder, 300 chars>"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001:2",
+      "session_id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001",
+      "seq": 2,
+      "ts": "2026-01-15T10:00:05Z",
+      "kind": "tool_call",
+      "summary": "manage_task",
+      "payload": {
+        "tool_name": "manage_task",
+        "input": {
+          "Action": "list"
+        },
+        "duration_ms": 0,
+        "output_excerpt": "No background tasks are currently running."
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001:3",
+      "session_id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001",
+      "seq": 3,
+      "ts": "2026-01-15T10:00:10Z",
+      "kind": "thinking",
+      "summary": "<thinking placeholder, 200 chars>",
+      "payload": {
+        "text": "<thinking placeholder, 200 chars>"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001:4",
+      "session_id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001",
+      "seq": 4,
+      "ts": "2026-01-15T10:00:10Z",
+      "kind": "shell_command",
+      "summary": "$ npm run dev",
+      "payload": {
+        "tool_name": "run_command",
+        "command": "npm run dev",
+        "cwd": "c:\\Users\\USER\\projects\\demo-app",
+        "duration_ms": 60000,
+        "exit_code": 1,
+        "stdout_excerpt": "\n> demo-app@0.1.0 dev\n> next dev\n\nPort 3000 is in use.\n",
+        "is_error": true
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001:5",
+      "session_id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001",
+      "seq": 5,
+      "ts": "2026-01-15T10:01:20Z",
+      "kind": "file_read",
+      "summary": "Read c:\\Users\\USER\\projects\\demo-app\\src\\login.ts",
+      "payload": {
+        "tool_name": "view_file",
+        "path": "c:\\Users\\USER\\projects\\demo-app\\src\\login.ts",
+        "start_line": 1,
+        "end_line": 40,
+        "duration_ms": 0
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001:6",
+      "session_id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001",
+      "seq": 6,
+      "ts": "2026-01-15T10:01:30Z",
+      "kind": "assistant_message",
+      "summary": "<reply placeholder, 60 chars>",
+      "payload": {
+        "text": "<reply placeholder, 60 chars>"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001:7",
+      "session_id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001",
+      "seq": 7,
+      "ts": "2026-01-15T10:01:30Z",
+      "kind": "file_edit",
+      "summary": "Edit c:\\Users\\USER\\projects\\demo-app\\src\\login.ts",
+      "payload": {
+        "tool_name": "replace_file_content",
+        "path": "c:\\Users\\USER\\projects\\demo-app\\src\\login.ts",
+        "old_excerpt": "const timeout = 10;",
+        "new_excerpt": "const timeout = 30;",
+        "description": "<description placeholder, 40 chars>",
+        "lines_added": 1,
+        "lines_removed": 1,
+        "duration_ms": 0,
+        "unified_diff": "@@ -1,3 +1,3 @@\n import { form } from './form';\n-const timeout = 10;\n+const timeout = 30;\n \n"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001:8",
+      "session_id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001",
+      "seq": 8,
+      "ts": "2026-01-15T10:01:40Z",
+      "kind": "file_edit",
+      "summary": "Edit c:\\Users\\USER\\projects\\demo-app\\src\\form.ts",
+      "payload": {
+        "tool_name": "multi_replace_file_content",
+        "path": "c:\\Users\\USER\\projects\\demo-app\\src\\form.ts",
+        "old_excerpt": "a\n…\nd",
+        "new_excerpt": "b\nc\n…\ne",
+        "description": "<description placeholder, 40 chars>",
+        "chunks": 2,
+        "lines_added": 3,
+        "lines_removed": 2,
+        "duration_ms": 0,
+        "unified_diff": "@@ -1,3 +1,3 @@\n import { form } from './form';\n-const timeout = 10;\n+const timeout = 30;\n \n"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001:9",
+      "session_id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001",
+      "seq": 9,
+      "ts": "2026-01-15T10:01:50Z",
+      "kind": "file_write",
+      "summary": "Write c:\\Users\\USER\\projects\\demo-app\\src\\retry.ts",
+      "payload": {
+        "tool_name": "write_to_file",
+        "path": "c:\\Users\\USER\\projects\\demo-app\\src\\retry.ts",
+        "content_excerpt": "export const retries = 3;\nexport const delayMs = 500;\n",
+        "bytes": 54,
+        "lines_added": 2,
+        "lines_removed": 0,
+        "duration_ms": 0
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001:10",
+      "session_id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001",
+      "seq": 10,
+      "ts": "2026-01-15T10:02:00Z",
+      "kind": "tool_call",
+      "summary": "Artifact analysis_results.md",
+      "payload": {
+        "tool_name": "write_to_file",
+        "path": "C:\\Users\\USER\\.gemini\\antigravity\\brain\\aaaaaaaa-0000-4000-8000-000000000001\\analysis_results.md",
+        "artifact": true,
+        "input": {
+          "TargetFile": "C:\\Users\\USER\\.gemini\\antigravity\\brain\\aaaaaaaa-0000-4000-8000-000000000001\\analysis_results.md",
+          "CodeContent": "<artifact placeholder, 300 chars>",
+          "IsArtifact": true,
+          "Overwrite": false,
+          "ArtifactMetadata": {
+            "ArtifactType": "other",
+            "RequestFeedback": false,
+            "Summary": "<summary placeholder, 60 chars>"
+          },
+          "Description": "<description placeholder, 40 chars>"
+        },
+        "duration_ms": 0,
+        "output_excerpt": "Created file file:///C:/Users/USER/.gemini/antigravity/brain/aaaaaaaa-0000-4000-8000-000000000001/analysis_results.md with requested content."
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001:11",
+      "session_id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001",
+      "seq": 11,
+      "ts": "2026-01-15T10:02:10Z",
+      "kind": "tool_call",
+      "summary": "grep_search: Search timeout",
+      "payload": {
+        "tool_name": "grep_search",
+        "input": {
+          "Query": "timeout",
+          "SearchPath": "c:\\Users\\USER\\projects\\demo-app",
+          "Includes": [
+            "*.ts"
+          ],
+          "MatchPerLine": true,
+          "toolAction": "Searching for timeouts",
+          "toolSummary": "Search timeout"
+        },
+        "duration_ms": 0,
+        "output_excerpt": "{\"File\":\"src/login.ts\",\"LineNumber\":2}"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001:12",
+      "session_id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001",
+      "seq": 12,
+      "ts": "2026-01-15T10:02:20Z",
+      "kind": "shell_command",
+      "summary": "$ npm test",
+      "payload": {
+        "tool_name": "run_command",
+        "command": "npm test",
+        "cwd": "c:\\Users\\USER\\projects\\demo-app",
+        "background": true,
+        "task_id": "aaaaaaaa-0000-4000-8000-000000000001/task-46",
+        "is_error": false
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001:13",
+      "session_id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001",
+      "seq": 13,
+      "ts": "2026-01-15T10:02:30Z",
+      "kind": "error",
+      "summary": "Error: RESOURCE_EXHAUSTED (code 429): Individual quota reached.",
+      "payload": {
+        "message": "RESOURCE_EXHAUSTED (code 429): Individual quota reached."
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001:14",
+      "session_id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001",
+      "seq": 14,
+      "ts": "2026-01-15T10:02:40Z",
+      "kind": "tool_call",
+      "summary": "list_dir",
+      "payload": {
+        "tool_name": "list_dir",
+        "input": {
+          "DirectoryPath": "c:\\Users\\USER\\projects\\demo-app\\src"
+        },
+        "duration_ms": 0,
+        "output_excerpt": "{\"name\":\"login.ts\",\"sizeBytes\":\"812\"}"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001:15",
+      "session_id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001",
+      "seq": 15,
+      "ts": "2026-01-15T10:02:50Z",
+      "kind": "shell_command",
+      "summary": "$ git status",
+      "payload": {
+        "tool_name": "run_command",
+        "command": "git status",
+        "cwd": "c:\\Users\\USER\\projects\\demo-app",
+        "duration_ms": 1000,
+        "exit_code": 0,
+        "stdout_excerpt": "On branch main\nnothing to commit\n",
+        "is_error": false
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001:16",
+      "session_id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001",
+      "seq": 16,
+      "ts": "2026-01-15T10:03:00Z",
+      "kind": "thinking",
+      "summary": "<thinking placeholder, 100 chars>",
+      "payload": {
+        "text": "<thinking placeholder, 100 chars>"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001:17",
+      "session_id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001",
+      "seq": 17,
+      "ts": "2026-01-15T10:03:00Z",
+      "kind": "assistant_message",
+      "summary": "<reply placeholder, 200 chars>",
+      "payload": {
+        "text": "<reply placeholder, 200 chars>"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001:18",
+      "session_id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001",
+      "seq": 18,
+      "ts": "2026-01-15T10:03:10Z",
+      "kind": "user_message",
+      "summary": "Thanks, looks good.",
+      "payload": {
+        "text": "Thanks, looks good."
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001:19",
+      "session_id": "antigravity:aaaaaaaa-0000-4000-8000-000000000001",
+      "seq": 19,
+      "ts": "2026-01-15T10:03:11Z",
+      "kind": "unknown",
+      "summary": "Unknown: unknown step type \"BROWSER_SUBAGENT\"",
+      "payload": {
+        "reason": "unknown step type \"BROWSER_SUBAGENT\""
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    }
+  ]
+}

@@ -4,6 +4,7 @@
 import { Box, render, Text, useApp, useInput, useStdout } from "ink";
 import { useEffect, useMemo, useState } from "react";
 import {
+  AGENT_LABELS,
   baseName,
   COST_LABEL,
   fmtDateTime,
@@ -50,7 +51,7 @@ const KIND: Record<string, { label: string; color: string }> = {
 };
 const kindOf = (k: string) => KIND[k] ?? KIND.unknown!;
 
-const AGENT_LABEL: Record<string, string> = { claude_code: "Claude Code", codex: "Codex" };
+const AGENT_LABEL: Record<string, string> = AGENT_LABELS;
 
 export const fmtCost = (usd: number | null) => (usd === null ? "—" : usd > 0 && usd < 0.01 ? "<$0.01" : `$${usd.toFixed(2)}`);
 const str = (v: unknown) => (typeof v === "string" ? v : v === undefined || v === null ? "" : String(v));

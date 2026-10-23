@@ -8,7 +8,7 @@ observation, it says so.
 |---|---|
 | Claude Code | 27 files, 56,416 lines, versions `2.1.229` – `2.1.304`, Windows 11, entrypoints `cli` and `claude-desktop`. 0 lines failed to parse as JSON. |
 | OpenCode | Schema only: `1.18.29` installed, database has 0 sessions (2026-10-23). |
-| Google Antigravity | Transcripts encrypted on disk; only metadata readable (2026-10-23). |
+| Google Antigravity | 9 conversations (2025-11 – 2026-09). Conversation files are encrypted; 1 has a readable `transcript.jsonl` (138 lines, 0 parse errors), the rest are metadata only (2026-10-23). |
 | Codex | 24 files from Codex Desktop `0.163.0-alpha.11.2`, Windows 11, inspected 2026-10-23. 22 were imports of Claude Code sessions. No Codex CLI rollouts on this machine; CLI-only shapes are from Codex's open-source schema. |
 
 ---
@@ -409,10 +409,52 @@ unknown), `16` and `22` varints (unknown).
 { "artifactType": "ARTIFACT_TYPE_TASK", "summary": "<one-line description>", "updatedAt": "<ISO-8601>" }
 ```
 
-**Blocked:** the transcripts (prompts, tool calls, commands, file edits, tokens) are only in the
-encrypted `conversations/*.pb`. Without them an adapter could show at most one metadata-only session
-per conversation (title, workspace, times, step count, artifact revisions), with no timeline,
-commands, risks or cost.
+### `brain/<uuid>/.system_generated/logs/transcript.jsonl` (readable, newer versions only)
+
+Found for 1 of 9 conversations (the only one written in 2026-09; 138 lines, all valid JSON). The
+others predate it. The log starts at `step_index` 25, so earlier steps of a conversation can be
+missing. Same folder: `messages/<uuid>.json` (background-task notifications, with the original
+`toolCall.argumentsJson` and a `toolu_vrtx_…` call id), `tasks/task-N.log` (background command output),
+`click_feedback/*.png`.
+
+One JSON object per step:
+
+```json
+{ "step_index": 31, "source": "MODEL", "type": "PLANNER_RESPONSE", "status": "DONE",
+  "created_at": "2026-09-05T11:04:38Z", "content": "…", "thinking": "…",
+  "tool_calls": [{ "name": "run_command", "args": { "CommandLine": "\"npm run dev\"", "Cwd": "\"d:\\\\proj\"", "WaitMsBeforeAsync": "5000" } }],
+  "error": "…" }
+```
+
+- `source`: `USER_EXPLICIT`, `MODEL`, `SYSTEM`. `status`: `DONE`, `RUNNING` (background task started).
+- **Every `args` value is itself JSON-encoded** (`"\"list\""`, `"5000"`, `"true"`, arrays as JSON text).
+  Newer lines add `toolAction` / `toolSummary` (UI labels).
+- No model id, no token counts, no cost anywhere in the transcript.
+
+| `type` | Meaning |
+|---|---|
+| `USER_INPUT` | prompt, wrapped in `<USER_REQUEST>…</USER_REQUEST>` plus `<ADDITIONAL_METADATA>` |
+| `PLANNER_RESPONSE` | model turn: optional `thinking`, `content`, `tool_calls` (one per line observed) |
+| `RUN_COMMAND`, `VIEW_FILE`, `CODE_ACTION`, `GREP_SEARCH`, `LIST_DIRECTORY`, `GENERIC` | result of the previous tool call. `content` starts `Created At: <ts>\nCompleted At: <ts>\n`; commands then say `The command failed with exit code: N` or `The command completed successfully.` then `Output:`; edits carry a diff between `[diff_block_start]` and `[diff_block_end]` |
+| `ERROR_MESSAGE` | `error` (quota, invalid tool call) |
+| `SYSTEM_MESSAGE`, `EPHEMERAL_MESSAGE`, `CONVERSATION_HISTORY` | injected by Antigravity, not actions |
+
+Tools seen: `run_command`, `view_file`, `write_to_file` (`IsArtifact: true` for brain documents),
+`replace_file_content`, `multi_replace_file_content` (`ReplacementChunks`), `grep_search`, `list_dir`,
+`manage_task`, `schedule`.
+
+### What the adapter does
+
+- One session per conversation. Discovery takes `brain/<uuid>/…/transcript.jsonl` when it exists,
+  else `conversations/<uuid>.pb`. Title, workspace and times come from the summaries file.
+- With a transcript: full timeline (prompts, thinking, commands with exit codes and output, reads,
+  edits with diffs, errors). Artifact writes become `tool_call`, not `file_write`, so Antigravity's own
+  folder is not flagged as a write outside the project.
+- Without one (encrypted only): metadata-only session, with one `assistant_message` per brain
+  document (`payload.metadata_only: true`). No timeline, commands, risks or cost.
+- Cost is shown as unknown ("—"), never $0, because no token usage is logged.
+- If Antigravity later writes readable transcripts somewhere else, add a reader next to
+  `parseTranscript` in `packages/core/src/adapters/antigravity.ts`.
 
 ---
 

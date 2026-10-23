@@ -90,8 +90,11 @@ export function SessionsPage() {
         <div className="mx-1 h-5 w-px bg-line" />
         <Select value={agent} onChange={(e) => setAgent(e.target.value)} aria-label="Agent">
           <option value="">All agents</option>
-          <option value="claude_code">Claude Code</option>
-          <option value="codex">Codex</option>
+          {Object.entries(AGENT_LABEL).map(([id, label]) => (
+            <option key={id} value={id}>
+              {label}
+            </option>
+          ))}
         </Select>
         <Select className="max-w-56" value={project} onChange={(e) => setProject(e.target.value)} aria-label="Project">
           <option value="">All projects</option>

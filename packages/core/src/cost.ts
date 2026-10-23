@@ -89,7 +89,12 @@ export interface SessionCost {
   unpricedModels: string[];
 }
 
+/** Shown as the "model" when a log records no token usage at all (e.g. Antigravity): cost is unknown, not $0. */
+export const NO_USAGE = "(no token usage in log)";
+
 export function sessionCost(events: Billable[], prices: Prices): SessionCost {
+  const hasUsage = events.some((e) => [e.tokens_in, e.tokens_out, e.cache_read, e.cache_write].some((t) => t !== null));
+  if (events.length > 0 && !hasUsage) return { usd: null, unpricedModels: [NO_USAGE] };
   let usd = 0;
   const unpriced = new Set<string>();
   for (const e of events) {

@@ -1,6 +1,14 @@
 // Normalized event model shared by every adapter (SPEC.md §5).
 
-export type SourceId = "claude_code" | "codex";
+export type SourceId = "claude_code" | "codex" | "antigravity" | "opencode";
+
+/** Display names, also used by the web UI's copy in packages/web/src/format.ts. */
+export const AGENT_LABELS: Record<SourceId, string> = {
+  claude_code: "Claude Code",
+  codex: "Codex",
+  antigravity: "Antigravity",
+  opencode: "OpenCode",
+};
 
 export type RiskLevel = "none" | "low" | "medium" | "high" | "critical";
 

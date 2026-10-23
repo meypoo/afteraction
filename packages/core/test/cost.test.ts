@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { eventCost, loadPrices, priceFor, sessionCost, type Prices } from "../src/cost.js";
+import { eventCost, loadPrices, NO_USAGE, priceFor, sessionCost, type Prices } from "../src/cost.js";
 import type { NormalizedEvent } from "../src/model.js";
 
 const prices = loadPrices();
@@ -80,6 +80,13 @@ describe("sessionCost", () => {
   it("is null (never a guess) when any event with tokens uses an unpriced model", () => {
     const r = sessionCost([ev("claude-opus-5-5", { tokens_in: M }), ev("mystery", { tokens_out: 5 }), ev("<synthetic>", {})], prices);
     expect(r).toEqual({ usd: null, unpricedModels: ["mystery"] });
+  });
+
+  it("is null, not $0, when the log records no token usage at all", () => {
+    const blank = { ...ev(null, {}), tokens_in: null, tokens_out: null, cache_read: null, cache_write: null };
+    expect(sessionCost([blank, blank], prices)).toEqual({ usd: null, unpricedModels: [NO_USAGE] });
+    expect(sessionCost([blank, ev("claude-opus-5-5", { tokens_in: M })], prices).usd).toBeCloseTo(4);
+    expect(sessionCost([], prices)).toEqual({ usd: 0, unpricedModels: [] });
   });
 
   it("uses a custom price table", () => {
