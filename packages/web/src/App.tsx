@@ -1,6 +1,7 @@
 import { createContext, useContext, useState } from "react";
 import { api, type Meta } from "./api";
-import { applyTheme, initialTheme, useAsync, useRoute } from "./hooks";
+import { Icon, Logo } from "./components/icons";
+import { applyTheme, initialTheme, useAsync, useRoute, useSystemThemeSync, type ThemePref } from "./hooks";
 import { CostsPage } from "./pages/CostsPage";
 import { RisksPage } from "./pages/RisksPage";
 import { SessionPage } from "./pages/SessionPage";
@@ -18,11 +19,11 @@ const NAV = [
 export function App() {
   const route = useRoute();
   const meta = useAsync(() => api.meta(), []);
-  const [theme, setTheme] = useState(initialTheme);
-  const toggleTheme = () => {
-    const next = theme === "dark" ? "light" : "dark";
-    applyTheme(next);
-    setTheme(next);
+  const [theme, setTheme] = useState<ThemePref>(initialTheme);
+  useSystemThemeSync(theme);
+  const changeTheme = (t: ThemePref) => {
+    applyTheme(t);
+    setTheme(t);
   };
 
   const sessionMatch = /^\/session\/([^/]+)(\/files)?$/.exec(route.path);
@@ -38,30 +39,54 @@ export function App() {
   return (
     <MetaContext.Provider value={meta.data}>
       <div className="flex h-full flex-col">
-        <header className="flex shrink-0 items-center gap-6 border-b border-line bg-panel px-4 py-2">
-          <a href="#/" className="flex items-center gap-2 font-semibold">
-            <span aria-hidden>🛫</span> Flight Recorder
+        <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-control focus:bg-surface focus:px-3 focus:py-1.5">
+          Skip to content
+        </a>
+        <header className="flex h-12 shrink-0 items-center gap-6 border-b border-line bg-surface px-5">
+          <a href="#/" className="flex items-center gap-2.5 text-sm font-semibold tracking-tight">
+            <Logo />
+            <span>Flight Recorder</span>
           </a>
-          <nav className="flex gap-1">
-            {NAV.map((n) => (
-              <a
-                key={n.path}
-                href={`#${n.path}`}
-                className={`rounded px-2.5 py-1 ${section === n.path ? "bg-raised text-fg" : "text-muted hover:text-fg"}`}
-              >
-                {n.label}
-              </a>
-            ))}
+          <nav aria-label="Main" className="flex h-full items-stretch gap-1">
+            {NAV.map((n) => {
+              const active = section === n.path;
+              return (
+                <a
+                  key={n.path}
+                  href={`#${n.path}`}
+                  aria-current={active ? "page" : undefined}
+                  className={`relative flex items-center px-2.5 text-sm transition-colors duration-150 ${
+                    active ? "text-fg" : "text-muted hover:text-fg"
+                  }`}
+                >
+                  {n.label}
+                  {active && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-accent" />}
+                </a>
+              );
+            })}
           </nav>
-          <div className="ml-auto flex items-center gap-3 text-xs text-muted">
-            <span title="Nothing leaves this machine">100% local</span>
-            {meta.data && <span>v{meta.data.version}</span>}
-            <button type="button" onClick={toggleTheme} className="rounded border border-line px-2 py-1 hover:text-fg" title="Toggle light/dark">
-              {theme === "dark" ? "☀ Light" : "☾ Dark"}
-            </button>
+          <div className="ml-auto flex items-center gap-4 text-xs text-muted">
+            <span className="inline-flex items-center gap-1.5" title="Nothing leaves this machine: no telemetry, no network calls">
+              <Icon.Lock className="size-3.5 text-ok" />
+              Local only
+            </span>
+            {meta.data && <span className="num font-mono">v{meta.data.version}</span>}
+            <label className="relative inline-flex items-center">
+              <span className="sr-only">Theme</span>
+              <select
+                value={theme}
+                onChange={(e) => changeTheme(e.target.value as ThemePref)}
+                className="h-7 cursor-pointer appearance-none rounded-control bg-transparent pr-6 pl-2 text-xs text-fg-2 outline-none hover:bg-raised focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <option value="system">System theme</option>
+                <option value="dark">Dark</option>
+                <option value="light">Light</option>
+              </select>
+              <Icon.ChevronDown className="pointer-events-none absolute right-1.5 size-3.5" />
+            </label>
           </div>
         </header>
-        <main className="min-h-0 flex-1 overflow-hidden">{page}</main>
+        <main id="main" className="min-h-0 flex-1 overflow-hidden">{page}</main>
       </div>
     </MetaContext.Provider>
   );

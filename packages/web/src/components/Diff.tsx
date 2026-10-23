@@ -82,12 +82,12 @@ export function Diff({ text, path }: { text: string; path?: string }) {
   }, [lines, path]);
 
   return (
-    <pre className="hljs-diff overflow-auto rounded border border-line bg-bg p-2 text-xs leading-5">
+    <pre className="hljs-diff overflow-auto rounded-control bg-sunken py-2 text-xs leading-5 ring-1 ring-line ring-inset">
       {lines.map((l, i) => {
-        let cls = "";
-        if (l.startsWith("@@")) cls = "text-sky-600 dark:text-sky-400";
-        else if (l.startsWith("+")) cls = "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
-        else if (l.startsWith("-")) cls = "bg-red-500/10 text-red-700 dark:text-red-300";
+        let cls = "px-3";
+        if (l.startsWith("@@")) cls += " my-1 bg-raised/60 text-muted";
+        else if (l.startsWith("+")) cls += " bg-ok-soft text-ok shadow-[inset_2px_0_0_var(--color-ok)]";
+        else if (l.startsWith("-")) cls += " bg-risk-high-soft text-risk-high shadow-[inset_2px_0_0_var(--color-risk-high)]";
         const h = html?.[i];
         if (h != null) {
           return (

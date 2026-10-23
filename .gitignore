@@ -10,3 +10,4 @@ packages/cli/prices.json
 packages/cli/README.md
 *.tgz
 .playwright-mcp/
+.tmp/

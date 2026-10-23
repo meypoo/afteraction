@@ -3,13 +3,18 @@ import { api, type NormalizedEvent } from "../api";
 import { useMeta } from "../App";
 import { fmtCost, fmtDateTime, fmtTokens, relPath, str } from "../format";
 import { asAddedDiff, Diff } from "./Diff";
+import { Icon } from "./icons";
+import { KindIcon, kindOf } from "./kinds";
 import { Button, RiskBadge } from "./ui";
+
+const riskSoft = (l: string) =>
+  ({ low: "bg-risk-low-soft", medium: "bg-risk-medium-soft", high: "bg-risk-high-soft", critical: "bg-risk-high-soft" })[l] ?? "bg-raised";
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex gap-3 text-xs">
+    <div className="flex gap-4 text-xs leading-5">
       <div className="w-24 shrink-0 text-muted">{label}</div>
-      <div className="min-w-0 break-all">{children}</div>
+      <div className="min-w-0 break-all text-fg-2">{children}</div>
     </div>
   );
 }
@@ -18,10 +23,10 @@ function Block({ label, text, tone }: { label: string; text: string; tone?: "err
   if (!text) return null;
   return (
     <div>
-      <div className="mb-1 text-[11px] uppercase tracking-wide text-muted">{label}</div>
+      <div className="label mb-1.5">{label}</div>
       <pre
-        className={`max-h-[28rem] overflow-auto whitespace-pre-wrap break-words rounded border p-2 text-xs leading-5 ${
-          tone === "error" ? "border-red-500/40 bg-red-500/5" : "border-line bg-bg"
+        className={`max-h-[28rem] overflow-auto rounded-control px-3 py-2.5 text-xs leading-5 break-words whitespace-pre-wrap ${
+          tone === "error" ? "bg-risk-high-soft text-risk-high" : "bg-sunken text-fg ring-1 ring-inset ring-line"
         }`}
       >
         {text}
@@ -87,8 +92,8 @@ export function EventDetail({ event: initial, projectPath }: { event: Normalized
         <div key="f" className="space-y-1">
           <Field label="file">{relPath(path, projectPath)}</Field>
           <Field label="lines">
-            <span className="text-emerald-600 dark:text-emerald-400">+{Number(p.lines_added ?? 0)}</span>{" "}
-            <span className="text-red-600 dark:text-red-400">−{Number(p.lines_removed ?? 0)}</span>
+            <span className="num font-mono text-ok">+{Number(p.lines_added ?? 0)}</span>{" "}
+            <span className="num font-mono text-risk-high">−{Number(p.lines_removed ?? 0)}</span>
             {p.operation ? ` · ${str(p.operation)}` : ""}
           </Field>
         </div>,
@@ -116,7 +121,7 @@ export function EventDetail({ event: initial, projectPath }: { event: Normalized
     case "user_message":
     case "assistant_message":
       body.push(
-        <pre key="t" className="whitespace-pre-wrap break-words font-sans text-[13px] leading-relaxed">
+        <pre key="t" className="max-w-[72ch] font-sans text-sm leading-6 break-words whitespace-pre-wrap text-fg">
           {str(p.text) || (p.images ? `(${String(p.images)} image${p.images === 1 ? "" : "s"})` : "")}
         </pre>,
       );
@@ -127,7 +132,7 @@ export function EventDetail({ event: initial, projectPath }: { event: Normalized
         p.redacted ? (
           <div key="t" className="text-muted">The log only keeps a signature for this thinking block; the text was not recorded.</div>
         ) : (
-          <pre key="t" className="whitespace-pre-wrap break-words font-sans text-[13px] italic leading-relaxed text-muted">{str(p.text)}</pre>
+          <pre key="t" className="max-w-[72ch] font-sans text-sm leading-6 break-words whitespace-pre-wrap text-muted italic">{str(p.text)}</pre>
         ),
       );
       break;
@@ -160,32 +165,35 @@ export function EventDetail({ event: initial, projectPath }: { event: Normalized
   const tokens = event.tokens_in !== null;
 
   return (
-    <div className="space-y-4 p-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="rounded bg-raised px-1.5 py-0.5 font-mono text-[11px]">{event.kind}</span>
-        <span className="text-xs text-muted">#{event.seq} · {fmtDateTime(event.ts)}</span>
-        {event.payload.subagent_id ? <span className="text-xs text-muted">· subagent {str(event.payload.subagent_id)}</span> : null}
-        <div className="ml-auto flex gap-2">
+    <div key={event.id} className="enter space-y-5 p-5">
+      <div className="flex flex-wrap items-center gap-2.5">
+        <KindIcon kind={event.kind} />
+        <span className="text-sm font-medium">{kindOf(event.kind).label}</span>
+        <span className="num font-mono text-2xs text-muted">#{event.seq} · {fmtDateTime(event.ts)}</span>
+        {event.payload.subagent_id ? <span className="text-2xs text-risk-low">subagent {str(event.payload.subagent_id).slice(0, 10)}</span> : null}
+        <div className="ml-auto flex gap-1.5">
           {masked && !revealed && (
-            <Button onClick={() => void load({ reveal: true })} disabled={busy} title="Secrets are masked by default">
+            <Button icon={<Icon.Eye />} onClick={() => void load({ reveal: true })} disabled={busy} title="Secrets are masked by default">
               Reveal secrets
             </Button>
           )}
-          <Button onClick={() => (raw ? setRaw(null) : void load({ raw: true }))} disabled={busy} active={!!raw}>
+          <Button variant="ghost" icon={<Icon.Code />} onClick={() => (raw ? setRaw(null) : void load({ raw: true }))} disabled={busy} active={!!raw}>
             Raw JSON
           </Button>
         </div>
       </div>
 
       {event.risk_rules.length > 0 && (
-        <div className="space-y-1 rounded border border-red-500/30 bg-red-500/5 p-2">
+        <div className={`space-y-2 rounded-control p-3 ${riskSoft(event.risk_level)}`}>
           {event.risk_rules.map((id) => {
             const r = rules.find((x) => x.id === id);
             return (
-              <div key={id} className="flex items-center gap-2 text-xs">
+              <div key={id} className="flex items-start gap-2.5 text-xs">
                 <RiskBadge level={r?.severity ?? event.risk_level} />
-                <span className="font-mono">{id}</span>
-                <span className="text-muted">{r?.description}</span>
+                <div className="min-w-0">
+                  <div className="font-mono font-medium text-fg">{id}</div>
+                  <div className="text-fg-2">{r?.description}</div>
+                </div>
               </div>
             );
           })}
@@ -195,14 +203,16 @@ export function EventDetail({ event: initial, projectPath }: { event: Normalized
       {body}
 
       {tokens && (
-        <div className="space-y-1 border-t border-line pt-3">
+        <div className="space-y-1 border-t border-line pt-4">
           <Field label="model">{event.model ?? "—"}</Field>
           <Field label="tokens">
-            {fmtTokens(event.tokens_in)} in · {fmtTokens(event.tokens_out)} out · {fmtTokens(event.cache_read)} cache read ·{" "}
-            {fmtTokens(event.cache_write)} cache write
+            <span className="num font-mono">
+              {fmtTokens(event.tokens_in)} in · {fmtTokens(event.tokens_out)} out · {fmtTokens(event.cache_read)} cache read · {fmtTokens(event.cache_write)} cache write
+            </span>
           </Field>
           <Field label="est. cost">
-            {fmtCost(event.est_cost_usd ?? null)} <span className="text-muted">(estimated, API-equivalent, whole API call)</span>
+            <span className="num font-mono text-fg">{fmtCost(event.est_cost_usd ?? null)}</span>{" "}
+            <span className="text-muted">estimated, API-equivalent, for the whole API call</span>
           </Field>
         </div>
       )}

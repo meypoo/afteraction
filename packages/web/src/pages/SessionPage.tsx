@@ -2,28 +2,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, type FileTouch, type NormalizedEvent } from "../api";
 import { asAddedDiff, Diff } from "../components/Diff";
 import { EventDetail } from "../components/EventDetail";
-import { Button, CostLabel, ErrorBox, Loading, RiskBadge, Stat } from "../components/ui";
+import { Icon } from "../components/icons";
+import { KindIcon } from "../components/kinds";
+import { Button, CostLabel, EmptyState, ErrorBox, Kbd, Loading, RiskBadge, Select, Stat, Toggle } from "../components/ui";
 import { AGENT_LABEL, baseName, fmtCost, fmtDateTime, fmtDuration, fmtTime, fmtTokens, relPath, str } from "../format";
 import { navigate, useAsync } from "../hooks";
 
-const ICON: Record<string, string> = {
-  user_message: "👤",
-  assistant_message: "💬",
-  thinking: "💭",
-  tool_call: "🔧",
-  tool_result: "↩",
-  shell_command: "❯",
-  file_read: "📄",
-  file_write: "📝",
-  file_edit: "✏️",
-  web_fetch: "🌐",
-  subagent_start: "🤖",
-  subagent_end: "🏁",
-  error: "⚠",
-  unknown: "?",
-};
-
 const SPEEDS = [0.5, 1, 2, 4, 8];
+const RISK_RANK: Record<string, number> = { none: 0, low: 1, medium: 2, high: 3, critical: 4 };
+const TICK_COLOR = ["", "bg-risk-low", "bg-risk-medium", "bg-risk-high", "bg-risk-critical"];
 
 export function SessionPage({ id, tab, params }: { id: string; tab: "timeline" | "files"; params: URLSearchParams }) {
   const detail = useAsync(() => api.session(id), [id]);
@@ -43,7 +30,7 @@ export function SessionPage({ id, tab, params }: { id: string; tab: "timeline" |
   const copyReceipt = async () => {
     try {
       await navigator.clipboard.writeText(await api.receipt(id));
-      setCopied("Copied");
+      setCopied("Copied to clipboard");
     } catch {
       setCopied("Copy failed");
     }
@@ -52,42 +39,64 @@ export function SessionPage({ id, tab, params }: { id: string; tab: "timeline" |
 
   return (
     <div className="flex h-full flex-col">
-      <div className="shrink-0 space-y-2 border-b border-line bg-panel px-4 py-3">
+      <div className="shrink-0 border-b border-line bg-surface px-5 pt-4">
         <div className="flex items-start gap-3">
-          <a href="#/" className="text-muted hover:text-fg" title="Back to sessions">←</a>
+          <a href="#/" className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-control text-muted transition-colors hover:bg-raised hover:text-fg" title="Back to sessions">
+            <Icon.Back className="size-4" />
+          </a>
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-sm font-semibold" title={s.title}>{s.title}</h1>
-            <div className="truncate text-xs text-muted">
-              {AGENT_LABEL[s.source] ?? s.source} · {s.model ?? "unknown model"} · {s.project_path ?? "—"}
-              {s.git_branch ? ` (${s.git_branch})` : ""} · {fmtDateTime(s.started_at)}
+            <h1 className="truncate text-base font-semibold" title={s.title}>{s.title}</h1>
+            <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs text-muted">
+              <span className="text-fg-2">{baseName(s.project_path) || "—"}</span>
+              {s.git_branch && <><span>·</span><span className="font-mono">{s.git_branch}</span></>}
+              <span>·</span><span>{AGENT_LABEL[s.source] ?? s.source}</span>
+              <span>·</span><span className="font-mono">{s.model ?? "unknown model"}</span>
+              <span>·</span><span className="num">{fmtDateTime(s.started_at)}</span>
             </div>
           </div>
-          <Button onClick={() => void copyReceipt()} title="Markdown summary for a PR comment (secrets and home paths redacted)">
+          <Button
+            icon={copied ? <Icon.Check /> : <Icon.Copy />}
+            onClick={() => void copyReceipt()}
+            title="Markdown summary for a PR comment (secrets and home paths redacted)"
+          >
             {copied || "Copy receipt"}
           </Button>
         </div>
-        <div className="grid grid-cols-3 gap-4 md:grid-cols-6">
+        <div className="mt-4 grid grid-cols-3 gap-x-6 gap-y-3 pl-10 md:grid-cols-6">
           <Stat label="Duration" value={fmtDuration(s.started_at, s.ended_at)} />
           <Stat
-            label="Tokens"
-            value={`${fmtTokens(s.total_input_tokens + s.total_output_tokens)} in/out`}
+            label="Tokens in / out"
+            value={`${fmtTokens(s.total_input_tokens)} / ${fmtTokens(s.total_output_tokens)}`}
+            sub={`${fmtTokens(s.total_cache_read_tokens)} cache read`}
             hint={`${fmtTokens(s.total_cache_read_tokens)} cache read · ${fmtTokens(s.total_cache_write_tokens)} cache write`}
           />
           <Stat
             label="Est. cost"
-            value={<>{fmtCost(s.est_cost_usd)} <CostLabel /></>}
+            value={fmtCost(s.est_cost_usd)}
+            sub={<CostLabel />}
             hint={unpriced.length ? `No price for: ${unpriced.join(", ")}` : "Estimated, API-equivalent pricing"}
           />
           <Stat label="Files touched" value={files.length} />
           <Stat label="Events" value={events.length} />
           <Stat label="Risks" value={<span className="flex items-center gap-2">{flagged} <RiskBadge level={s.max_risk} /></span>} />
         </div>
-        <div className="flex gap-1">
-          <a href={`#${base}`} className={`rounded px-2.5 py-1 text-xs ${tab === "timeline" ? "bg-raised" : "text-muted hover:text-fg"}`}>Timeline</a>
-          <a href={`#${base}/files`} className={`rounded px-2.5 py-1 text-xs ${tab === "files" ? "bg-raised" : "text-muted hover:text-fg"}`}>
-            Files ({files.length})
-          </a>
-        </div>
+        <nav className="mt-3 flex gap-1 pl-8" aria-label="Session views">
+          {[
+            { href: `#${base}`, label: "Timeline", on: tab === "timeline" },
+            { href: `#${base}/files`, label: `Files`, count: files.length, on: tab === "files" },
+          ].map((t) => (
+            <a
+              key={t.label}
+              href={t.href}
+              aria-current={t.on ? "page" : undefined}
+              className={`relative px-2 pb-2.5 text-sm transition-colors ${t.on ? "text-fg" : "text-muted hover:text-fg"}`}
+            >
+              {t.label}
+              {t.count !== undefined && <span className="num ml-1.5 rounded-chip bg-raised px-1 font-mono text-2xs text-fg-2">{t.count}</span>}
+              {t.on && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-accent" />}
+            </a>
+          ))}
+        </nav>
       </div>
       <div className="min-h-0 flex-1">
         {tab === "timeline" ? (
@@ -96,6 +105,48 @@ export function SessionPage({ id, tab, params }: { id: string; tab: "timeline" |
           <FilesTab files={files} events={events} projectPath={s.project_path} />
         )}
       </div>
+    </div>
+  );
+}
+
+/** The flight tape: every event as a tick, risks in colour, the selected event as the playhead. */
+function Tape({ events, selectedSeq, onSelect }: { events: NormalizedEvent[]; selectedSeq: number | undefined; onSelect: (seq: number) => void }) {
+  const buckets = useMemo(() => {
+    const n = Math.min(events.length, 480);
+    const out: { seq: number; risk: number; prompt: boolean; seqs: Set<number> }[] = [];
+    for (let i = 0; i < n; i++) {
+      const slice = events.slice(Math.floor((i * events.length) / n), Math.floor(((i + 1) * events.length) / n));
+      out.push({
+        seq: slice[0]!.seq,
+        risk: Math.max(...slice.map((e) => RISK_RANK[e.risk_level] ?? 0)),
+        prompt: slice.some((e) => e.kind === "user_message" && !e.payload.meta),
+        seqs: new Set(slice.map((e) => e.seq)),
+      });
+    }
+    return out;
+  }, [events]);
+  if (buckets.length < 2) return null;
+  return (
+    <div className="flex h-7 items-end justify-between gap-px border-b border-line bg-sunken px-3 pt-1.5 pb-1" role="slider" aria-label="Session tape" aria-valuenow={selectedSeq}>
+      {buckets.map((b) => {
+        const sel = selectedSeq !== undefined && b.seqs.has(selectedSeq);
+        return (
+          <button
+            key={b.seq}
+            type="button"
+            tabIndex={-1}
+            onClick={() => onSelect(b.seq)}
+            className="group flex h-full max-w-1.5 min-w-px flex-1 items-end"
+            title={`#${b.seq}`}
+          >
+            <span
+              className={`w-full rounded-[1px] transition-all duration-100 group-hover:opacity-100 ${
+                sel ? "h-full bg-accent" : b.risk ? `h-3/4 ${TICK_COLOR[b.risk]}` : b.prompt ? "h-3/5 bg-fg-2/60" : "h-1/3 bg-line-strong opacity-80"
+              }`}
+            />
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -133,8 +184,8 @@ function Timeline({ events, projectPath, params, base }: {
     const onKey = (ev: KeyboardEvent) => {
       const t = ev.target as HTMLElement;
       if (t.tagName === "INPUT" || t.tagName === "SELECT" || t.tagName === "TEXTAREA" || ev.metaKey || ev.ctrlKey || ev.altKey) return;
-      if (ev.key === "j") select(visible[Math.min(visible.length - 1, index + 1)]?.seq);
-      else if (ev.key === "k") select(visible[Math.max(0, index - 1)]?.seq);
+      if (ev.key === "j" || ev.key === "ArrowDown") select(visible[Math.min(visible.length - 1, index + 1)]?.seq);
+      else if (ev.key === "k" || ev.key === "ArrowUp") select(visible[Math.max(0, index - 1)]?.seq);
       else if (ev.key === "r") {
         const risky = visible.filter((e) => e.risk_level !== "none");
         const next = risky.find((e) => e.seq > (selected?.seq ?? -1)) ?? risky[0];
@@ -165,50 +216,65 @@ function Timeline({ events, projectPath, params, base }: {
   const riskCount = visible.filter((e) => e.risk_level !== "none").length;
 
   return (
-    <div className="flex h-full">
-      <div className="flex w-[46%] min-w-[380px] flex-col border-r border-line">
-        <div className="flex flex-wrap items-center gap-2 border-b border-line px-3 py-1.5 text-xs">
-          <Button onClick={() => setPlaying((p) => !p)} active={playing} title="Space">{playing ? "❚❚ Pause" : "▶ Play"}</Button>
-          <select className="rounded border border-line bg-panel px-1 py-0.5" value={speed} onChange={(e) => setSpeed(Number(e.target.value))} aria-label="Speed">
-            {SPEEDS.map((x) => <option key={x} value={x}>{x}×</option>)}
-          </select>
-          <label className="flex items-center gap-1 text-muted">
-            <input type="checkbox" checked={showThinking} onChange={(e) => setShowThinking(e.target.checked)} /> thinking
-          </label>
-          <label className="flex items-center gap-1 text-muted">
-            <input type="checkbox" checked={showMeta} onChange={(e) => setShowMeta(e.target.checked)} /> injected messages
-          </label>
-          <span className="ml-auto text-muted" title="j / k: next / previous · r: next risk · space: play">
-            {index + 1}/{visible.length} · {riskCount} risks · <kbd>j</kbd>/<kbd>k</kbd> <kbd>r</kbd>
-          </span>
+    <div className="flex h-full flex-col">
+      <Tape events={visible} selectedSeq={selected?.seq} onSelect={select} />
+      <div className="flex min-h-0 flex-1">
+        <div className="flex w-[46%] min-w-[380px] flex-col border-r border-line">
+          <div className="flex flex-wrap items-center gap-3 border-b border-line px-3 py-2">
+            <Button
+              variant={playing ? "secondary" : "primary"}
+              icon={playing ? <Icon.Pause /> : <Icon.Play />}
+              onClick={() => setPlaying((p) => !p)}
+              title="Play / pause (space)"
+            >
+              {playing ? "Pause" : "Play"}
+            </Button>
+            <Select value={speed} onChange={(e) => setSpeed(Number(e.target.value))} aria-label="Playback speed" className="w-[4.5rem]">
+              {SPEEDS.map((x) => <option key={x} value={x}>{x}×</option>)}
+            </Select>
+            <Toggle checked={showThinking} onChange={setShowThinking}>Thinking</Toggle>
+            <Toggle checked={showMeta} onChange={setShowMeta}>Injected</Toggle>
+            <span className="num ml-auto flex items-center gap-1.5 font-mono text-2xs text-muted" title="j / k: next / previous · r: next risk · space: play">
+              {index + 1}/{visible.length}
+              <span className="text-line-strong">|</span>
+              <span className={riskCount ? "text-risk-high" : ""}>{riskCount} risks</span>
+              <span className="ml-1 hidden items-center gap-0.5 xl:inline-flex"><Kbd>j</Kbd><Kbd>k</Kbd><Kbd>r</Kbd></span>
+            </span>
+          </div>
+          <div ref={listRef} className="min-h-0 flex-1 overflow-auto py-1">
+            {visible.map((e) => {
+              const nested = !!e.payload.subagent_id && e.kind !== "subagent_end";
+              const isSel = e.seq === selected?.seq;
+              const prompt = e.kind === "user_message" && !e.payload.meta;
+              return (
+                <div
+                  key={e.id}
+                  data-seq={e.seq}
+                  onClick={() => select(e.seq)}
+                  className={`relative mx-1.5 flex cursor-pointer items-center gap-2.5 rounded-control py-1 pr-2 pl-2 transition-colors duration-100 ${
+                    isSel ? "bg-accent-soft" : "hover:bg-surface"
+                  } ${e.kind === "thinking" || e.payload.meta ? "opacity-60" : ""}`}
+                >
+                  {isSel && <span className="absolute top-1.5 bottom-1.5 left-0 w-0.5 rounded-full bg-accent" />}
+                  <span className="num w-[3.75rem] shrink-0 font-mono text-2xs text-muted">{fmtTime(e.ts)}</span>
+                  {nested && <span className="-mr-1 ml-1 h-5 w-px shrink-0 bg-risk-low/40" />}
+                  <KindIcon kind={e.kind} />
+                  <span
+                    className={`min-w-0 flex-1 truncate ${prompt ? "font-medium" : ""} ${e.kind === "shell_command" ? "font-mono text-xs" : "text-sm"}`}
+                    title={e.summary}
+                  >
+                    {e.summary}
+                  </span>
+                  {e.payload.is_error === true && <Icon.X className="size-3.5 shrink-0 text-risk-high" aria-label="failed" />}
+                  {e.risk_level !== "none" && <RiskBadge level={e.risk_level} title={e.risk_rules.join(", ")} />}
+                </div>
+              );
+            })}
+          </div>
         </div>
-        <div ref={listRef} className="min-h-0 flex-1 overflow-auto font-mono text-xs">
-          {visible.map((e) => {
-            const nested = !!e.payload.subagent_id && e.kind !== "subagent_end";
-            const isSel = e.seq === selected?.seq;
-            return (
-              <div
-                key={e.id}
-                data-seq={e.seq}
-                onClick={() => select(e.seq)}
-                className={`flex cursor-pointer items-center gap-2 border-b border-line/40 px-3 py-1 ${
-                  isSel ? "bg-accent/15" : "hover:bg-raised"
-                } ${e.kind === "thinking" || e.payload.meta ? "text-muted" : ""}`}
-              >
-                <span className="w-14 shrink-0 tabular-nums text-muted">{fmtTime(e.ts)}</span>
-                <span className={`w-5 shrink-0 text-center ${nested ? "ml-4" : ""}`} title={e.kind}>{ICON[e.kind] ?? "·"}</span>
-                <span className="min-w-0 flex-1 truncate font-sans" title={e.summary}>
-                  {e.summary}
-                </span>
-                {e.payload.is_error === true && <span className="text-red-500" title="failed">✗</span>}
-                {e.risk_level !== "none" && <RiskBadge level={e.risk_level} title={e.risk_rules.join(", ")} />}
-              </div>
-            );
-          })}
+        <div className="min-w-0 flex-1 overflow-auto bg-surface">
+          {selected ? <EventDetail event={selected} projectPath={projectPath} /> : <EmptyState title="No events" />}
         </div>
-      </div>
-      <div className="min-w-0 flex-1 overflow-auto">
-        {selected ? <EventDetail event={selected} projectPath={projectPath} /> : <div className="p-6 text-muted">No events.</div>}
       </div>
     </div>
   );
@@ -234,47 +300,54 @@ function FilesTab({ files, events, projectPath }: { files: FileTouch[]; events: 
   return (
     <div className="flex h-full">
       <div className="w-[46%] min-w-[380px] overflow-auto border-r border-line">
-        <table className="w-full table-fixed text-left text-xs">
-          <thead className="sticky top-0 bg-panel text-[11px] uppercase tracking-wide text-muted">
-            <tr className="border-b border-line">
-              <th className="px-3 py-2 font-medium">File</th>
-              <th className="w-16 px-2 py-2 text-right font-medium">Reads</th>
-              <th className="w-16 px-2 py-2 text-right font-medium">Writes</th>
-              <th className="w-16 px-3 py-2 text-right font-medium">Edits</th>
+        <table className="w-full table-fixed border-separate border-spacing-0 text-left">
+          <thead className="sticky top-0 bg-bg">
+            <tr className="[&>th]:border-b [&>th]:border-line [&>th]:py-2 [&>th]:label [&>th]:font-medium">
+              <th className="pl-4">File</th>
+              <th className="w-16 text-right">Reads</th>
+              <th className="w-16 text-right">Writes</th>
+              <th className="w-16 pr-4 text-right">Edits</th>
             </tr>
           </thead>
           <tbody>
-            {files.map((f) => (
-              <tr
-                key={f.path}
-                onClick={() => setPath(f.path)}
-                className={`cursor-pointer border-b border-line/40 ${f.path === path ? "bg-accent/15" : "hover:bg-raised"}`}
-              >
-                <td className="truncate px-3 py-1.5 font-mono" title={f.path}>
-                  <FileName path={relPath(f.path, projectPath)} />
-                </td>
-                <td className="px-2 py-1.5 text-right tabular-nums">{f.reads || ""}</td>
-                <td className="px-2 py-1.5 text-right tabular-nums">{f.writes || ""}</td>
-                <td className="px-3 py-1.5 text-right tabular-nums">{f.edits || ""}</td>
-              </tr>
-            ))}
+            {files.map((f) => {
+              const on = f.path === path;
+              return (
+                <tr
+                  key={f.path}
+                  onClick={() => setPath(f.path)}
+                  className={`cursor-pointer transition-colors [&>td]:border-b [&>td]:border-line/60 [&>td]:py-2 ${on ? "bg-accent-soft" : "hover:bg-surface"}`}
+                >
+                  <td className="truncate pl-4 font-mono text-xs" title={f.path}>
+                    <FileName path={relPath(f.path, projectPath)} />
+                  </td>
+                  <td className="num text-right font-mono text-xs text-fg-2">{f.reads || ""}</td>
+                  <td className="num text-right font-mono text-xs text-ok">{f.writes || ""}</td>
+                  <td className="num pr-4 text-right font-mono text-xs text-ok">{f.edits || ""}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
-      <div className="min-w-0 flex-1 space-y-4 overflow-auto p-4">
+      <div className="min-w-0 flex-1 space-y-5 overflow-auto bg-surface p-5">
         {!path ? (
-          <div className="text-muted">Pick a file to see every change the agent made to it, in order.</div>
+          <EmptyState icon={<Icon.FileRead />} title="Pick a file">Every change the agent made to it shows here, in order.</EmptyState>
         ) : changes.length === 0 ? (
-          <div className="text-muted">{baseName(path)} was only read in this session.</div>
+          <EmptyState icon={<Icon.FileRead />} title={`${baseName(path)} was only read`}>This session never wrote to it.</EmptyState>
         ) : (
           changes.map((e) => {
             const diff = str(e.payload.unified_diff) || (e.kind === "file_write" && e.payload.content_excerpt ? asAddedDiff(str(e.payload.content_excerpt)) : "");
             return (
-              <div key={e.id} className="space-y-1">
+              <div key={e.id} className="enter space-y-2">
                 <div className="flex items-center gap-2 text-xs text-muted">
-                  <span>{e.kind === "file_write" ? "Write" : "Edit"} #{e.seq} · {fmtTime(e.ts)}</span>
-                  {e.payload.is_error === true && <span className="text-red-500">failed</span>}
-                  <a className="ml-auto text-accent hover:underline" href={`#/session/${encodeURIComponent(e.session_id)}?e=${e.seq}`}>open in timeline</a>
+                  <KindIcon kind={e.kind} />
+                  <span className="text-fg-2">{e.kind === "file_write" ? "Write" : "Edit"}</span>
+                  <span className="num font-mono">#{e.seq} · {fmtTime(e.ts)}</span>
+                  {e.payload.is_error === true && <span className="text-risk-high">failed</span>}
+                  <a className="ml-auto inline-flex items-center gap-0.5 text-accent hover:underline" href={`#/session/${encodeURIComponent(e.session_id)}?e=${e.seq}`}>
+                    Open in timeline <Icon.Chevron className="size-3" />
+                  </a>
                 </div>
                 {diff ? <Diff text={diff} path={path} /> : <div className="text-xs text-muted">No diff recorded.</div>}
               </div>

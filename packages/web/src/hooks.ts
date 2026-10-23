@@ -58,19 +58,36 @@ export function useDebounced<T>(value: T, ms: number): T {
 
 const THEME_KEY = "flightrec-theme";
 
-export function initialTheme(): "dark" | "light" {
+export type ThemePref = "system" | "light" | "dark";
+
+export function initialTheme(): ThemePref {
   try {
-    return localStorage.getItem(THEME_KEY) === "light" ? "light" : "dark";
+    const v = localStorage.getItem(THEME_KEY);
+    return v === "light" || v === "dark" ? v : "system";
   } catch {
-    return "dark";
+    return "system";
   }
 }
 
-export function applyTheme(theme: "dark" | "light"): void {
-  document.documentElement.classList.toggle("dark", theme === "dark");
+const systemDark = () => window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? true;
+
+/** Apply a theme preference; "system" follows the OS and keeps following it. */
+export function applyTheme(pref: ThemePref): void {
+  document.documentElement.classList.toggle("dark", pref === "dark" || (pref === "system" && systemDark()));
   try {
-    localStorage.setItem(THEME_KEY, theme);
+    if (pref === "system") localStorage.removeItem(THEME_KEY);
+    else localStorage.setItem(THEME_KEY, pref);
   } catch {
     // storage unavailable: theme just won't persist
   }
+}
+
+export function useSystemThemeSync(pref: ThemePref): void {
+  useEffect(() => {
+    if (pref !== "system") return;
+    const mq = window.matchMedia?.("(prefers-color-scheme: dark)");
+    const on = () => applyTheme("system");
+    mq?.addEventListener("change", on);
+    return () => mq?.removeEventListener("change", on);
+  }, [pref]);
 }
