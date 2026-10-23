@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Theme tokens: light by default, overridden under .dark (the default theme). */
+@theme {
+  --color-bg: #f7f7f8;
+  --color-panel: #ffffff;
+  --color-raised: #f0f0f2;
+  --color-line: #e2e2e6;
+  --color-fg: #1b1b1f;
+  --color-muted: #6b6b76;
+  --color-accent: #2563eb;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, monospace;
+}
+
+.dark {
+  --color-bg: #0e0f12;
+  --color-panel: #15171b;
+  --color-raised: #1d2026;
+  --color-line: #2a2e36;
+  --color-fg: #e6e7ea;
+  --color-muted: #8b909a;
+  --color-accent: #60a5fa;
+}
+
+/* In the base layer so utility classes (font-sans on a <pre>, etc.) still win. */
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-size: 13px;
+  }
+
+  pre {
+    font-family: var(--font-mono);
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--color-accent) 35%, transparent);
+  }
+}

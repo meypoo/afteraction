@@ -11,6 +11,9 @@
   },
   "dependencies": {
     "@flightrec/core": "workspace:^",
-    "commander": "^12.1.0"
+    "@flightrec/web": "workspace:^",
+    "@hono/node-server": "^1.13.7",
+    "commander": "^12.1.0",
+    "hono": "^4.6.14"
   }
 }

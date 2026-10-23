@@ -1,5 +1,8 @@
 import { Command, InvalidArgumentError, Option } from "commander";
+import { spawn } from "node:child_process";
 import { existsSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
 import os from "node:os";
 import path from "node:path";
 import {
@@ -32,9 +35,30 @@ import {
   type RiskLevel,
   type SourceConfig,
 } from "@flightrec/core";
+import { startServer } from "./server.js";
 
 
 export const VERSION = "0.1.0";
+const DEFAULT_PORT = 4317;
+
+/** Built web UI: the @flightrec/web package's dist folder. */
+function webRoot(): string {
+  try {
+    return path.join(path.dirname(createRequire(import.meta.url).resolve("@flightrec/web/package.json")), "dist");
+  } catch {
+    return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../web/dist");
+  }
+}
+
+function openBrowser(url: string): void {
+  const [cmd, args] =
+    process.platform === "win32" ? ["cmd", ["/c", "start", "", url]] : process.platform === "darwin" ? ["open", [url]] : ["xdg-open", [url]];
+  try {
+    spawn(cmd, args, { stdio: "ignore", detached: true, windowsHide: true }).on("error", () => {}).unref();
+  } catch {
+    // no browser available: the URL is printed anyway
+  }
+}
 
 export interface Io {
   out: (s: string) => void;
@@ -122,10 +146,31 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
     .version(VERSION)
     .option("--db <path>", "database file", undefined)
     .option("--source <name=path>", "override a log location, e.g. claude=~/.claude/projects (repeatable)", parseSourceFlag, [])
+    .option("--port <n>", "web UI port", (v) => Number.parseInt(v, 10), DEFAULT_PORT)
+    .option("--no-open", "don't open the browser")
     .configureOutput({ writeOut: (s) => io.out(s.trimEnd()), writeErr: (s) => io.err(s.trimEnd()) })
-    .action(async (_opts, cmd: Command) => {
-      await runIngest(openFor(cmd), cmd.optsWithGlobals<GlobalOpts>(), false, io);
-      io.out('The web UI is not built yet (milestone M3). Try "flightrec list" or "flightrec show <id>".');
+    .action(async (opts: { port: number; open: boolean }, cmd: Command) => {
+      const db = openFor(cmd);
+      await runIngest(db, cmd.optsWithGlobals<GlobalOpts>(), false, io);
+      if (!Number.isInteger(opts.port) || opts.port < 1 || opts.port > 65535) throw new CliError(`Invalid --port "${opts.port}"`);
+      let server;
+      try {
+        server = await startServer({ db, port: opts.port, webRoot: webRoot(), version: VERSION });
+      } catch (e) {
+        if ((e as { code?: string }).code === "EADDRINUSE") {
+          throw new CliError(`Port ${opts.port} is in use (is flightrec already running?). Try --port ${opts.port + 1}.`);
+        }
+        throw e;
+      }
+      io.out(`Flight Recorder is running at ${server.url} (local only). Press Ctrl+C to stop.`);
+      if (opts.open) openBrowser(server.url);
+      await new Promise<void>((resolve) => {
+        const stop = () => {
+          void server.close().then(resolve);
+        };
+        process.once("SIGINT", stop);
+        process.once("SIGTERM", stop);
+      });
     });
 
   program
