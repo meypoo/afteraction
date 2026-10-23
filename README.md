@@ -90,6 +90,8 @@ masked secrets, `esc` goes back and `q` quits. It needs an interactive terminal;
 |---|---|---|
 | Claude Code | `~/.claude/projects/` | Supported, including subagents |
 | Codex (CLI and Desktop) | `~/.codex/sessions/` | Supported; sessions Codex imported from other agents are skipped |
+| OpenCode | `~/.local/share/opencode/opencode.db` | Supported (prompts, replies, reasoning, commands, file reads; other tools listed as tool calls) |
+| Google Antigravity | `~/.gemini/antigravity/` | Full timeline where Antigravity wrote a readable `transcript.jsonl`; otherwise title, project, times and plan documents only, because conversation files are encrypted. No token or cost data |
 
 ## Commands
 
