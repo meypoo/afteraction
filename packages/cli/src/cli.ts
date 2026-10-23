@@ -172,6 +172,15 @@ export interface CliState {
   db?: Db;
 }
 
+/** A throwaway database of made-up sessions in a temp dir; the caller closes it and removes `dir`. */
+async function openDemo(state: CliState, io: Io): Promise<{ db: Db; dir: string }> {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "flightrec-demo-"));
+  const db = (state.db = openDb(path.join(dir, "demo.db")));
+  const report = await ingest(db, { sources: [{ adapter: ADAPTERS.claude!, root: writeDemoLogs(dir) }] });
+  io.out(`Demo mode: ${report.sessions} sample sessions (made up; your own logs are not read).`);
+  return { db, dir };
+}
+
 export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command {
   const program = new Command();
   const openFor = (cmd: Command): Db => {
@@ -195,10 +204,7 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
       let db: Db;
       let demoDir: string | undefined;
       if (opts.demo) {
-        demoDir = mkdtempSync(path.join(os.tmpdir(), "flightrec-demo-"));
-        db = state.db = openDb(path.join(demoDir, "demo.db"));
-        const report = await ingest(db, { sources: [{ adapter: ADAPTERS.claude!, root: writeDemoLogs(demoDir) }] });
-        io.out(`Demo mode: ${report.sessions} sample sessions (made up; your own logs are not read).`);
+        ({ db, dir: demoDir } = await openDemo(state, io));
         opts.port ??= DEFAULT_PORT;
       } else {
         db = openFor(cmd);
@@ -315,6 +321,41 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
         const failed = e.payload.is_error === true ? " ✗" : "";
         const risk = e.risk_level !== "none" ? `  ⚠ ${e.risk_level}: ${e.risk_rules.join(", ")}` : "";
         io.out(`${String(e.seq).padStart(4)}  ${fmtTime(e.ts)}  ${e.kind.padEnd(17)} ${nested}${mask(truncate(e.summary, 100))}${failed}${risk}`);
+      }
+    });
+
+  program
+    .command("tui")
+    .alias("browse")
+    .description("browse sessions full-screen in the terminal (j/k to move, r for the next risk)")
+    .argument("[session-id]", "open this session directly: full id, uuid, a unique prefix, or \"latest\"")
+    .option("--no-ingest", "skip reading new logs first")
+    .action(async (query: string | undefined, opts: { ingest: boolean }, cmd: Command) => {
+      if (!process.stdin.isTTY || !process.stdout.isTTY) {
+        throw new CliError('"flightrec tui" needs an interactive terminal. Use "flightrec list" and "flightrec show" instead.');
+      }
+      const g = cmd.optsWithGlobals<GlobalOpts & { demo?: boolean }>();
+      let d: Db;
+      let demoDir: string | undefined;
+      if (g.demo) ({ db: d, dir: demoDir } = await openDemo(state, io));
+      else {
+        d = openFor(cmd);
+        if (opts.ingest) await runIngest(d, g, false, io);
+      }
+      let initialSessionId: string | undefined;
+      if (query) {
+        initialSessionId = resolveSession(d, query) ?? undefined;
+        if (!initialSessionId) throw new CliError(`No single session matches "${query}". Use "flightrec list" to see ids.`);
+      }
+      const { runTui } = await import("./tui.js");
+      try {
+        await runTui({ sessions: () => listSessions(d), events: (id) => getEvents(d, id) }, { initialSessionId });
+      } finally {
+        if (demoDir) {
+          d.close();
+          state.db = undefined;
+          rmSync(demoDir, { recursive: true, force: true });
+        }
       }
     });
 

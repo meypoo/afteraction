@@ -55,6 +55,7 @@ flightrec --demo                   # sample sessions, nothing saved
 flightrec ingest [--full]          # ingest only
 flightrec list [--since 7d] [--project <path>] [--risk high] [--search <text>]
 flightrec show <session-id>        # timeline in the terminal
+flightrec tui [session-id]         # full-screen browser in the terminal (j/k, r for next risk; works over SSH)
 flightrec risks [--since 7d]       # flagged events, grouped by rule
 flightrec receipt <session-id|latest> [-o receipt.md]
 flightrec purge [--before 30d] --yes   # delete stored sessions (never your agent's logs)

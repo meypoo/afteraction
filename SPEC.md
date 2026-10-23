@@ -132,6 +132,7 @@ flightrec                  # ingest (incremental) then open UI at http://localho
 flightrec ingest [--full]  # ingest only
 flightrec list [--since 7d] [--project <path>] [--risk high]
 flightrec show <session-id>            # terminal timeline
+flightrec tui [session-id]             # full-screen terminal browser (Ink): session list, timeline, detail
 flightrec receipt <session-id> [-o file.md]
 flightrec risks [--since 7d]           # all flagged events
 flightrec doctor                       # show discovered sources, counts, parse warnings
