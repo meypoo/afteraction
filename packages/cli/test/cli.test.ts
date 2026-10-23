@@ -145,6 +145,12 @@ describe("flightrec cli", () => {
     expect(readFileSync(file, "utf8")).toContain("Agent session receipt");
   });
 
+  it("list --search filters by full-text match", async () => {
+    await cli("ingest");
+    expect((await cli("list", "--search", "npm")).out).toContain("11111111");
+    expect((await cli("list", "--search", "zzzznotthere")).out).toMatch(/No sessions found/);
+  });
+
   it("purge only deletes with --yes", async () => {
     await cli("ingest");
     const dry = await cli("purge", "--before", "2026-02-01");

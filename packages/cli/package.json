@@ -6,14 +6,37 @@
     "flightrec": "dist/index.js"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json"
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+    "prepack": "node scripts/build.mjs && node -e \"require('fs').copyFileSync('../../README.md','README.md')\""
   },
   "dependencies": {
-    "@flightrec/core": "workspace:^",
-    "@flightrec/web": "workspace:^",
     "@hono/node-server": "^1.13.7",
+    "better-sqlite3": "^11.8.1",
     "commander": "^12.1.0",
     "hono": "^4.6.14"
-  }
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0",
+    "@flightrec/core": "workspace:^",
+    "@flightrec/web": "workspace:^"
+  },
+  "description": "See what your coding agent did: commands, files, tokens and risks. 100% local.",
+  "keywords": [
+    "claude-code",
+    "codex",
+    "ai-agents",
+    "audit",
+    "replay",
+    "cli"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "dist",
+    "web",
+    "prices.json",
+    "README.md"
+  ]
 }

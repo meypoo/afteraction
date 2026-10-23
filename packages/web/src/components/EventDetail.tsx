@@ -93,7 +93,7 @@ export function EventDetail({ event: initial, projectPath }: { event: Normalized
           </Field>
         </div>,
         diff ? (
-          <Diff key="d" text={diff} />
+          <Diff key="d" text={diff} path={path} />
         ) : (
           <div key="d" className="space-y-2">
             <Block label="Old" text={str(p.old_excerpt)} />

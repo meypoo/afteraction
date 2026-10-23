@@ -274,6 +274,10 @@ export function getSession(db: Db, id: string): SessionRow | undefined {
 /** Accept a full id, a bare uuid, or a unique prefix of either. Returns null if none or ambiguous. */
 export function resolveSession(db: Db, query: string): string | null {
   if (getSession(db, query)) return query;
+  if (query === "latest") {
+    const row = db.prepare("SELECT id FROM sessions ORDER BY COALESCE(ended_at, started_at) DESC LIMIT 1").get() as { id: string } | undefined;
+    return row?.id ?? null;
+  }
   const rows = db
     .prepare("SELECT id FROM sessions WHERE id LIKE @q OR substr(id, instr(id, ':') + 1) LIKE @q LIMIT 2")
     .all({ q: `${query.replace(/[%_]/g, "")}%` }) as { id: string }[];

@@ -5,3 +5,8 @@
 coverage/
 dist/
 node_modules/
+packages/cli/web/
+packages/cli/prices.json
+packages/cli/README.md
+*.tgz
+.playwright-mcp/

@@ -48,3 +48,41 @@
     background: color-mix(in srgb, var(--color-accent) 35%, transparent);
   }
 }
+
+/* Syntax colours inside diffs (highlight.js token classes). */
+.hljs-diff {
+  --hl-keyword: #8250df;
+  --hl-string: #0a3069;
+  --hl-number: #0550ae;
+  --hl-comment: #6e7781;
+  --hl-title: #6639ba;
+  --hl-attr: #953800;
+}
+.dark .hljs-diff {
+  --hl-keyword: #c792ea;
+  --hl-string: #a5d6a7;
+  --hl-number: #f78c6c;
+  --hl-comment: #7f8796;
+  --hl-title: #82aaff;
+  --hl-attr: #ffcb6b;
+}
+.hljs-diff .hljs-keyword,
+.hljs-diff .hljs-built_in,
+.hljs-diff .hljs-selector-tag,
+.hljs-diff .hljs-meta .hljs-keyword { color: var(--hl-keyword); }
+.hljs-diff .hljs-string,
+.hljs-diff .hljs-regexp,
+.hljs-diff .hljs-template-tag { color: var(--hl-string); }
+.hljs-diff .hljs-number,
+.hljs-diff .hljs-literal,
+.hljs-diff .hljs-symbol { color: var(--hl-number); }
+.hljs-diff .hljs-comment,
+.hljs-diff .hljs-quote { color: var(--hl-comment); font-style: italic; }
+.hljs-diff .hljs-title,
+.hljs-diff .hljs-section,
+.hljs-diff .hljs-name { color: var(--hl-title); }
+.hljs-diff .hljs-attr,
+.hljs-diff .hljs-attribute,
+.hljs-diff .hljs-type,
+.hljs-diff .hljs-params,
+.hljs-diff .hljs-variable { color: var(--hl-attr); }

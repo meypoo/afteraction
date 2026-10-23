@@ -1,6 +1,6 @@
 import { Command, InvalidArgumentError, Option } from "commander";
 import { spawn } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import os from "node:os";
@@ -37,18 +37,21 @@ import {
   type RiskLevel,
   type SourceConfig,
 } from "@flightrec/core";
+import { writeDemoLogs } from "./demo.js";
 import { startServer } from "./server.js";
 
 
 export const VERSION = "0.1.0";
 const DEFAULT_PORT = 4317;
 
-/** Built web UI: the @flightrec/web package's dist folder. */
+/** Built web UI: copied next to the bundle by scripts/build.mjs, else the workspace's web package. */
 function webRoot(): string {
+  const bundled = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../web");
+  if (existsSync(path.join(bundled, "index.html"))) return bundled;
   try {
     return path.join(path.dirname(createRequire(import.meta.url).resolve("@flightrec/web/package.json")), "dist");
   } catch {
-    return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../web/dist");
+    return bundled;
   }
 }
 
@@ -186,11 +189,22 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
     .option("--config <path>", "config file (default ~/.flightrec/config.json)")
     .option("--port <n>", `web UI port (default ${DEFAULT_PORT})`, (v) => Number.parseInt(v, 10))
     .option("--no-open", "don't open the browser")
+    .option("--demo", "show made-up sample sessions instead of your own logs (nothing is saved)")
     .configureOutput({ writeOut: (s) => io.out(s.trimEnd()), writeErr: (s) => io.err(s.trimEnd()) })
-    .action(async (opts: { port?: number; open: boolean }, cmd: Command) => {
-      const db = openFor(cmd);
-      opts.port ??= loadConfig(cmd.optsWithGlobals<GlobalOpts>().config).port ?? DEFAULT_PORT;
-      await runIngest(db, cmd.optsWithGlobals<GlobalOpts>(), false, io);
+    .action(async (opts: { port?: number; open: boolean; demo?: boolean }, cmd: Command) => {
+      let db: Db;
+      let demoDir: string | undefined;
+      if (opts.demo) {
+        demoDir = mkdtempSync(path.join(os.tmpdir(), "flightrec-demo-"));
+        db = state.db = openDb(path.join(demoDir, "demo.db"));
+        const report = await ingest(db, { sources: [{ adapter: ADAPTERS.claude!, root: writeDemoLogs(demoDir) }] });
+        io.out(`Demo mode: ${report.sessions} sample sessions (made up; your own logs are not read).`);
+        opts.port ??= DEFAULT_PORT;
+      } else {
+        db = openFor(cmd);
+        opts.port ??= loadConfig(cmd.optsWithGlobals<GlobalOpts>().config).port ?? DEFAULT_PORT;
+        await runIngest(db, cmd.optsWithGlobals<GlobalOpts>(), false, io);
+      }
       if (!Number.isInteger(opts.port) || opts.port < 1 || opts.port > 65535) throw new CliError(`Invalid --port "${opts.port}"`);
       let server;
       try {
@@ -210,6 +224,11 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
         process.once("SIGINT", stop);
         process.once("SIGTERM", stop);
       });
+      if (demoDir) {
+        db.close();
+        state.db = undefined;
+        rmSync(demoDir, { recursive: true, force: true });
+      }
     });
 
   program
@@ -226,12 +245,13 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
     .option("--since <when>", "only sessions active since, e.g. 7d, 24h, 2026-01-31")
     .option("--project <path>", "only sessions whose project path contains this")
     .addOption(new Option("--risk <level>", "only sessions at or above this risk").choices(RISKS))
+    .option("--search <text>", "only sessions whose prompts, messages or commands match")
     .option("--limit <n>", "max rows", (v) => Number.parseInt(v, 10), 50)
     .option("--json", "print JSON")
-    .action((opts: { since?: string; project?: string; risk?: RiskLevel; limit: number; json?: boolean }, cmd: Command) => {
+    .action((opts: { since?: string; project?: string; risk?: RiskLevel; search?: string; limit: number; json?: boolean }, cmd: Command) => {
       let rows;
       try {
-        rows = listSessions(openFor(cmd), opts);
+        rows = listSessions(openFor(cmd), { ...opts, q: opts.search });
       } catch (e) {
         throw new CliError(e instanceof Error ? e.message : String(e));
       }
@@ -261,7 +281,7 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
   program
     .command("show")
     .description("print a session's timeline")
-    .argument("<session-id>", "full id, uuid, or a unique prefix")
+    .argument("<session-id>", "full id, uuid, a unique prefix, or \"latest\"")
     .option("--json", "print JSON (session, events, files)")
     .option("--reveal", "show secrets instead of masking them")
     .action((query: string, opts: { json?: boolean; reveal?: boolean }, cmd: Command) => {
@@ -334,7 +354,7 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
   program
     .command("receipt")
     .description("Markdown summary of a session for a PR comment (secrets and home paths redacted)")
-    .argument("<session-id>", "full id, uuid, or a unique prefix")
+    .argument("<session-id>", "full id, uuid, a unique prefix, or \"latest\"")
     .option("-o, --output <file>", "write to a file instead of stdout")
     .option("--no-redact", "keep secrets and home-directory paths")
     .action((query: string, opts: { output?: string; redact: boolean }, cmd: Command) => {

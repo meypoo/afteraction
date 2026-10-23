@@ -20,6 +20,7 @@ const get = (url: string, host = `127.0.0.1:${PORT}`) => app.request(url, { head
 const json = async (url: string) => {
   const res = await get(url);
   expect(res.status, url).toBe(200);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- loose JSON shapes in assertions
   return (await res.json()) as Record<string, any>;
 };
 

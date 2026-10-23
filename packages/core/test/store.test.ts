@@ -199,6 +199,7 @@ describe("queries", () => {
     expect(resolveSession(db, DEMO_ID)).toBe(DEMO_ID);
     expect(resolveSession(db, "11111111-2222-4333-8444-555555555555")).toBe(DEMO_ID);
     expect(resolveSession(db, "1111")).toBe(DEMO_ID);
+    expect(resolveSession(db, "latest")).toBe(DEMO_ID);
     expect(resolveSession(db, "claude:1111")).toBe(DEMO_ID);
     expect(resolveSession(db, "9999")).toBeNull();
   });

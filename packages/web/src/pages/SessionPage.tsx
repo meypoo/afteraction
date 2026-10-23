@@ -276,7 +276,7 @@ function FilesTab({ files, events, projectPath }: { files: FileTouch[]; events: 
                   {e.payload.is_error === true && <span className="text-red-500">failed</span>}
                   <a className="ml-auto text-accent hover:underline" href={`#/session/${encodeURIComponent(e.session_id)}?e=${e.seq}`}>open in timeline</a>
                 </div>
-                {diff ? <Diff text={diff} /> : <div className="text-xs text-muted">No diff recorded.</div>}
+                {diff ? <Diff text={diff} path={path} /> : <div className="text-xs text-muted">No diff recorded.</div>}
               </div>
             );
           })

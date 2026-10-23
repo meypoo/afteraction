@@ -1,0 +1,60 @@
+name: Flight Recorder receipt
+description: Post a Flight Recorder session receipt (commands, files, risks, cost) as a pull request comment.
+branding:
+  icon: activity
+  color: blue
+
+# Stub (SPEC M5). CI runners have no agent history of their own, so the session log has to be
+# committed or uploaded into the workspace first, e.g. `.flightrec/session.jsonl` from
+# ~/.claude/projects/<project>/<session-id>.jsonl. The receipt is redacted (secrets, home paths).
+
+inputs:
+  log-path:
+    description: Folder (searched recursively) or single .jsonl file holding the Claude Code session log(s).
+    required: true
+  session:
+    description: Session id, unique prefix, or "latest".
+    default: latest
+  version:
+    description: flightrec version to run from npm.
+    default: latest
+  github-token:
+    description: Token used to post the comment.
+    default: ${{ github.token }}
+
+outputs:
+  receipt-path:
+    description: Path of the generated Markdown receipt.
+    value: ${{ steps.receipt.outputs.path }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 20
+
+    - id: receipt
+      shell: bash
+      env:
+        LOG_PATH: ${{ inputs.log-path }}
+        SESSION: ${{ inputs.session }}
+        VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        logs="$RUNNER_TEMP/flightrec-logs/projects/ci"
+        mkdir -p "$logs"
+        if [ -f "$LOG_PATH" ]; then cp "$LOG_PATH" "$logs/"; else cp -R "$LOG_PATH"/. "$logs/"; fi
+        out="$RUNNER_TEMP/flightrec-receipt.md"
+        fr() { npx --yes "flightrec@$VERSION" --db "$RUNNER_TEMP/flightrec.db" --source "claude=$RUNNER_TEMP/flightrec-logs/projects" "$@"; }
+        fr ingest
+        fr receipt "$SESSION" -o "$out"
+        echo "path=$out" >> "$GITHUB_OUTPUT"
+
+    - if: github.event_name == 'pull_request' || github.event_name == 'pull_request_target'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        PR: ${{ github.event.pull_request.number }}
+        FILE: ${{ steps.receipt.outputs.path }}
+      run: gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body-file "$FILE"
