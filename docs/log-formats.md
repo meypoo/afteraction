@@ -7,6 +7,8 @@ observation, it says so.
 | Source | Status |
 |---|---|
 | Claude Code | 27 files, 56,416 lines, versions `2.1.229` – `2.1.304`, Windows 11, entrypoints `cli` and `claude-desktop`. 0 lines failed to parse as JSON. |
+| OpenCode | Schema only: `1.18.29` installed, database has 0 sessions (2026-10-23). |
+| Google Antigravity | Transcripts encrypted on disk; only metadata readable (2026-10-23). |
 | Codex CLI | **Not inspected.** Codex is not installed on this machine: no `~/.codex`, no `CODEX_HOME`, no `codex` on PATH, nothing in either WSL distro. No format is documented below until real logs exist. |
 
 ---
@@ -214,6 +216,82 @@ prompts and request bodies and are large.
 
 Not available on this machine. The spec's location `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl`
 is unverified. The Codex adapter (M4) needs real logs before its format can be documented here.
+
+---
+
+## OpenCode
+
+Inspected 2026-10-23, OpenCode `1.18.29` (npm global install), Windows 11.
+
+### Location
+
+`~/.local/share/opencode/opencode.db` (SQLite, WAL mode, so `-wal`/`-shm` sit next to it and
+hold recent writes). `~/.local/share/opencode/log/opencode.log` is a process log, not a transcript.
+No JSON `storage/` directory exists in this version; older OpenCode releases are said to have used
+one (inference, not observed).
+
+### Schema (observed, no rows yet)
+
+The database on this machine has **0 sessions, 0 messages, 0 parts**: OpenCode was installed but
+never used. Only the schema can be documented:
+
+- `session`: `id`, `project_id`, `parent_id` (subagent sessions point at their parent), `directory`,
+  `title`, `version`, `agent`, `model`, `cost`, `tokens_input/output/reasoning/cache_read/cache_write`,
+  `summary_additions/deletions/files`, `time_created`/`time_updated` (integers, unit unverified).
+- `message`: `id`, `session_id`, `time_created`, `data` (JSON text, shape unverified).
+- `part`: `id`, `message_id`, `session_id`, `time_created`, `data` (JSON text, shape unverified;
+  inferred to hold text, reasoning and tool-call parts).
+- `project`: `id`, `worktree`, `vcs`, `name`.
+- Also `todo`, `permission`, `session_share`, `event`/`event_sequence`, `session_message`,
+  `session_input`, and `account`/`credential`/`control_account` tables. The adapter must never read
+  the account or credential tables: they hold access tokens.
+
+Implication for the adapter: unlike Claude Code and Codex, OpenCode is one database, not one file
+per session. `discover()` would return the database path and `parse()` would yield many sessions.
+
+**Blocked:** the `message.data` and `part.data` JSON shapes need a real session before a parser is
+written.
+
+---
+
+## Google Antigravity
+
+Inspected 2026-10-23, Antigravity IDE installed at `D:\Antigravity`, data last written 2026-09-05.
+
+### Locations
+
+`~/.gemini/antigravity/` (with older copies in `antigravity-backup/` and `antigravity-ide/`):
+
+| Path | Content | Readable |
+|---|---|---|
+| `conversations/<uuid>.pb` | one file per conversation (9 here, 67 KB – 3.2 MB) | **No.** Byte entropy ≈ 8.0 bits/byte and no compression magic: encrypted. |
+| `implicit/<uuid>.pb` | 6 files, up to 11 MB | No, same as above. |
+| `agyhub_summaries_proto.pb` | plain protobuf, one entry per conversation | Yes (no `.proto` schema; field meanings inferred) |
+| `brain/<uuid>/` | agent artifacts per conversation: `task.md`, `implementation_plan.md`, `walkthrough.md`, each with `.metadata.json` and numbered `.resolved.N` revisions, plus browser screenshots (`*.png`, `*.webp`) | Yes |
+| `annotations/<uuid>.pbtxt` | `last_user_view_time` only | Yes |
+| `code_tracker/active/no_repo/<md5>_<file>` | copies of files the agent touched | Yes, but no link to a conversation |
+| `antigravity_state.pbtxt` | onboarding state and last selected model (`MODEL_…` enum) | Yes |
+
+`%APPDATA%\Antigravity\User\globalStorage\state.vscdb` holds IDE state (auth, theme, agent-manager
+init state) but no transcripts.
+
+### `agyhub_summaries_proto.pb` (inferred field meanings)
+
+Repeated field 1, each `{1: conversation uuid, 2: summary}`. In the summary: `1` title (string),
+`2` step count (varint, inferred), `3` last-modified `{seconds, nanos}`, `7` created
+`{seconds, nanos}`, `9.1` workspace `file:///` URI, `4`/`17.3`/`17.18` further uuids (meaning
+unknown), `16` and `22` varints (unknown).
+
+### `brain/*.metadata.json`
+
+```json
+{ "artifactType": "ARTIFACT_TYPE_TASK", "summary": "<one-line description>", "updatedAt": "<ISO-8601>" }
+```
+
+**Blocked:** the transcripts (prompts, tool calls, commands, file edits, tokens) are only in the
+encrypted `conversations/*.pb`. Without them an adapter could show at most one metadata-only session
+per conversation (title, workspace, times, step count, artifact revisions), with no timeline,
+commands, risks or cost.
 
 ---
 
