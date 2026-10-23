@@ -169,3 +169,7 @@ pnpm flightrec --demo
 The repo is a pnpm workspace: `packages/core` (adapters, risk rules, costs, SQLite store), `packages/cli`
 (commands and the local server) and `packages/web` (React UI). `pnpm --filter @flightrec/web dev` runs the UI with
 hot reload against a running `flightrec` on port 4317. Log format notes live in [docs/log-formats.md](docs/log-formats.md).
+
+## License
+
+[MIT](LICENSE)

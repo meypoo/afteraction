@@ -25,6 +25,9 @@
     "esbuild": "^0.24.0",
     "ink-testing-library": "4.0.0"
   },
+  "license": "MIT",
+  "repository": { "type": "git", "url": "git+https://github.com/meypoo/flightrecorder.git", "directory": "packages/cli" },
+  "homepage": "https://github.com/meypoo/flightrecorder#readme",
   "description": "See what your coding agent did: commands, files, tokens and risks. 100% local.",
   "keywords": [
     "claude-code",
