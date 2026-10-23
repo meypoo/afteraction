@@ -1,6 +1,7 @@
 {
   "last_updated": "2026-10-22",
-  "confirmed": false,
+  "confirmed": true,
+  "confirmed_on": "2026-10-23",
   "source": "https://platform.claude.com/docs/en/about-claude/pricing (Claude API, global routing, standard speed)",
   "currency": "USD",
   "unit": "per 1M tokens",
