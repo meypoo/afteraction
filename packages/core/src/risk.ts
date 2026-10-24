@@ -111,7 +111,7 @@ function isInside(p: string, root: string): boolean {
 /** OS temp directories, where agents keep scratch files. */
 export function isTempPath(p: string): boolean {
   const n = "/" + p.replace(/\\/g, "/").replace(/^\/+/, "").toLowerCase();
-  return /^\/(private\/)?(var\/)?tmp(\/|$)/.test(n) || /\/appdata\/local\/temp(\/|$)/.test(n) ||
+  return /^\/(private\/)?(var\/)?tmp(\/|$)/.test(n) || /^\/(private\/)?var\/folders\//.test(n) || /\/appdata\/local\/temp(\/|$)/.test(n) ||
     /^\/(\$tmpdir|\$\{tmpdir\}|%temp%|%tmp%|\$env:temp|\$env:tmp)(\/|$)/.test(n);
 }
 
@@ -213,6 +213,13 @@ export const SECRET_PATTERNS: { name: string; re: RegExp }[] = [
   { name: "OpenAI API key", re: /\bsk-(proj-|svcacct-)?[A-Za-z0-9_-]{20,}/g },
   { name: "GitHub token", re: /\b(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{36}\b/g },
   { name: "Stripe live key", re: /\b(sk|rk)_live_[0-9a-zA-Z]{24,}/g },
+  { name: "GitHub fine-grained token", re: /\bgithub_pat_[A-Za-z0-9_]{40,}/g },
+  { name: "GitLab token", re: /\bglpat-[A-Za-z0-9_-]{20,}/g },
+  { name: "Slack token", re: /\bxox[abposr]-[A-Za-z0-9-]{10,}/g },
+  { name: "Google API key", re: /\bAIza[0-9A-Za-z_-]{35}\b/g },
+  { name: "npm token", re: /\bnpm_[A-Za-z0-9]{36}\b/g },
+  { name: "Hugging Face token", re: /\bhf_[A-Za-z0-9]{34,}\b/g },
+  { name: "Private key", re: /-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY-----/g },
 ];
 
 /** Text produced by or written during an event: command output, written content, tool results. */
@@ -370,7 +377,7 @@ export const RULES: RiskRule[] = [
       segments(command(e)).some((s) => {
         if (s.program === "icacls") return /everyone:\(?f/i.test(s.args.join(" "));
         if (s.program !== "chmod") return false;
-        return s.args.some((a) => a === "-R" || a === "--recursive" || /^0?777$/.test(a) || /^[ugoa]*\+[rwx]*w[rwx]*$/.test(a) && /[oa]/.test(a.split("+")[0]!));
+        return s.args.some((a) => a === "-R" || a === "--recursive" || /^0?[0-7]?[0-7]{2}[2367]$/.test(a) || /^[ugoa]*\+[rwx]*w[rwx]*$/.test(a) && /[oa]/.test(a.split("+")[0]!));
       }),
   },
   {

@@ -90,8 +90,8 @@ const CASES: Record<string, { yes: NormalizedEvent[]; no: NormalizedEvent[] }> =
       sh("curl -o out https://x.io/file")],
   },
   "chmod-permissive": {
-    yes: [sh("chmod 777 run.sh"), sh("chmod -R 755 dir"), sh("chmod a+rwx f")],
-    no: [sh("chmod +x run.sh"), sh("chmod 644 f")],
+    yes: [sh("chmod 777 run.sh"), sh("chmod -R 755 dir"), sh("chmod a+rwx f"), sh("chmod 666 f"), sh("chmod 0662 f")],
+    no: [sh("chmod +x run.sh"), sh("chmod 644 f"), sh("chmod 755 f"), sh("chmod 4755 f")],
   },
   "db-destructive": {
     yes: [sh('psql -c "DROP TABLE users"'), sh('sqlite3 db "delete from logs"'), sh('mysql -e "TRUNCATE orders"'),

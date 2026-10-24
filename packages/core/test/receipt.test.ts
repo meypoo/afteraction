@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildReceipt, redactText } from "../src/receipt.js";
+import { buildReceipt, code, maskSecrets, redactText } from "../src/receipt.js";
 import type { EventKind, NormalizedEvent, RiskLevel } from "../src/model.js";
 import type { SessionRow } from "../src/db.js";
 
@@ -43,17 +43,17 @@ describe("buildReceipt", () => {
 
   it("follows the spec layout with labelled estimated cost", () => {
     expect(md).toContain("### 🛫 Agent session receipt");
-    expect(md).toContain("**Agent:** Claude Code · **Model:** claude-opus-5-5 · **Duration:** 42m · **Est. cost:** $3.18 (estimated, API-equivalent)");
-    expect(md).toContain('**Prompt:** "Add Stripe webhook handler"');
+    expect(md).toContain("**Agent:** Claude Code · **Model:** `claude-opus-5-5` · **Duration:** 42m · **Est. cost:** $3.18 (estimated, API-equivalent)");
+    expect(md).toContain("**Prompt:** `Add Stripe webhook handler`");
     expect(md).toContain("<sub>Generated locally by flightrec v0.1.0 — transcript not uploaded.</sub>");
   });
 
   it("lists changed files relative to the project with line counts", () => {
-    expect(md).toContain("**Files changed (1):** src/api/webhook.ts (+123/−4)");
+    expect(md).toContain("**Files changed (1):** `src/api/webhook.ts` (+123/−4)");
   });
 
   it("groups commands with counts in first-seen order", () => {
-    expect(md).toMatch(/\*\*Commands run \(5\):\*\* npm i stripe, npm test ×2, ``git commit -m "add `webhook`"``, echo sk-ant…\[redacted\]$/m);
+    expect(md).toMatch(/\*\*Commands run \(5\):\*\* `npm i stripe`, `npm test` ×2, ``git commit -m "add `webhook`"``, `echo sk-ant…\[redacted\]`$/m);
   });
 
   it("lists risk flags worst first", () => {
@@ -74,6 +74,69 @@ describe("buildReceipt", () => {
     expect(md2).toContain("**Risk flags:** none");
     expect(md2).toContain("**Files changed:** none");
     expect(md2).toContain("**Commands run:** none");
+  });
+
+  it("labels every agent", () => {
+    for (const [source, label] of [["opencode", "OpenCode"], ["antigravity", "Antigravity"], ["gemini_cli", "Gemini CLI"]] as const) {
+      expect(buildReceipt({ ...session, source }, [], { version: "0.1.0", homeDir: HOME })).toContain(`**Agent:** ${label} ·`);
+    }
+  });
+});
+
+describe("receipt Markdown injection", () => {
+  const evil = [
+    "[click](https://attacker.example) @maintainer ![x](https://attacker.example/p.png) <img src=x>",
+    "line one\n# Heading\n@everyone\r\n- item",
+    "a ``` b `` c `",
+    "`starts and ends`",
+  ];
+  for (const text of evil) {
+    it(`keeps ${JSON.stringify(text.slice(0, 16))} inside one code span everywhere`, () => {
+      const md = buildReceipt(
+        { ...session, title: text, model: text },
+        [
+          ev("shell_command", { command: text }, ["high", ["git-force"]]),
+          ev("file_write", { path: `${PROJECT}\\${text}`, lines_added: 1, lines_removed: 0 }, ["medium", ["outside-project-write"]]),
+          { ...ev("web_fetch", { url: text }, ["medium", ["network-exfil-hint"]]), summary: text },
+        ],
+        { version: "0.1.0", homeDir: HOME },
+      );
+      // Untrusted newlines never reach the output, so nothing can start a heading, list or mention line.
+      const lines = md.split("\n");
+      expect(lines.filter((l) => /^(#|@|- item)/.test(l))).toEqual(["### 🛫 Agent session receipt"]);
+      // Each copy is fenced by a backtick run longer than any inside it, so it cannot close early.
+      const flat = code(text);
+      const fence = /^`+/.exec(flat)![0];
+      expect(flat.endsWith(fence)).toBe(true);
+      expect(flat.slice(fence.length, -fence.length)).not.toContain(fence);
+      expect(md).toContain(`**Prompt:** ${flat}`);
+      expect(md).toContain(`**Model:** ${flat}`);
+    });
+  }
+});
+
+describe("maskSecrets", () => {
+  it("masks prefixed tokens and credentials recognised by context", () => {
+    const cases: [string, string][] = [
+      ["github_pat_11ABCDEFG0123456789_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOP", "github_pat_…[redacted]"],
+      ["glpat-abcdefghij0123456789", "glpat-…[redacted]"],
+      ["xoxb-1234567890-abcdefghij", "xoxb-…[redacted]"],
+      ["AIzaSyA-abcdefghijklmnopqrstuvwxyz01234", "AIza…[redacted]"],
+      ["OPENAI_API_KEY=hunter2hunter2", "OPENAI_API_KEY=…[redacted]"],
+      ['export DB_PASSWORD="correct-horse"', 'export DB_PASSWORD="…[redacted]"'],
+      ['{"password": "s3cr3t-value"}', '{"password": "…[redacted]"}'],
+      ["curl -H 'Authorization: Bearer abc.def.ghijkl'", "curl -H 'Authorization: Bearer …[redacted]'"],
+      ["git clone https://bob:pa55word@git.example/x", "git clone https://bob:…[redacted]@git.example/x"],
+      ["mysql --password=letmein123", "mysql --password=…[redacted]"],
+      ["-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXk\n-----END OPENSSH PRIVATE KEY-----", "-----BEGIN OPENSSH PRIVATE KEY-----…[redacted]"],
+    ];
+    for (const [input, want] of cases) expect(maskSecrets(input), input).toBe(want);
+  });
+
+  it("leaves ordinary code and variable references alone", () => {
+    for (const s of ["const token = getToken();", "MAX_TOKENS=100000", "GITHUB_TOKEN=$GITHUB_TOKEN", "max_tokens: 4096", "--token-file x"]) {
+      expect(maskSecrets(s)).toBe(s);
+    }
   });
 });
 

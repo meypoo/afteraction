@@ -86,10 +86,9 @@ function decodeProto(b: Buffer): ProtoField[] {
       if (end > b.length) throw new Error("truncated field");
       out.push({ no, wire, bytes: b.subarray(k, end) });
       i = end;
-    } else if (wire === 1) {
-      i += 8;
-    } else if (wire === 5) {
-      i += 4;
+    } else if (wire === 1 || wire === 5) {
+      i += wire === 1 ? 8 : 4;
+      if (i > b.length) throw new Error("truncated field");
     } else {
       throw new Error(`unsupported wire type ${wire}`);
     }
@@ -110,7 +109,8 @@ function fieldTime(fs: ProtoField[], no: number): string | null {
   if (secs === undefined) return null;
   const nanos = field(t, 2)?.int ?? 0n;
   const ms = Number(secs) * 1000 + Math.floor(Number(nanos) / 1e6);
-  return Number.isFinite(ms) ? new Date(ms).toISOString() : null;
+  const d = new Date(ms);
+  return Number.isFinite(d.getTime()) ? d.toISOString() : null; // out-of-range seconds must not throw
 }
 
 export interface AntigravitySummary {

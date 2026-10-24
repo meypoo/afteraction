@@ -211,6 +211,50 @@ describe("flightrec cli", () => {
     expect(bad.err).toMatch(/config/i);
   });
 
+  it("masks secrets in --json output unless --reveal", async () => {
+    appendRisky();
+    await cli("ingest");
+    const KEY = "sk-ant-api03-abcdefghijklmnopqrstuvwxyz";
+    for (const args of [["list", "--json"], ["show", "1111", "--json"], ["risks", "--json"]]) {
+      const masked = await cli(...args);
+      expect(masked.code, args.join(" ")).toBe(0);
+      expect(masked.out, args.join(" ")).not.toContain(KEY);
+    }
+    expect((await cli("show", "1111", "--json", "--reveal")).out).toContain(KEY);
+    expect((await cli("risks", "--json", "--reveal")).out).toContain(KEY);
+  });
+
+  it("reads only the named sources with --no-default-sources", async () => {
+    // A Codex session in the (fake) home directory, as on a self-hosted CI runner.
+    cpSync(path.resolve(FIXTURES, "../codex/sessions"), path.join(tmp, "home", ".codex", "sessions"), { recursive: true });
+    const all = await cli("ingest");
+    expect(all.out).toMatch(/Ingested 3 files/);
+    dbArgs = ["--db", path.join(tmp, "only.db"), "--no-default-sources", "--source", `claude=${path.join(tmp, "projects")}`];
+    expect((await cli("ingest")).out).toMatch(/Ingested 1 files/);
+    const sources = JSON.parse((await cli("list", "--json")).out) as { source: string }[];
+    expect(sources.map((s) => s.source)).toEqual(["claude_code"]);
+    expect((await cli("doctor")).out).not.toMatch(/^\s+codex /m);
+  });
+
+  it("rejects bad --limit values and expands ~ in --db", async () => {
+    await cli("ingest");
+    for (const v of ["0", "-1", "abc", "1.5"]) expect((await cli("list", "--limit", v)).code, v).not.toBe(0);
+    dbArgs = ["--db", "~/tilde.db", "--source", `claude=${path.join(tmp, "projects")}`];
+    await cli("ingest");
+    expect(existsSync(path.join(tmp, "home", "tilde.db"))).toBe(true);
+  });
+
+  it("rejects config values of the wrong type", async () => {
+    const cfg = path.join(tmp, "config.json");
+    dbArgs = ["--config", cfg];
+    for (const bad of [{ db: 123 }, { port: "x" }, { sources: { claude: 5 } }, { sources: [] }]) {
+      writeFileSync(cfg, JSON.stringify(bad));
+      const res = await cli("ingest");
+      expect(res.code, JSON.stringify(bad)).toBe(1);
+      expect(res.err).toMatch(/Invalid config file/);
+    }
+  });
+
   it("validates --source", async () => {
     dbArgs = [];
     const res = await cli("--source", "no-such-agent=/tmp", "ingest");

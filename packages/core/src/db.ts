@@ -97,14 +97,21 @@ CREATE VIEW IF NOT EXISTS file_touches AS
 export function openDb(file = defaultDbPath()): Db {
   if (file !== ":memory:") mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
   const db = new Database(file);
+  db.pragma("journal_mode = WAL");
   if (file !== ":memory:") {
-    try {
-      chmodSync(file, 0o600); // user-only; best effort on Windows
-    } catch {
-      // ignore: some filesystems do not support chmod
+    // User-only, including the WAL and shared-memory files that hold recent writes. Best effort:
+    // chmod is a no-op on Windows, where the profile directory's ACLs decide.
+    // Only our own default directory is tightened; a --db elsewhere (say /tmp) keeps its folder as is.
+    const targets = [file, `${file}-wal`, `${file}-shm`];
+    if (path.resolve(path.dirname(file)) === path.dirname(defaultDbPath())) targets.push(path.dirname(file));
+    for (const f of targets) {
+      try {
+        chmodSync(f, f === path.dirname(file) ? 0o700 : 0o600);
+      } catch {
+        // missing yet, or a filesystem without chmod
+      }
     }
   }
-  db.pragma("journal_mode = WAL");
   db.pragma("synchronous = NORMAL");
   db.pragma("foreign_keys = ON");
   const version = db.pragma("user_version", { simple: true }) as number;
@@ -219,16 +226,23 @@ export function ftsQuery(text: string): string | null {
 
 const RISK_ORDER: RiskLevel[] = ["none", "low", "medium", "high", "critical"];
 
+/** A --since/--before/until value that is not a duration or a date (a user error, HTTP 400). */
+export class InvalidSince extends Error {}
+
 /** Parse "7d", "24h", "30m", "2w" or an ISO date into an ISO timestamp. */
 export function parseSince(value: string, now = new Date()): string {
+  const invalid = () => new InvalidSince(`Invalid --since value "${value}" (use e.g. 7d, 24h or 2026-01-31)`);
   const m = /^(\d+)\s*([mhdw])$/.exec(value.trim());
+  let t: number;
   if (m) {
     const ms = { m: 60e3, h: 3600e3, d: 86400e3, w: 7 * 86400e3 }[m[2] as "m" | "h" | "d" | "w"];
-    return new Date(now.getTime() - Number(m[1]) * ms).toISOString();
+    t = now.getTime() - Number(m[1]) * ms;
+  } else {
+    t = Date.parse(value);
   }
-  const t = Date.parse(value);
-  if (!Number.isFinite(t)) throw new Error(`Invalid --since value "${value}" (use e.g. 7d, 24h or 2026-01-31)`);
-  return new Date(t).toISOString();
+  const d = new Date(t);
+  if (!Number.isFinite(d.getTime())) throw invalid(); // also huge durations like 99999999999999d
+  return d.toISOString();
 }
 
 export function listSessions(db: Db, opts: ListOptions = {}): SessionRow[] {
@@ -261,7 +275,11 @@ export function listSessions(db: Db, opts: ListOptions = {}): SessionRow[] {
     where.push("id IN (SELECT session_id FROM search WHERE search MATCH @q)");
     params.q = q;
   }
-  const limit = opts.limit ? `LIMIT ${Math.trunc(opts.limit)} OFFSET ${Math.trunc(opts.offset ?? 0)}` : "";
+  const whole = (n: number | undefined, min: number) => (n !== undefined && Number.isSafeInteger(n) && n >= min ? n : undefined);
+  const lim = whole(opts.limit, 1);
+  if (opts.limit !== undefined && lim === undefined) throw new RangeError(`Invalid limit ${opts.limit}`);
+  if (opts.offset !== undefined && whole(opts.offset, 0) === undefined) throw new RangeError(`Invalid offset ${opts.offset}`);
+  const limit = lim ? `LIMIT ${lim} OFFSET ${opts.offset ?? 0}` : "";
   const sql = `SELECT * FROM sessions ${where.length ? "WHERE " + where.join(" AND ") : ""}
     ORDER BY COALESCE(started_at, '') DESC ${limit}`;
   return db.prepare(sql).all(params) as SessionRow[];
@@ -448,6 +466,8 @@ export function purgeSessions(db: Db, opts: { before?: string } = {}): { session
       ? db.prepare("SELECT id, source_file, event_count FROM sessions WHERE COALESCE(ended_at, started_at, '') < ?").all(cutoff)
       : db.prepare("SELECT id, source_file, event_count FROM sessions").all()
   ) as { id: string; source_file: string; event_count: number }[];
+  // Overwrite deleted content instead of leaving it in free pages.
+  db.pragma("secure_delete = ON");
   db.transaction(() => {
     for (const r of rows) {
       db.prepare("DELETE FROM search WHERE session_id = ?").run(r.id);
@@ -462,6 +482,7 @@ export function purgeSessions(db: Db, opts: { before?: string } = {}): { session
     } catch {
       // VACUUM needs free temp space; the rows are deleted either way
     }
+    db.pragma("wal_checkpoint(TRUNCATE)"); // old page images in the WAL go too
   }
   return { sessions: rows.length, events: rows.reduce((a, r) => a + r.event_count, 0) };
 }

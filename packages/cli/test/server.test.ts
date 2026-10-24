@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { appendFileSync, cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, cpSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -157,5 +157,76 @@ describe("static files", () => {
     const res = await bare.request("/", { headers: { Host: `127.0.0.1:${PORT}` } });
     expect(res.status).toBe(503);
     expect(await res.text()).toMatch(/pnpm build/);
+  });
+});
+
+describe("hardening", () => {
+  it("sets protective headers on 403s, errors and API responses, and never caches the API", async () => {
+    const denied = await get("/api/meta", "evil.example");
+    expect(denied.status).toBe(403);
+    expect(denied.headers.get("content-security-policy")).toContain("frame-ancestors 'none'");
+    expect(denied.headers.get("x-frame-options")).toBe("DENY");
+    const bad = await get("/api/sessions?since=soon");
+    expect(bad.status).toBe(400);
+    expect(bad.headers.get("x-content-type-options")).toBe("nosniff");
+    const ok = await get(`/api/sessions/${encodeURIComponent(ID)}/events?reveal=1`);
+    expect(ok.headers.get("cache-control")).toBe("no-store");
+  });
+
+  it("rejects bad pagination and huge durations with 400, not an unlimited dump or a 500", async () => {
+    for (const q of ["limit=-1", "limit=0", "limit=abc", "limit=1e3", "limit=5001", "offset=-1", "offset=Infinity", "since=99999999999999999999d"]) {
+      expect((await get(`/api/sessions?${q}`)).status, q).toBe(400);
+    }
+    expect((await get("/api/costs?since=99999999999999999999d")).status).toBe(400);
+    expect((await json("/api/sessions?limit=1&offset=0")).sessions).toHaveLength(1);
+  });
+
+  it("refuses anything but GET on the API", async () => {
+    for (const method of ["POST", "PUT", "DELETE", "PATCH"]) {
+      const res = await app.request("/api/sessions", { method, headers: { Host: `127.0.0.1:${PORT}` } });
+      expect(res.status, method).toBe(405);
+    }
+  });
+
+  it("does not follow symlinks out of the web root", async (ctx) => {
+    try {
+      symlinkSync(tmp, path.join(tmp, "web", "link"), "junction");
+    } catch {
+      ctx.skip(); // no permission to create links here
+    }
+    const res = await get("/link/secret.txt");
+    expect(await res.text()).not.toContain("do not serve");
+  });
+});
+
+describe("access token", () => {
+  const TOKEN = "test-token-0123456789";
+  let locked: ReturnType<typeof createApp>;
+  const req = (url: string, headers: Record<string, string> = {}) =>
+    locked.request(url, { headers: { Host: `127.0.0.1:${PORT}`, ...headers } });
+  beforeEach(() => {
+    locked = createApp({ db, port: PORT, webRoot: path.join(tmp, "web"), version: "0.1.0", token: TOKEN });
+  });
+
+  it("refuses API and page requests without the token", async () => {
+    expect((await req("/api/sessions")).status).toBe(401);
+    expect((await req("/")).status).toBe(401);
+    expect((await req("/api/sessions", { Cookie: `flightrec_${PORT}=wrong` })).status).toBe(401);
+    expect((await req("/api/sessions", { Cookie: `flightrec_9999=${TOKEN}` })).status).toBe(401);
+    expect((await req("/?token=wrong")).status).toBe(403);
+    expect((await req(`/api/sessions?token=${TOKEN}`)).status).toBe(401); // only page URLs trade the token for a cookie
+  });
+
+  it("trades the URL token for an HttpOnly SameSite cookie, then accepts the cookie or a bearer header", async () => {
+    const first = await req(`/?token=${TOKEN}`);
+    expect(first.status).toBe(302);
+    expect(first.headers.get("location")).toBe("/");
+    const cookie = first.headers.get("set-cookie")!;
+    expect(cookie).toMatch(/HttpOnly/);
+    expect(cookie).toMatch(/SameSite=Strict/);
+    const pair = cookie.split(";")[0]!;
+    expect((await req("/api/sessions", { Cookie: `other=1; ${pair}` })).status).toBe(200);
+    expect((await req("/", { Cookie: pair })).status).toBe(200);
+    expect((await req("/api/sessions", { Authorization: `Bearer ${TOKEN}` })).status).toBe(200);
   });
 });

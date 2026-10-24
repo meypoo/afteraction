@@ -29,6 +29,23 @@ describe("vscode chat log replay", () => {
     expect(replayChatLog(log, (line) => bad.push(line))).toEqual({ a: 2 });
     expect(bad).toEqual([2, 3, 4]);
   });
+
+  it("cannot pollute Object.prototype or grow huge sparse arrays", () => {
+    const bad: number[] = [];
+    const log = [
+      { kind: 0, v: { a: [1, 2] } },
+      { kind: 1, k: ["__proto__", "polluted"], v: true },
+      { kind: 1, k: ["a", "constructor", "prototype", "polluted"], v: true },
+      { kind: 2, k: ["__proto__", "x"], v: [1] },
+      { kind: 3, k: ["constructor", "prototype", "toString"] },
+      { kind: 2, k: ["a"], i: 1e9, v: [3] },
+    ].map((e) => JSON.stringify(e)).join("\n");
+    const state = replayChatLog(log, (line) => bad.push(line)) as { a: unknown[] };
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+    expect(typeof Object.prototype.toString).toBe("function");
+    expect(bad).toEqual([2, 3, 4, 5]);
+    expect(state.a).toEqual([1, 2, 3]);
+  });
 });
 
 describe("copilot adapter", () => {

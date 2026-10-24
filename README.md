@@ -30,7 +30,7 @@ npx flightrec
 ```
 
 That reads your Claude Code session logs, stores them in a local SQLite database and opens a replay UI at
-http://localhost:4317. Nothing leaves your machine.
+http://localhost:4317 (the link it opens carries a one-off access token). Nothing leaves your machine.
 
 Want to look around first without touching your own logs?
 
@@ -114,7 +114,8 @@ flightrec purge [--before 30d] --yes   # delete stored sessions (never your agen
 flightrec doctor                   # log sources found, counts, parse warnings
 ```
 
-Global options: `--db <path>`, `--source claude=<path>`, `--config <path>`, `--port <n>`, `--no-open`.
+Global options: `--db <path>`, `--source claude=<path>`, `--no-default-sources` (read only the `--source`s you name),
+`--config <path>`, `--port <n>`, `--no-open`. `--json` output masks secrets too; add `--reveal` for the raw values.
 
 Session ids can be the full id, the bare UUID, a unique prefix, or `latest`.
 
@@ -140,8 +141,11 @@ cost on the API".
 
 - 100% local. No telemetry, no accounts, no network calls.
 - The UI server listens on `127.0.0.1` only and rejects requests with a non-local `Host` header (DNS-rebinding
-  protection).
-- Secrets found in logs are masked in the UI until you click "Reveal secrets", and are always redacted in receipts.
+  protection). Each launch makes a random access token: the link flightrec opens trades it for a cookie, and requests
+  without it are refused, so other users and programs on the same machine cannot read your sessions through the port.
+  The API is read-only.
+- Secrets found in logs are masked in the UI, the terminal and `--json` output until you ask to reveal them, and are
+  redacted in receipts. Masking is pattern-based and best-effort: see [SECURITY.md](SECURITY.md).
 - Your data lives in `~/.flightrec/flightrec.db`. Delete it, or run `flightrec purge`, whenever you like.
   Flight Recorder never modifies your agents' log files.
 
@@ -158,10 +162,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: meypoo/flightrecorder@main
+      - uses: meypoo/flightrecorder@<release tag or commit SHA>
         with:
           log-path: .flightrec/session.jsonl
 ```
+
+The action reads only the log you give it (never other agent history on the runner) and runs the exact
+`flightrec` version in its `version` input. Pin the action itself to a tag or commit, and prefer `pull_request` over
+`pull_request_target`.
 
 ## Development
 

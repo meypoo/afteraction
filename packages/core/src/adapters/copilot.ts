@@ -32,6 +32,10 @@ export function replayChatLog(text: string, onBadLine: (line: number, message: s
     const entry = tryJson(raw);
     if (!isObj(entry) || typeof entry.kind !== "number") return onBadLine(i + 1, "not a chat log entry, skipped");
     const k = Array.isArray(entry.k) ? (entry.k as Key[]) : [];
+    // Keys come from the file: never let them reach Object.prototype (prototype pollution).
+    if (k.some((key) => (typeof key !== "string" && typeof key !== "number") || UNSAFE_KEYS.has(String(key)))) {
+      return onBadLine(i + 1, "unsafe or invalid key path, skipped");
+    }
     try {
       if (entry.kind === 0) state = entry.v;
       else if (entry.kind === 1) {
@@ -40,7 +44,8 @@ export function replayChatLog(text: string, onBadLine: (line: number, message: s
       } else if (entry.kind === 2) {
         const parent = walk(state, k.slice(0, -1)) as Record<Key, unknown>;
         const arr = Array.isArray(parent[k.at(-1)!]) ? (parent[k.at(-1)!] as unknown[]) : [];
-        if (typeof entry.i === "number") arr.length = entry.i;
+        // Truncate only: a huge index must not grow a giant sparse array.
+        if (typeof entry.i === "number" && Number.isInteger(entry.i) && entry.i >= 0 && entry.i < arr.length) arr.length = entry.i;
         if (Array.isArray(entry.v)) arr.push(...(entry.v as unknown[]));
         parent[k.at(-1)!] = arr;
       } else if (entry.kind === 3) {
@@ -53,10 +58,12 @@ export function replayChatLog(text: string, onBadLine: (line: number, message: s
   return state;
 }
 
+const UNSAFE_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+
 function walk(v: unknown, keys: Key[]): unknown {
   let cur = v;
   for (const key of keys) {
-    if (cur === null || typeof cur !== "object") throw new Error("bad path");
+    if (cur === null || typeof cur !== "object" || !Object.hasOwn(cur, key)) throw new Error("bad path");
     cur = (cur as Record<Key, unknown>)[key];
   }
   if (cur === null || typeof cur !== "object") throw new Error("bad path");

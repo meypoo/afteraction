@@ -14,6 +14,7 @@ import {
   maskSecrets,
   riskRank,
   RULES,
+  safeTerminalDeep,
   truncate,
   type NormalizedEvent,
   type RiskLevel,
@@ -540,13 +541,14 @@ function SessionView({ session, all, onBack }: { session: SessionRow; all: Norma
 // ---------------------------------------------------------------------------------------------- app
 
 export function App({ data, initialSessionId }: { data: TuiData; initialSessionId?: string }) {
-  const sessions = useMemo(() => data.sessions(), [data]);
+  // Log text goes straight to the terminal, so escape sequences in it are neutralised first.
+  const sessions = useMemo(() => safeTerminalDeep(data.sessions()), [data]);
   const [open, setOpen] = useState<{ session: SessionRow; index: number } | null>(() => {
     const i = sessions.findIndex((s) => s.id === initialSessionId);
     return i >= 0 ? { session: sessions[i]!, index: i } : null;
   });
   const [listSel, setListSel] = useState(open?.index ?? 0);
-  const events = useMemo(() => (open ? data.events(open.session.id) : []), [data, open]);
+  const events = useMemo(() => (open ? safeTerminalDeep(data.events(open.session.id)) : []), [data, open]);
 
   if (open) {
     return (

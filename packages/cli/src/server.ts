@@ -1,7 +1,8 @@
 // Local web server: JSON API over the store plus the built web UI. Loopback only.
 import { serve } from "@hono/node-server";
 import { Hono, type Context } from "hono";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { randomBytes, timingSafeEqual } from "node:crypto";
+import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import path from "node:path";
 import {
   buildReceipt,
@@ -11,11 +12,12 @@ import {
   getEvent,
   getEvents,
   getSession,
+  InvalidSince,
   listProjects,
   listRisks,
   listSessions,
   loadPrices,
-  maskSecrets,
+  maskDeep,
   RULES,
   sourceCounts,
   type Db,
@@ -28,6 +30,12 @@ export interface ServerOptions {
   /** Directory with the built web UI (index.html + assets). */
   webRoot: string;
   version: string;
+  /**
+   * Per-launch secret. When set, every request must carry it: once as ?token= on a page URL (which sets a
+   * cookie and redirects), then in that cookie or an "Authorization: Bearer" header. Other local users and
+   * processes can reach a loopback port, so the port alone is not access control.
+   */
+  token?: string;
 }
 
 const RISKS: RiskLevel[] = ["none", "low", "medium", "high", "critical"];
@@ -44,41 +52,94 @@ const MIME: Record<string, string> = {
   ".map": "application/json",
 };
 
-/** Mask API keys in every string of a JSON-like value. */
-function maskDeep<T>(v: T): T {
-  if (typeof v === "string") return maskSecrets(v) as T;
-  if (Array.isArray(v)) return v.map(maskDeep) as T;
-  if (v && typeof v === "object") {
-    return Object.fromEntries(Object.entries(v as Record<string, unknown>).map(([k, x]) => [k, maskDeep(x)])) as T;
-  }
-  return v;
-}
+const SECURITY_HEADERS: Record<string, string> = {
+  "X-Content-Type-Options": "nosniff",
+  "Referrer-Policy": "no-referrer",
+  "X-Frame-Options": "DENY",
+  "Cross-Origin-Opener-Policy": "same-origin",
+  "Cross-Origin-Resource-Policy": "same-origin",
+  "Content-Security-Policy":
+    "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; connect-src 'self'; " +
+    "object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+};
 
 class BadRequest extends Error {}
+
+/** Integer query parameter in [min, max]; absent means `fallback`, anything else is a 400. */
+function intParam(v: string | undefined, name: string, fallback: number, min: number, max: number): number {
+  if (v === undefined || v === "") return fallback;
+  const n = /^\d{1,16}$/.test(v) ? Number(v) : NaN;
+  if (!Number.isSafeInteger(n) || n < min || n > max) throw new BadRequest(`Invalid ${name} "${v}" (expected ${min} to ${max})`);
+  return n;
+}
+
+function sameSecret(a: string, b: string): boolean {
+  const x = Buffer.from(a);
+  const y = Buffer.from(b);
+  return x.length === y.length && timingSafeEqual(x, y);
+}
+
+/** A fresh random value for ServerOptions.token. */
+export const newToken = (): string => randomBytes(24).toString("base64url");
 
 export function createApp(opts: ServerOptions): Hono {
   const { db, port, webRoot, version } = opts;
   const allowedHosts = new Set([`127.0.0.1:${port}`, `localhost:${port}`, `[::1]:${port}`]);
+  // Cookies are shared by every port on a host, so the name carries the port.
+  const cookieName = `flightrec_${port}`;
   const app = new Hono();
+
+  // Hardening headers on every response, including the 401/403s and error pages below.
+  app.use("*", async (c, next) => {
+    await next();
+    for (const [k, v] of Object.entries(SECURITY_HEADERS)) c.res.headers.set(k, v);
+    // Sessions hold prompts, commands and (with ?reveal=1) secrets: never cache them.
+    if (c.req.path.startsWith("/api/")) c.res.headers.set("Cache-Control", "no-store");
+  });
 
   // DNS-rebinding protection: only answer requests addressed to the loopback host we listen on.
   app.use("*", async (c, next) => {
     const host = (c.req.header("host") ?? "").toLowerCase();
     if (!allowedHosts.has(host)) return c.text("Forbidden: flightrec only answers on localhost.", 403);
     await next();
-    c.header("X-Content-Type-Options", "nosniff");
-    c.header("Referrer-Policy", "no-referrer");
-    c.header("X-Frame-Options", "DENY");
-    c.header(
-      "Content-Security-Policy",
-      "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'",
-    );
   });
 
+  if (opts.token) {
+    const token = opts.token;
+    app.use("*", async (c, next) => {
+      const fromUrl = c.req.query("token");
+      if (fromUrl !== undefined && c.req.method === "GET" && !c.req.path.startsWith("/api/")) {
+        if (!sameSecret(fromUrl, token)) return c.text("Forbidden: wrong token. Open the URL flightrec printed in your terminal.", 403);
+        const url = new URL(c.req.url);
+        url.searchParams.delete("token");
+        c.header("Set-Cookie", `${cookieName}=${token}; Path=/; HttpOnly; SameSite=Strict`);
+        c.header("Cache-Control", "no-store");
+        return c.redirect(url.pathname + url.search, 302);
+      }
+      const cookie = (c.req.header("cookie") ?? "")
+        .split(/;\s*/)
+        .find((p) => p.startsWith(cookieName + "="))
+        ?.slice(cookieName.length + 1);
+      const bearer = /^Bearer (\S+)$/.exec(c.req.header("authorization") ?? "")?.[1];
+      const given = cookie ?? bearer;
+      if (!given || !sameSecret(given, token)) {
+        const msg = "Unauthorized: open the URL flightrec printed in your terminal (it carries this launch's token).";
+        return c.req.path.startsWith("/api/") ? c.json({ error: msg }, 401) : c.text(msg, 401);
+      }
+      await next();
+    });
+  }
+
   app.onError((err, c) => {
-    if (err instanceof BadRequest || /Invalid --since/.test(err.message)) return c.json({ error: err.message.replace("--since ", "") }, 400);
+    if (err instanceof BadRequest || err instanceof InvalidSince) return c.json({ error: err.message.replace("--since ", "") }, 400);
     console.error(err);
     return c.json({ error: "internal error" }, 500);
+  });
+
+  // The API is read-only: nothing but GET/HEAD reaches it, so no cross-site request can change state.
+  app.use("/api/*", async (c, next) => {
+    if (c.req.method !== "GET" && c.req.method !== "HEAD") return c.json({ error: "method not allowed" }, 405);
+    await next();
   });
 
   const reveal = (c: Context) => c.req.query("reveal") === "1";
@@ -102,7 +163,6 @@ export function createApp(opts: ServerOptions): Hono {
 
   app.get("/api/sessions", (c) => {
     const q = c.req.query();
-    const limit = Math.min(Number(q.limit) || 500, 5000);
     const sessions = listSessions(db, {
       source: q.agent || undefined,
       project: q.project || undefined,
@@ -110,8 +170,8 @@ export function createApp(opts: ServerOptions): Hono {
       until: q.until || undefined,
       risk: risk(q.risk),
       q: q.q?.trim() ? q.q : undefined,
-      limit,
-      offset: Number(q.offset) || 0,
+      limit: intParam(q.limit, "limit", 500, 1, 5000),
+      offset: intParam(q.offset, "offset", 0, 0, Number.MAX_SAFE_INTEGER),
     });
     return c.json(out(c, { sessions }));
   });
@@ -154,8 +214,16 @@ export function createApp(opts: ServerOptions): Hono {
 
   app.all("/api/*", (c) => c.json({ error: "not found" }, 404));
 
-  // Static UI with single-page-app fallback.
+  // Static UI with single-page-app fallback. Containment is checked on real paths, so a symlink
+  // inside the web root cannot serve a file from outside it.
   const root = path.resolve(webRoot);
+  const realRoot = (() => {
+    try {
+      return realpathSync(root);
+    } catch {
+      return root;
+    }
+  })();
   app.get("*", (c) => {
     const index = path.join(root, "index.html");
     if (!existsSync(index)) {
@@ -167,12 +235,18 @@ export function createApp(opts: ServerOptions): Hono {
     } catch {
       rel = "/";
     }
-    const file = path.resolve(root, "." + rel);
-    const inside = file === root || file.startsWith(root + path.sep);
-    if (inside && rel !== "/" && existsSync(file) && statSync(file).isFile()) {
-      const type = MIME[path.extname(file).toLowerCase()] ?? "application/octet-stream";
-      const cache = rel.startsWith("/assets/") ? "public, max-age=31536000, immutable" : "no-cache";
-      return c.body(readFileSync(file), 200, { "Content-Type": type, "Cache-Control": cache });
+    if (rel !== "/" && !rel.includes("\0")) {
+      let real: string | undefined;
+      try {
+        real = realpathSync(path.resolve(root, "." + rel));
+      } catch {
+        real = undefined; // missing: fall through to the app
+      }
+      if (real && real.startsWith(realRoot + path.sep) && statSync(real).isFile()) {
+        const type = MIME[path.extname(real).toLowerCase()] ?? "application/octet-stream";
+        const cache = rel.startsWith("/assets/") ? "public, max-age=31536000, immutable" : "no-cache";
+        return c.body(readFileSync(real), 200, { "Content-Type": type, "Cache-Control": cache });
+      }
     }
     return c.body(readFileSync(index), 200, { "Content-Type": MIME[".html"]!, "Cache-Control": "no-cache" });
   });
@@ -180,13 +254,13 @@ export function createApp(opts: ServerOptions): Hono {
   return app;
 }
 
-/** Listen on 127.0.0.1 only. Resolves once the port is bound. */
+/** Listen on 127.0.0.1 only. Resolves once the port is bound; `url` carries the token when one is set. */
 export function startServer(opts: ServerOptions): Promise<{ url: string; close: () => Promise<void> }> {
   const app = createApp(opts);
   return new Promise((resolve, reject) => {
     const server = serve({ fetch: app.fetch, port: opts.port, hostname: "127.0.0.1" }, () =>
       resolve({
-        url: `http://localhost:${opts.port}`,
+        url: `http://localhost:${opts.port}/${opts.token ? `?token=${opts.token}` : ""}`,
         close: () => new Promise((r) => server.close(() => r())),
       }),
     );

@@ -16,6 +16,15 @@ const NAV = [
   { path: "/costs", label: "Costs" },
 ];
 
+/** A malformed escape (#/session/%E0%A4%A) must not throw during render and blank the app. */
+function safeDecode(s: string): string {
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return s;
+  }
+}
+
 export function App() {
   const route = useRoute();
   const meta = useAsync(() => api.meta(), []);
@@ -31,7 +40,7 @@ export function App() {
 
   let page;
   if (sessionMatch) {
-    page = <SessionPage id={decodeURIComponent(sessionMatch[1]!)} tab={sessionMatch[2] ? "files" : "timeline"} params={route.params} />;
+    page = <SessionPage id={safeDecode(sessionMatch[1]!)} tab={sessionMatch[2] ? "files" : "timeline"} params={route.params} />;
   } else if (route.path === "/risks") page = <RisksPage />;
   else if (route.path === "/costs") page = <CostsPage />;
   else page = <SessionsPage />;

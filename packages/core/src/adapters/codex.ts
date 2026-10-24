@@ -254,7 +254,7 @@ function fileDrafts(changes: FileChange[], base: Omit<Draft, "kind" | "summary" 
       payload: {
         ...extra, path: c.path, move_path: c.movePath, unified_diff: excerpt(diff),
         // new_excerpt lets content rules (e.g. destructive SQL) see the added lines.
-        new_excerpt: excerpt(diff.split("\n").filter((l) => l.startsWith("+")).map((l) => l.slice(1)).join("\n")),
+        new_excerpt: excerpt(diff.split("\n").filter((l) => l.startsWith("+") && !l.startsWith("+++ ")).map((l) => l.slice(1)).join("\n")),
         lines_added: added, lines_removed: removed,
       },
     };
