@@ -55,14 +55,15 @@ const unquote = (t: string) => t.replace(/^["'`]+|["'`;)]+$/g, "");
 /** Prefixes that run another program: skip them to find the real command. */
 const WRAPPERS = new Set(["sudo", "doas", "env", "time", "nohup", "exec", "xargs", "command", "&", "call"]);
 
-interface Segment {
+export interface ShellSegment {
   program: string; // lower-cased basename, without .exe
   args: string[];
   sudo: boolean;
 }
 
-function segments(cmd: string): Segment[] {
-  const out: Segment[] = [];
+/** The programs a command line runs, split on ; && || | and newlines, wrappers like sudo skipped. */
+export function shellSegments(cmd: string): ShellSegment[] {
+  const out: ShellSegment[] = [];
   const text = stripHeredocs(cmd);
   const vars = assignments(text);
   const expand = (t: string) => t.replace(/\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?/g, (m, name: string) => vars.get(name) ?? m);
@@ -137,7 +138,7 @@ interface RmCall {
 function recursiveForceDeletes(e: NormalizedEvent): RmCall[] {
   const out: RmCall[] = [];
   const cwd = str(e.payload.cwd);
-  for (const s of segments(command(e))) {
+  for (const s of shellSegments(command(e))) {
     const args = s.args;
     const la = lower(args);
     let recursive = false;
@@ -188,7 +189,7 @@ const PIPE_TO_SHELL = [
 /** The git subcommand and its arguments, skipping global flags like -C <dir>. */
 function gitCalls(e: NormalizedEvent): { sub: string; args: string[] }[] {
   const out: { sub: string; args: string[] }[] = [];
-  for (const s of segments(command(e))) {
+  for (const s of shellSegments(command(e))) {
     if (s.program !== "git") continue;
     let i = 0;
     while (i < s.args.length && s.args[i]!.startsWith("-")) i += /^-(C|c)$/.test(s.args[i]!) ? 2 : 1;
@@ -314,7 +315,7 @@ export const RULES: RiskRule[] = [
     description: "Read a file that usually holds secrets (.env, keys, credentials)",
     match: (e) => {
       if (e.kind === "file_read") return isSecretPath(str(e.payload.path));
-      return segments(command(e)).some((s) => {
+      return shellSegments(command(e)).some((s) => {
         const copier = FILE_COPIERS.has(s.program);
         if (!FILE_READERS.has(s.program) && !copier) return false;
         const redirect = s.args.findIndex((a) => /^\d?>/.test(a));
@@ -334,14 +335,14 @@ export const RULES: RiskRule[] = [
     id: "sudo",
     severity: "medium",
     description: "Command run with elevated privileges",
-    match: (e) => segments(command(e)).some((s) => s.sudo) || /-verb\s+runas\b/i.test(command(e)),
+    match: (e) => shellSegments(command(e)).some((s) => s.sudo) || /-verb\s+runas\b/i.test(command(e)),
   },
   {
     id: "package-install",
     severity: "low",
     description: "Package install (supply-chain awareness)",
     match: (e) =>
-      segments(command(e)).some((s) => {
+      shellSegments(command(e)).some((s) => {
         const la = lower(s.args);
         if (/^python[0-9.]*$|^py$/.test(s.program)) return la[0] === "-m" && /^pip3?$/.test(la[1] ?? "") && la[2] === "install";
         if (s.program === "uv") return (la[0] === "pip" && la[1] === "install") || la[0] === "add";
@@ -365,7 +366,7 @@ export const RULES: RiskRule[] = [
     severity: "medium",
     description: "Data uploaded with curl/wget/Invoke-WebRequest to a non-local host",
     match: (e) =>
-      segments(command(e)).some((s) => {
+      shellSegments(command(e)).some((s) => {
         const la = lower(s.args);
         let sends = false;
         if (s.program === "curl") sends = s.args.some((a) => /^(-d|-F|-T)/.test(a) || /^--(data|form|upload-file|json)/.test(a));
@@ -385,7 +386,7 @@ export const RULES: RiskRule[] = [
     severity: "low",
     description: "World-writable or recursive permission change",
     match: (e) =>
-      segments(command(e)).some((s) => {
+      shellSegments(command(e)).some((s) => {
         if (s.program === "icacls") return /everyone:\(?f/i.test(s.args.join(" "));
         if (s.program !== "chmod") return false;
         return s.args.some((a) => a === "-R" || a === "--recursive" || /^0?[0-7]?[0-7]{2}[2367]$/.test(a) || /^[ugoa]*\+[rwx]*w[rwx]*$/.test(a) && /[oa]/.test(a.split("+")[0]!));
@@ -398,7 +399,7 @@ export const RULES: RiskRule[] = [
     match: (e) => {
       if (e.kind === "shell_command") {
         // SQL text in grep patterns or scripts is not executed; a database client (with its heredoc) is.
-        return segments(command(e)).some((s) => DB_CLIENTS.has(s.program)) && sqlDestructive(command(e));
+        return shellSegments(command(e)).some((s) => DB_CLIENTS.has(s.program)) && sqlDestructive(command(e));
       }
       if ((e.kind === "file_write" || e.kind === "file_edit") && /\.sql$/i.test(str(e.payload.path)))
         return sqlDestructive(str(e.payload.content_excerpt) + "\n" + str(e.payload.new_excerpt));

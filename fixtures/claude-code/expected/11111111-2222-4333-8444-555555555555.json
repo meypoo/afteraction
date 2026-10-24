@@ -213,7 +213,7 @@
         "duration_ms": 1007,
         "stdout_excerpt": "<stdout placeholder, 174 chars>",
         "stderr_excerpt": "",
-        "exit_code": null
+        "exit_code": 0
       },
       "tokens_in": null,
       "tokens_out": null,
@@ -241,7 +241,7 @@
         "duration_ms": 5007,
         "stdout_excerpt": "<stdout placeholder, 255 chars>",
         "stderr_excerpt": "",
-        "exit_code": null
+        "exit_code": 0
       },
       "tokens_in": 2,
       "tokens_out": 268,
@@ -591,7 +591,7 @@
         "is_error": false,
         "duration_ms": 7,
         "stdout_excerpt": "<content placeholder, 1012 chars>",
-        "exit_code": null
+        "exit_code": 0
       },
       "tokens_in": null,
       "tokens_out": null,
@@ -704,7 +704,7 @@
         "duration_ms": 7007,
         "stdout_excerpt": "<stdout placeholder, 61 chars>",
         "stderr_excerpt": "",
-        "exit_code": null
+        "exit_code": 0
       },
       "tokens_in": 2,
       "tokens_out": 422,

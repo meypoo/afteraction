@@ -2,6 +2,7 @@
 import os from "node:os";
 import type { SessionRow } from "./db.js";
 import { fmtDuration, truncate } from "./format.js";
+import { checkClaims, claimSummary, type ClaimVerdict } from "./claims.js";
 import { AGENT_LABELS, type NormalizedEvent } from "./model.js";
 import { isAgentStatePath, isTempPath, RULES, riskRank, SECRET_PATTERNS } from "./risk.js";
 
@@ -100,6 +101,7 @@ function relPath(p: string, project: string | null): string {
 }
 
 const firstLine = (s: string) => s.split("\n")[0]!.trim();
+const VERDICT_ICON: Record<ClaimVerdict, string> = { contradicted: "❌", unverified: "❔", supported: "✅" };
 const SEVERITY = new Map(RULES.map((r) => [r.id, r.severity]));
 
 function money(usd: number | null): string {
@@ -171,6 +173,22 @@ export function buildReceipt(session: SessionRow, events: NormalizedEvent[], opt
     if (flags.length > 15) lines.push(`- … and ${flags.length - 15} more`);
   } else {
     lines.push("**Risk flags:** none");
+  }
+
+  // Claims vs evidence: only when the agent made checkable claims, most doubtful first.
+  const { claims, counts } = checkClaims(events);
+  if (claims.length) {
+    const order: ClaimVerdict[] = ["contradicted", "unverified", "supported"];
+    const sorted = [...claims].sort((a, b) => order.indexOf(a.verdict) - order.indexOf(b.verdict) || a.seq - b.seq);
+    lines.push(`**🔎 Claims vs evidence (${claims.length}):** ${claimSummary(counts)}`);
+    for (const c of sorted.slice(0, 10)) {
+      const ran = c.evidence ? ` · ran ${code(clean(truncate(firstLine(c.evidence.command), 60)))}` : "";
+      const files = c.changed_files?.length
+        ? ` · changed since: ${c.changed_files.slice(0, 3).map((p) => code(clean(relPath(p, project)))).join(", ")}${c.changed_files.length > 3 ? " …" : ""}`
+        : "";
+      lines.push(`- ${VERDICT_ICON[c.verdict]} ${c.verdict} · ${c.kind} · ${code(clean(truncate(c.text, 100)))} — ${c.reason}${ran}${files}`);
+    }
+    if (claims.length > 10) lines.push(`- … and ${claims.length - 10} more`);
   }
   lines.push("");
   lines.push(`<sub>Generated locally by afteraction v${opts.version} — transcript not uploaded.</sub>`);

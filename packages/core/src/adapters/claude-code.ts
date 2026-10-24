@@ -235,9 +235,10 @@ function applyResult(d: Draft, block: Obj, line: Obj, ts: string | null): void {
       } else if (!isError) {
         p.stdout_excerpt = excerpt(text);
       }
-      // Claude Code only records an exit code on failure, inside the error string.
+      // Claude Code only records an exit code on failure, inside the error string. A result that
+      // is not an error means exit 0, unless the command went to the background or was interrupted.
       const m = isError ? /^Error: Exit code (\d+)/.exec(String(p.error ?? "")) : null;
-      p.exit_code = m ? Number(m[1]) : null;
+      p.exit_code = m ? Number(m[1]) : !isError && p.interrupted !== true && p.run_in_background !== true ? 0 : null;
       break;
     }
     case "file_read":
