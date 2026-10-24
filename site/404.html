@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Page not found · Afteraction</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/afteraction/favicon.svg" type="image/svg+xml">
+<style>
+@font-face { font-family: "Geist"; src: url("/afteraction/fonts/geist.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Geist Mono"; src: url("/afteraction/fonts/geist-mono.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+:root { --bg: #0b0c0f; --line-strong: #30353e; --fg: #e7e9ec; --fg-2: #b0b6bf; --muted: #8a919c; --accent: #5cc4b5; --high: #f0706a; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100dvh; display: grid; place-items: center; padding: 24px; background: var(--bg); color: var(--fg); font: 17px/1.6 "Geist", ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+main { width: min(640px, 100%); display: grid; gap: 22px; }
+.code { font: 500 13px/1 "Geist Mono", ui-monospace, monospace; color: var(--high); }
+h1 { margin: 0; font-size: clamp(36px, 7vw, 64px); line-height: 1; letter-spacing: -0.04em; font-weight: 600; }
+p { margin: 0; color: var(--fg-2); }
+a { color: var(--fg); text-decoration: none; border-bottom: 1px solid var(--line-strong); padding-bottom: 2px; }
+a:hover { border-color: var(--accent); }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+.tape { display: flex; gap: 3px; align-items: flex-end; height: 24px; margin-top: 12px; }
+.tape i { width: 3px; height: 8px; border-radius: 1px; background: var(--line-strong); }
+.tape i.r { height: 13px; background: var(--high); }
+</style>
+</head>
+<body>
+<main>
+  <span class="code">404 · no event at this address</span>
+  <h1>This page isn't in the log.</h1>
+  <p>The link may be old, or the page moved. Head back to the <a href="/afteraction/">Afteraction home page</a> or the <a href="https://github.com/meypoo/afteraction">repository</a>.</p>
+  <div class="tape" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class="r"></i></div>
+</main>
+</body>
+</html>
