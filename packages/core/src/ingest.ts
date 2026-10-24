@@ -69,6 +69,10 @@ export async function ingest(db: Db, opts: IngestOptions): Promise<IngestReport>
             opts.onWarning?.(rec.warning);
           }
         }
+        for (const w of normalizeTimes(file, events, session)) {
+          warnings.push(w);
+          opts.onWarning?.(w);
+        }
         applyRisks(events, session);
         for (const e of events) e.est_cost_usd = eventCost(e, prices).usd;
         const cost = sessionCost(events, prices);
@@ -94,6 +98,35 @@ export async function ingest(db: Db, opts: IngestOptions): Promise<IngestReport>
   }
   report.ms = Date.now() - started;
   return report;
+}
+
+/** An ISO timestamp in any offset as UTC with milliseconds; null if missing or unparseable. */
+export function utcIso(ts: string | null | undefined): string | null {
+  if (!ts) return null;
+  const t = Date.parse(ts);
+  return Number.isFinite(t) && Math.abs(t) <= 8.64e15 ? new Date(t).toISOString() : null;
+}
+
+/**
+ * Store every timestamp as UTC (2026-01-01T00:00:00.000Z) so that SQL string comparison, ordering and
+ * day bucketing are correct whatever offset or precision the log used, and take the session's start
+ * and end as the true min/max instants.
+ */
+function normalizeTimes(file: string, events: NormalizedEvent[], session: Session | null): ParseWarning[] {
+  const warnings: ParseWarning[] = [];
+  let bad = 0;
+  for (const e of events) {
+    const n = utcIso(e.ts);
+    if (e.ts && !n) bad++;
+    e.ts = n;
+  }
+  if (bad) warnings.push({ file, line: null, message: `${bad} event timestamp(s) could not be parsed and were dropped` });
+  if (session) {
+    const evTs = events.map((e) => e.ts).filter((x): x is string => !!x);
+    session.started_at = [utcIso(session.started_at), ...evTs].filter((x): x is string => !!x).sort()[0] ?? null;
+    session.ended_at = [utcIso(session.ended_at), ...evTs].filter((x): x is string => !!x).sort().at(-1) ?? null;
+  }
+  return warnings;
 }
 
 export function recomputeDerived(db: Db, prices: Prices): number {

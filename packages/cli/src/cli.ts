@@ -7,13 +7,16 @@ import os from "node:os";
 import path from "node:path";
 import {
   ADAPTERS,
+  AGENT_LABELS,
   buildReceipt,
   COST_LABEL,
   defaultDbPath,
   listRisks,
   loadPrices,
+  maskDeep,
   maskSecrets,
   RULES,
+  safeTerminal,
   fileTouches,
   getEvents,
   getSession,
@@ -38,7 +41,7 @@ import {
   type SourceConfig,
 } from "@flightrec/core";
 import { writeDemoLogs } from "./demo.js";
-import { startServer } from "./server.js";
+import { newToken, startServer } from "./server.js";
 
 
 export const VERSION = "0.1.0";
@@ -70,9 +73,11 @@ export interface Io {
   err: (s: string) => void;
 }
 
+// Log text (titles, commands, paths, warnings) reaches these lines, so on a terminal control
+// characters are made visible instead of being interpreted as escape sequences.
 const defaultIo: Io = {
-  out: (s) => process.stdout.write(s + "\n"),
-  err: (s) => process.stderr.write(s + "\n"),
+  out: (s) => process.stdout.write((process.stdout.isTTY ? safeTerminal(s) : s) + "\n"),
+  err: (s) => process.stderr.write((process.stderr.isTTY ? safeTerminal(s) : s) + "\n"),
 };
 
 /** Thrown for user errors; the message is printed without a stack trace. */
@@ -82,6 +87,8 @@ interface GlobalOpts {
   db?: string;
   source: string[];
   config?: string;
+  /** false with --no-default-sources: read only the sources named by --source or the config file. */
+  defaultSources: boolean;
 }
 
 /** ~/.flightrec/config.json (or --config): defaults that command-line flags override. */
@@ -105,17 +112,31 @@ function loadConfig(explicit?: string): Config {
   } catch (e) {
     throw new CliError(`Invalid config file ${file}: ${e instanceof Error ? e.message : String(e)}`);
   }
-  if (typeof cfg !== "object" || cfg === null || Array.isArray(cfg)) throw new CliError(`Invalid config file ${file}: expected a JSON object`);
-  const c = cfg as Config;
-  for (const name of Object.keys(c.sources ?? {})) {
-    if (!ADAPTERS[name]) throw new CliError(`Invalid config file ${file}: unknown source "${name}" (known: ${Object.keys(ADAPTERS).join(", ")})`);
+  const bad = (why: string) => new CliError(`Invalid config file ${file}: ${why}`);
+  if (typeof cfg !== "object" || cfg === null || Array.isArray(cfg)) throw bad("expected a JSON object");
+  const c = cfg as Record<string, unknown>;
+  if (c.db !== undefined && (typeof c.db !== "string" || !c.db)) throw bad('"db" must be a path');
+  if (c.port !== undefined && (!Number.isInteger(c.port) || (c.port as number) < 1 || (c.port as number) > 65535)) {
+    throw bad('"port" must be an integer from 1 to 65535');
   }
-  return c;
+  if (c.sources !== undefined && (typeof c.sources !== "object" || c.sources === null || Array.isArray(c.sources))) {
+    throw bad('"sources" must be an object of name: path');
+  }
+  for (const [name, root] of Object.entries((c.sources ?? {}) as Record<string, unknown>)) {
+    if (!ADAPTERS[name]) throw bad(`unknown source "${name}" (known: ${Object.keys(ADAPTERS).join(", ")})`);
+    if (typeof root !== "string" || !root) throw bad(`source "${name}" must be a path`);
+  }
+  return c as Config;
 }
 
 function dbPathFor(g: GlobalOpts): string {
   const cfg = loadConfig(g.config);
-  return g.db ?? (cfg.db ? expandHome(cfg.db) : defaultDbPath());
+  return g.db ? expandHome(g.db) : cfg.db ? expandHome(cfg.db) : defaultDbPath();
+}
+
+function positiveInt(value: string): number {
+  if (!/^\d{1,9}$/.test(value) || Number(value) < 1) throw new InvalidArgumentError("expected a whole number of at least 1");
+  return Number(value);
 }
 
 function parseSourceFlag(value: string, prev: string[]): string[] {
@@ -129,7 +150,9 @@ function parseSourceFlag(value: string, prev: string[]): string[] {
 function sourcesFrom(opts: GlobalOpts): SourceConfig[] {
   const overrides = new Map(Object.entries(loadConfig(opts.config).sources ?? {}).map(([k, v]) => [k, expandHome(v)]));
   for (const s of opts.source) overrides.set(s.slice(0, s.indexOf("=")), expandHome(s.slice(s.indexOf("=") + 1)));
-  return Object.entries(ADAPTERS).map(([name, adapter]) => ({ adapter, root: overrides.get(name) }));
+  return Object.entries(ADAPTERS)
+    .filter(([name]) => opts.defaultSources !== false || overrides.has(name))
+    .map(([name, adapter]) => ({ adapter, root: overrides.get(name) }));
 }
 
 const MAX_PRINTED_WARNINGS = 20;
@@ -140,9 +163,9 @@ async function runIngest(db: Db, opts: GlobalOpts, full: boolean, io: Io): Promi
     sources: sourcesFrom(opts),
     full,
     onWarning: (w) => {
-      if (printed++ < MAX_PRINTED_WARNINGS) io.err(`warning: ${w.file}:${w.line ?? "?"} ${w.message}`);
+      if (printed++ < MAX_PRINTED_WARNINGS) io.err(maskSecrets(`warning: ${w.file}:${w.line ?? "?"} ${w.message}`));
     },
-    onError: (file, err) => io.err(`error: could not ingest ${file}: ${err instanceof Error ? err.message : String(err)}`),
+    onError: (file, err) => io.err(maskSecrets(`error: could not ingest ${file}: ${err instanceof Error ? err.message : String(err)}`)),
   });
   if (report.warnings > MAX_PRINTED_WARNINGS) {
     io.err(`… and ${report.warnings - MAX_PRINTED_WARNINGS} more warnings (see "flightrec doctor")`);
@@ -157,7 +180,7 @@ async function runIngest(db: Db, opts: GlobalOpts, full: boolean, io: Io): Promi
   return report;
 }
 
-const AGENT_LABEL: Record<string, string> = { claude_code: "Claude Code", codex: "Codex" };
+const AGENT_LABEL: Record<string, string> = AGENT_LABELS;
 
 const fmtCost = (usd: number | null) => (usd === null ? "—" : usd > 0 && usd < 0.01 ? "<$0.01" : `$${usd.toFixed(2)}`);
 
@@ -195,6 +218,7 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
     .version(VERSION)
     .option("--db <path>", "database file", undefined)
     .option("--source <name=path>", "override a log location, e.g. claude=~/.claude/projects (repeatable)", parseSourceFlag, [])
+    .option("--no-default-sources", "read only the sources given with --source or in the config file")
     .option("--config <path>", "config file (default ~/.flightrec/config.json)")
     .option("--port <n>", `web UI port (default ${DEFAULT_PORT})`, (v) => Number.parseInt(v, 10))
     .option("--no-open", "don't open the browser")
@@ -214,14 +238,14 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
       if (!Number.isInteger(opts.port) || opts.port < 1 || opts.port > 65535) throw new CliError(`Invalid --port "${opts.port}"`);
       let server;
       try {
-        server = await startServer({ db, port: opts.port, webRoot: webRoot(), version: VERSION });
+        server = await startServer({ db, port: opts.port, webRoot: webRoot(), version: VERSION, token: newToken() });
       } catch (e) {
         if ((e as { code?: string }).code === "EADDRINUSE") {
           throw new CliError(`Port ${opts.port} is in use (is flightrec already running?). Try --port ${opts.port + 1}.`);
         }
         throw e;
       }
-      io.out(`Flight Recorder is running at ${server.url} (local only). Press Ctrl+C to stop.`);
+      io.out(`Flight Recorder is running at ${server.url} (local only; the link carries this launch's access token). Press Ctrl+C to stop.`);
       if (opts.open) openBrowser(server.url);
       await new Promise<void>((resolve) => {
         const stop = () => {
@@ -250,17 +274,20 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
     .description("list ingested sessions, newest first")
     .option("--since <when>", "only sessions active since, e.g. 7d, 24h, 2026-01-31")
     .option("--project <path>", "only sessions whose project path contains this")
+    .addOption(new Option("--agent <name>", "only sessions from this agent").choices(Object.keys(ADAPTERS)))
     .addOption(new Option("--risk <level>", "only sessions at or above this risk").choices(RISKS))
     .option("--search <text>", "only sessions whose prompts, messages or commands match")
-    .option("--limit <n>", "max rows", (v) => Number.parseInt(v, 10), 50)
-    .option("--json", "print JSON")
-    .action((opts: { since?: string; project?: string; risk?: RiskLevel; search?: string; limit: number; json?: boolean }, cmd: Command) => {
+    .option("--limit <n>", "max rows", positiveInt, 50)
+    .option("--json", "print JSON (secrets masked unless --reveal)")
+    .option("--reveal", "show secrets instead of masking them")
+    .action((opts: { since?: string; project?: string; agent?: string; risk?: RiskLevel; search?: string; limit: number; json?: boolean; reveal?: boolean }, cmd: Command) => {
       let rows;
       try {
-        rows = listSessions(openFor(cmd), { ...opts, q: opts.search });
+        rows = listSessions(openFor(cmd), { ...opts, source: opts.agent ? ADAPTERS[opts.agent]!.id : undefined, q: opts.search });
       } catch (e) {
         throw new CliError(e instanceof Error ? e.message : String(e));
       }
+      if (!opts.reveal) rows = maskDeep(rows);
       if (opts.json) return io.out(JSON.stringify(rows, null, 2));
       if (!rows.length) return io.out('No sessions found. Run "flightrec ingest" first, or loosen the filters.');
       io.out(
@@ -288,7 +315,7 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
     .command("show")
     .description("print a session's timeline")
     .argument("<session-id>", "full id, uuid, a unique prefix, or \"latest\"")
-    .option("--json", "print JSON (session, events, files)")
+    .option("--json", "print JSON: session, events, files (secrets masked unless --reveal)")
     .option("--reveal", "show secrets instead of masking them")
     .action((query: string, opts: { json?: boolean; reveal?: boolean }, cmd: Command) => {
       const d = openFor(cmd);
@@ -296,7 +323,10 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
       if (!id) throw new CliError(`No single session matches "${query}". Use "flightrec list" to see ids.`);
       const s = getSession(d, id)!;
       const events = getEvents(d, id);
-      if (opts.json) return io.out(JSON.stringify({ session: s, events, files: fileTouches(d, id) }, null, 2));
+      if (opts.json) {
+        const all = { session: s, events, files: fileTouches(d, id) };
+        return io.out(JSON.stringify(opts.reveal ? all : maskDeep(all), null, 2));
+      }
       const files = fileTouches(d, id);
       const mask = (t: string) => (opts.reveal ? t : maskSecrets(t));
       const flagged = events.filter((e) => e.risk_level !== "none").length;
@@ -305,7 +335,7 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
       io.out(
         [
           `${AGENT_LABEL[s.source] ?? s.source} · ${s.model ?? "unknown model"}`,
-          `${s.project_path ?? "—"}${s.git_branch ? ` (${s.git_branch})` : ""}`,
+          mask(`${s.project_path ?? "—"}${s.git_branch ? ` (${s.git_branch})` : ""}`),
           `${fmtDateTime(s.started_at)} → ${fmtDateTime(s.ended_at)} (${fmtDuration(s.started_at, s.ended_at)})`,
           `tokens: ${fmtTokens(s.total_input_tokens)} in · ${fmtTokens(s.total_output_tokens)} out · ` +
             `${fmtTokens(s.total_cache_read_tokens)} cache read · ${fmtTokens(s.total_cache_write_tokens)} cache write`,
@@ -365,7 +395,7 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
     .option("--since <when>", "only events since, e.g. 7d, 24h, 2026-01-31")
     .addOption(new Option("--level <level>", "minimum severity").choices(RISKS.slice(1)).default("low"))
     .option("--reveal", "show secrets instead of masking them")
-    .option("--json", "print JSON")
+    .option("--json", "print JSON (secrets masked unless --reveal)")
     .action((opts: { since?: string; level: RiskLevel; reveal?: boolean; json?: boolean }, cmd: Command) => {
       let rows;
       try {
@@ -373,7 +403,7 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
       } catch (e) {
         throw new CliError(e instanceof Error ? e.message : String(e));
       }
-      if (opts.json) return io.out(JSON.stringify(rows, null, 2));
+      if (opts.json) return io.out(JSON.stringify(opts.reveal ? rows : maskDeep(rows), null, 2));
       if (!rows.length) return io.out("No flagged events.");
       const mask = (t: string) => (opts.reveal ? t : maskSecrets(t));
       for (const rule of RULES) {
@@ -462,7 +492,7 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
       for (const f of w.byFile.slice(0, 10)) io.out(`  ${String(f.count).padStart(5)}  ${f.source_file}`);
       if (w.sample.length) {
         io.out("  first warnings:");
-        for (const s of w.sample) io.out(`    ${s.file}:${s.line ?? "?"} ${s.message}`);
+        for (const s of w.sample) io.out(maskSecrets(`    ${s.file}:${s.line ?? "?"} ${s.message}`));
       }
     });
 

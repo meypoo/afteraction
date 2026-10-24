@@ -58,6 +58,18 @@ export function relPath(p: string, project: string | null): string {
   return p;
 }
 
-export const AGENT_LABEL: Record<string, string> = { claude_code: "Claude Code", codex: "Codex" };
+// Keep in sync with AGENT_LABELS in packages/core/src/model.ts.
+export const AGENT_LABEL: Record<string, string> = {
+  claude_code: "Claude Code",
+  codex: "Codex",
+  antigravity: "Antigravity",
+  opencode: "OpenCode",
+  gemini_cli: "Gemini CLI",
+  cursor: "Cursor",
+  copilot: "GitHub Copilot",
+  cline: "Cline",
+  aider: "Aider",
+  continue: "Continue",
+};
 
 export const str = (v: unknown): string => (typeof v === "string" ? v : "");

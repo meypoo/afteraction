@@ -1,0 +1,356 @@
+{
+  "session": {
+    "id": "copilot:pppppppp-0000-4000-8000-000000000001",
+    "source": "copilot",
+    "project_path": "c:\\Users\\USER\\projects\\demo-app",
+    "git_branch": null,
+    "started_at": "2026-01-15T09:59:59.000Z",
+    "ended_at": "2026-01-15T10:01:10.000Z",
+    "model": "gpt-4.1",
+    "title": "Configurable login timeout",
+    "total_input_tokens": 0,
+    "total_output_tokens": 0,
+    "total_cache_read_tokens": 0,
+    "total_cache_write_tokens": 0,
+    "est_cost_usd": null,
+    "max_risk": "none",
+    "source_file": "<fixture>",
+    "source_hash": "<hash>"
+  },
+  "events": [
+    {
+      "id": "copilot:pppppppp-0000-4000-8000-000000000001:0",
+      "session_id": "copilot:pppppppp-0000-4000-8000-000000000001",
+      "seq": 0,
+      "ts": "2026-01-15T10:00:00.000Z",
+      "kind": "user_message",
+      "summary": "Make the login timeout configurable.",
+      "payload": {
+        "text": "Make the login timeout configurable.",
+        "agent": "github.copilot.editsAgent"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "copilot:pppppppp-0000-4000-8000-000000000001:1",
+      "session_id": "copilot:pppppppp-0000-4000-8000-000000000001",
+      "seq": 1,
+      "ts": "2026-01-15T10:00:00.000Z",
+      "kind": "thinking",
+      "summary": "Read the file, then edit it.",
+      "payload": {
+        "text": "Read the file, then edit it."
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "gpt-4.1",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "copilot:pppppppp-0000-4000-8000-000000000001:2",
+      "session_id": "copilot:pppppppp-0000-4000-8000-000000000001",
+      "seq": 2,
+      "ts": "2026-01-15T10:00:00.000Z",
+      "kind": "assistant_message",
+      "summary": "I'll read C:\\Users\\USER\\projects\\demo-app\\src\\login.ts first.",
+      "payload": {
+        "text": "I'll read C:\\Users\\USER\\projects\\demo-app\\src\\login.ts first."
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "gpt-4.1",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "copilot:pppppppp-0000-4000-8000-000000000001:3",
+      "session_id": "copilot:pppppppp-0000-4000-8000-000000000001",
+      "seq": 3,
+      "ts": "2026-01-15T10:00:00.000Z",
+      "kind": "file_read",
+      "summary": "Read C:\\Users\\USER\\projects\\demo-app\\src\\login.ts",
+      "payload": {
+        "path": "C:\\Users\\USER\\projects\\demo-app\\src\\login.ts",
+        "tool_use_id": "tc1",
+        "tool_name": "copilot_readFile"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "gpt-4.1",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "copilot:pppppppp-0000-4000-8000-000000000001:4",
+      "session_id": "copilot:pppppppp-0000-4000-8000-000000000001",
+      "seq": 4,
+      "ts": "2026-01-15T10:00:00.000Z",
+      "kind": "shell_command",
+      "summary": "$ npm test",
+      "payload": {
+        "command": "npm test",
+        "tool_use_id": "tc2",
+        "tool_name": "run_in_terminal",
+        "exit_code": 1,
+        "is_error": true,
+        "duration_ms": 1500,
+        "stdout_excerpt": "1 failing"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "gpt-4.1",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "copilot:pppppppp-0000-4000-8000-000000000001:5",
+      "session_id": "copilot:pppppppp-0000-4000-8000-000000000001",
+      "seq": 5,
+      "ts": "2026-01-15T10:00:00.000Z",
+      "kind": "tool_call",
+      "summary": "copilot_replaceString: Editing login.ts",
+      "payload": {
+        "tool_use_id": "tc3",
+        "tool_name": "copilot_replaceString",
+        "message": "Editing login.ts"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "gpt-4.1",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "copilot:pppppppp-0000-4000-8000-000000000001:6",
+      "session_id": "copilot:pppppppp-0000-4000-8000-000000000001",
+      "seq": 6,
+      "ts": "2026-01-15T10:00:00.000Z",
+      "kind": "file_edit",
+      "summary": "Edit C:\\Users\\USER\\projects\\demo-app\\src\\login.ts",
+      "payload": {
+        "path": "C:\\Users\\USER\\projects\\demo-app\\src\\login.ts",
+        "old_excerpt": "",
+        "new_excerpt": "const timeout = config.timeout;",
+        "lines_added": 1,
+        "lines_removed": 0,
+        "edit_count": 1
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "gpt-4.1",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "copilot:pppppppp-0000-4000-8000-000000000001:7",
+      "session_id": "copilot:pppppppp-0000-4000-8000-000000000001",
+      "seq": 7,
+      "ts": "2026-01-15T10:00:00.000Z",
+      "kind": "file_write",
+      "summary": "Write C:\\Users\\USER\\projects\\demo-app\\src\\config.ts",
+      "payload": {
+        "path": "C:\\Users\\USER\\projects\\demo-app\\src\\config.ts",
+        "content_excerpt": "export const timeout = 30;\n",
+        "bytes": 27,
+        "lines_added": 1,
+        "lines_removed": 0,
+        "tool_use_id": "tc4",
+        "tool_name": "copilot_createFile"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "gpt-4.1",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "copilot:pppppppp-0000-4000-8000-000000000001:8",
+      "session_id": "copilot:pppppppp-0000-4000-8000-000000000001",
+      "seq": 8,
+      "ts": "2026-01-15T10:00:00.000Z",
+      "kind": "web_fetch",
+      "summary": "Fetch https://example.com/docs",
+      "payload": {
+        "tool_use_id": "tc5",
+        "tool_name": "copilot_fetchWebPage",
+        "url": "https://example.com/docs"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "gpt-4.1",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "copilot:pppppppp-0000-4000-8000-000000000001:9",
+      "session_id": "copilot:pppppppp-0000-4000-8000-000000000001",
+      "seq": 9,
+      "ts": "2026-01-15T10:00:00.000Z",
+      "kind": "tool_call",
+      "summary": "mcp_github_list_issues: Running list_issues",
+      "payload": {
+        "tool_use_id": "tc6",
+        "tool_name": "mcp_github_list_issues",
+        "input": {
+          "repo": "demo"
+        },
+        "message": "Running list_issues"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "gpt-4.1",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "copilot:pppppppp-0000-4000-8000-000000000001:10",
+      "session_id": "copilot:pppppppp-0000-4000-8000-000000000001",
+      "seq": 10,
+      "ts": "2026-01-15T10:00:00.000Z",
+      "kind": "assistant_message",
+      "summary": "Done. The timeout now comes from config.",
+      "payload": {
+        "text": "Done. The timeout now comes from config."
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "gpt-4.1",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "copilot:pppppppp-0000-4000-8000-000000000001:11",
+      "session_id": "copilot:pppppppp-0000-4000-8000-000000000001",
+      "seq": 11,
+      "ts": "2026-01-15T10:01:00.000Z",
+      "kind": "user_message",
+      "summary": "Also add a test.",
+      "payload": {
+        "text": "Also add a test."
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "copilot:pppppppp-0000-4000-8000-000000000001:12",
+      "session_id": "copilot:pppppppp-0000-4000-8000-000000000001",
+      "seq": 12,
+      "ts": "2026-01-15T10:01:00.000Z",
+      "kind": "error",
+      "summary": "Error: Rate limit exceeded",
+      "payload": {
+        "message": "Rate limit exceeded"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "gpt-4.1",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "copilot:pppppppp-0000-4000-8000-000000000001:13",
+      "session_id": "copilot:pppppppp-0000-4000-8000-000000000001",
+      "seq": 13,
+      "ts": "2026-01-15T10:01:10.000Z",
+      "kind": "user_message",
+      "summary": "Never mind.",
+      "payload": {
+        "text": "Never mind."
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "copilot:pppppppp-0000-4000-8000-000000000001:14",
+      "session_id": "copilot:pppppppp-0000-4000-8000-000000000001",
+      "seq": 14,
+      "ts": "2026-01-15T10:01:10.000Z",
+      "kind": "assistant_message",
+      "summary": "OK",
+      "payload": {
+        "text": "OK"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "copilot:pppppppp-0000-4000-8000-000000000001:15",
+      "session_id": "copilot:pppppppp-0000-4000-8000-000000000001",
+      "seq": 15,
+      "ts": "2026-01-15T10:01:10.000Z",
+      "kind": "error",
+      "summary": "Request cancelled",
+      "payload": {
+        "message": "cancelled",
+        "cancelled": true
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    }
+  ]
+}

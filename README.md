@@ -30,7 +30,7 @@ npx flightrec
 ```
 
 That reads your Claude Code session logs, stores them in a local SQLite database and opens a replay UI at
-http://localhost:4317. Nothing leaves your machine.
+http://localhost:4317 (the link it opens carries a one-off access token). Nothing leaves your machine.
 
 Want to look around first without touching your own logs?
 
@@ -89,7 +89,15 @@ masked secrets, `esc` goes back and `q` quits. It needs an interactive terminal;
 | Agent | Logs read from | Status |
 |---|---|---|
 | Claude Code | `~/.claude/projects/` | Supported, including subagents |
-| Codex CLI | `~/.codex/sessions/` | Planned |
+| Codex (CLI and Desktop) | `~/.codex/sessions/` | Supported; sessions Codex imported from other agents are skipped |
+| OpenCode | `~/.local/share/opencode/opencode.db` | Supported (prompts, replies, reasoning, commands, file reads; writes and edits mapped from the tool definitions, not yet seen in a real log; other tools listed as tool calls) |
+| Google Antigravity | `~/.gemini/antigravity/` | Full timeline where Antigravity wrote a readable `transcript.jsonl`; otherwise title, project, times and plan documents only, because conversation files are encrypted. No token or cost data |
+| Gemini CLI | `~/.gemini/tmp/*/chats/` | Unverified: built from Gemini CLI's source, not yet tested on real sessions |
+| Cursor | Cursor's `globalStorage/state.vscdb` | Unverified: built from Cursor's code, not yet tested on real chats |
+| GitHub Copilot (VS Code) | VS Code's `workspaceStorage/*/chatSessions/` | Unverified: built from VS Code's code, checked on two small chats. No token or cost data |
+| Cline, Roo Code, Kilo Code | the extension's `globalStorage/…/tasks/` in VS Code, Cursor, Windsurf and others | Unverified: built from Cline's source, not yet tested on real tasks |
+| Aider | `.aider.chat.history.md` in your repositories (searched under your home folder) | Unverified: built from Aider's source, not yet tested on real history files |
+| Continue | `~/.continue/sessions/` | Unverified: built from Continue's source, not yet tested on real sessions |
 
 ## Commands
 
@@ -97,7 +105,7 @@ masked secrets, `esc` goes back and `q` quits. It needs an interactive terminal;
 flightrec                          # ingest new logs, then open the UI
 flightrec --demo                   # sample sessions, nothing saved
 flightrec ingest [--full]          # ingest only
-flightrec list [--since 7d] [--project <path>] [--risk high] [--search <text>]
+flightrec list [--since 7d] [--project <path>] [--agent codex] [--risk high] [--search <text>]
 flightrec show <session-id>        # timeline in the terminal
 flightrec tui [session-id]         # full-screen browser in the terminal (j/k, r for next risk; works over SSH)
 flightrec risks [--since 7d]       # flagged events, grouped by rule
@@ -106,7 +114,8 @@ flightrec purge [--before 30d] --yes   # delete stored sessions (never your agen
 flightrec doctor                   # log sources found, counts, parse warnings
 ```
 
-Global options: `--db <path>`, `--source claude=<path>`, `--config <path>`, `--port <n>`, `--no-open`.
+Global options: `--db <path>`, `--source claude=<path>`, `--no-default-sources` (read only the `--source`s you name),
+`--config <path>`, `--port <n>`, `--no-open`. `--json` output masks secrets too; add `--reveal` for the raw values.
 
 Session ids can be the full id, the bare UUID, a unique prefix, or `latest`.
 
@@ -132,8 +141,11 @@ cost on the API".
 
 - 100% local. No telemetry, no accounts, no network calls.
 - The UI server listens on `127.0.0.1` only and rejects requests with a non-local `Host` header (DNS-rebinding
-  protection).
-- Secrets found in logs are masked in the UI until you click "Reveal secrets", and are always redacted in receipts.
+  protection). Each launch makes a random access token: the link flightrec opens trades it for a cookie, and requests
+  without it are refused, so other users and programs on the same machine cannot read your sessions through the port.
+  The API is read-only.
+- Secrets found in logs are masked in the UI, the terminal and `--json` output until you ask to reveal them, and are
+  redacted in receipts. Masking is pattern-based and best-effort: see [SECURITY.md](SECURITY.md).
 - Your data lives in `~/.flightrec/flightrec.db`. Delete it, or run `flightrec purge`, whenever you like.
   Flight Recorder never modifies your agents' log files.
 
@@ -150,10 +162,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: meypoo/flightrecorder@main
+      - uses: meypoo/flightrecorder@<release tag or commit SHA>
         with:
           log-path: .flightrec/session.jsonl
 ```
+
+The action reads only the log you give it (never other agent history on the runner) and runs the exact
+`flightrec` version in its `version` input. Pin the action itself to a tag or commit, and prefer `pull_request` over
+`pull_request_target`.
 
 ## Development
 

@@ -1,0 +1,280 @@
+{
+  "session": {
+    "id": "opencode:ses_fixture00000000000001",
+    "source": "opencode",
+    "project_path": "C:\\Users\\USER\\projects\\demo-app",
+    "git_branch": null,
+    "started_at": "2026-01-15T10:00:00.000Z",
+    "ended_at": "2026-01-15T10:10:00.001Z",
+    "model": "claude-sonnet-5-5",
+    "title": "Review the demo app for bugs",
+    "total_input_tokens": 6700,
+    "total_output_tokens": 720,
+    "total_cache_read_tokens": 8800,
+    "total_cache_write_tokens": 0,
+    "est_cost_usd": null,
+    "max_risk": "none",
+    "source_file": "<fixture>",
+    "source_hash": "<hash>"
+  },
+  "events": [
+    {
+      "id": "opencode:ses_fixture00000000000001:0",
+      "session_id": "opencode:ses_fixture00000000000001",
+      "seq": 0,
+      "ts": "2026-01-15T10:00:00.000Z",
+      "kind": "user_message",
+      "summary": "Review src for bugs and summarize them.",
+      "payload": {
+        "text": "Review src for bugs and summarize them."
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "opencode:ses_fixture00000000000001:1",
+      "session_id": "opencode:ses_fixture00000000000001",
+      "seq": 1,
+      "ts": "2026-01-15T10:00:01.100Z",
+      "kind": "assistant_message",
+      "summary": "I'll start by looking at the repository.",
+      "payload": {
+        "text": "I'll start by looking at the repository."
+      },
+      "tokens_in": 1200,
+      "tokens_out": 90,
+      "cache_read": 800,
+      "cache_write": 0,
+      "usage_extra": null,
+      "model": "claude-sonnet-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "opencode:ses_fixture00000000000001:2",
+      "session_id": "opencode:ses_fixture00000000000001",
+      "seq": 2,
+      "ts": "2026-01-15T10:00:01.300Z",
+      "kind": "shell_command",
+      "summary": "$ git status",
+      "payload": {
+        "tool_use_id": "call_00_fixture",
+        "status": "completed",
+        "is_error": false,
+        "duration_ms": 400,
+        "command": "git status",
+        "exit_code": 0,
+        "stdout_excerpt": "On branch main\n"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "claude-sonnet-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "opencode:ses_fixture00000000000001:3",
+      "session_id": "opencode:ses_fixture00000000000001",
+      "seq": 3,
+      "ts": "2026-01-15T10:00:01.400Z",
+      "kind": "file_read",
+      "summary": "Read C:\\Users\\USER\\projects\\demo-app\\package.json",
+      "payload": {
+        "tool_use_id": "call_01_fixture",
+        "status": "completed",
+        "duration_ms": 400,
+        "path": "C:\\Users\\USER\\projects\\demo-app\\package.json"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "claude-sonnet-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "opencode:ses_fixture00000000000001:4",
+      "session_id": "opencode:ses_fixture00000000000001",
+      "seq": 4,
+      "ts": "2026-01-15T10:00:10.100Z",
+      "kind": "thinking",
+      "summary": "Check the source folder next.",
+      "payload": {
+        "text": "Check the source folder next.",
+        "redacted": false
+      },
+      "tokens_in": 300,
+      "tokens_out": 160,
+      "cache_read": 2000,
+      "cache_write": 0,
+      "usage_extra": null,
+      "model": "claude-sonnet-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "opencode:ses_fixture00000000000001:5",
+      "session_id": "opencode:ses_fixture00000000000001",
+      "seq": 5,
+      "ts": "2026-01-15T10:00:10.200Z",
+      "kind": "file_read",
+      "summary": "Read C:\\Users\\USER\\projects\\demo-app\\src",
+      "payload": {
+        "tool_use_id": "call_00_fixture",
+        "status": "completed",
+        "duration_ms": 400,
+        "path": "C:\\Users\\USER\\projects\\demo-app\\src",
+        "directory": true
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "claude-sonnet-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "opencode:ses_fixture00000000000001:6",
+      "session_id": "opencode:ses_fixture00000000000001",
+      "seq": 6,
+      "ts": "2026-01-15T10:00:10.300Z",
+      "kind": "shell_command",
+      "summary": "$ npm test",
+      "payload": {
+        "tool_use_id": "call_01_fixture",
+        "status": "completed",
+        "is_error": true,
+        "duration_ms": 400,
+        "command": "npm test",
+        "exit_code": 1,
+        "stdout_excerpt": "1 failing\n"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "claude-sonnet-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "opencode:ses_fixture00000000000001:7",
+      "session_id": "opencode:ses_fixture00000000000001",
+      "seq": 7,
+      "ts": "2026-01-15T10:00:10.900Z",
+      "kind": "tool_call",
+      "summary": "glob: **/*.env",
+      "payload": {
+        "tool_use_id": "call_02_fixture",
+        "status": "completed",
+        "duration_ms": 400,
+        "tool_name": "glob",
+        "input": {
+          "pattern": "**/*.env"
+        },
+        "output_excerpt": "No files found"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "claude-sonnet-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "opencode:ses_fixture00000000000001:8",
+      "session_id": "opencode:ses_fixture00000000000001",
+      "seq": 8,
+      "ts": "2026-01-15T10:00:21.100Z",
+      "kind": "assistant_message",
+      "summary": "## Objective - <compaction summary placeholder, 200 chars>",
+      "payload": {
+        "text": "## Objective\n- <compaction summary placeholder, 200 chars>",
+        "compact_summary": true
+      },
+      "tokens_in": 5000,
+      "tokens_out": 400,
+      "cache_read": 0,
+      "cache_write": 0,
+      "usage_extra": null,
+      "model": "claude-sonnet-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "opencode:ses_fixture00000000000001:9",
+      "session_id": "opencode:ses_fixture00000000000001",
+      "seq": 9,
+      "ts": "2026-01-15T10:00:30.000Z",
+      "kind": "user_message",
+      "summary": "Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.",
+      "payload": {
+        "text": "Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.",
+        "meta": true
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "opencode:ses_fixture00000000000001:10",
+      "session_id": "opencode:ses_fixture00000000000001",
+      "seq": 10,
+      "ts": "2026-01-15T10:00:31.100Z",
+      "kind": "thinking",
+      "summary": "(thinking; text not recorded)",
+      "payload": {
+        "text": "",
+        "redacted": true
+      },
+      "tokens_in": 200,
+      "tokens_out": 70,
+      "cache_read": 6000,
+      "cache_write": 0,
+      "usage_extra": null,
+      "model": "claude-sonnet-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "opencode:ses_fixture00000000000001:11",
+      "session_id": "opencode:ses_fixture00000000000001",
+      "seq": 11,
+      "ts": "2026-01-15T10:00:31.200Z",
+      "kind": "assistant_message",
+      "summary": "Found one failing test in src/app.ts.",
+      "payload": {
+        "text": "Found one failing test in src/app.ts."
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "claude-sonnet-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    }
+  ]
+}

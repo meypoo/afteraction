@@ -1,0 +1,6 @@
+{"id":"0196a000-0000-7000-8000-000000000001","timestamp":"2025-05-01T12:00:00.000Z","instructions":null,"git":{"branch":"main"}}
+{"record_type":"state"}
+{"type":"message","role":"user","content":[{"type":"input_text","text":"List the files."}]}
+{"type":"local_shell_call","call_id":"call_legacy_1","status":"completed","action":{"type":"exec","command":["ls","-la"],"working_directory":"/home/user/projects/demo-app","timeout_ms":10000}}
+{"type":"function_call_output","call_id":"call_legacy_1","output":"{\"output\":\"README.md\\n\",\"metadata\":{\"exit_code\":0,\"duration_seconds\":0.01}}"}
+{"type":"message","role":"assistant","content":[{"type":"output_text","text":"There is one file."}]}

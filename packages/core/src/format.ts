@@ -48,6 +48,30 @@ export function baseName(p: string | null): string {
   return parts.at(-1) ?? p;
 }
 
+/**
+ * Make untrusted text safe to print to a terminal. Log content can carry escape sequences that
+ * recolour or clear the screen, rewrite the window title, plant OSC 8 links or (on some terminals)
+ * write the clipboard, and bidi overrides that make a command display differently from what ran.
+ * Control characters become visible stand-ins (ESC → ␛); newlines and tabs are kept.
+ */
+export function safeTerminal(s: string): string {
+  return s
+    .replace(/\r\n/g, "\n")
+    // eslint-disable-next-line no-control-regex -- matching control characters is the point
+    .replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, (c) => (c === "\u007f" ? "\u2421" : String.fromCharCode(0x2400 + c.charCodeAt(0))))
+    .replace(/[\u0080-\u009f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/g, "\ufffd");
+}
+
+/** safeTerminal on every string in a JSON-like value. */
+export function safeTerminalDeep<T>(v: T): T {
+  if (typeof v === "string") return safeTerminal(v) as T;
+  if (Array.isArray(v)) return v.map(safeTerminalDeep) as T;
+  if (v && typeof v === "object") {
+    return Object.fromEntries(Object.entries(v as Record<string, unknown>).map(([k, x]) => [k, safeTerminalDeep(x)])) as T;
+  }
+  return v;
+}
+
 export function table(headers: string[], rows: string[][]): string {
   const widths = headers.map((h, i) => Math.max(h.length, ...rows.map((r) => (r[i] ?? "").length)));
   const line = (cells: string[]) => cells.map((c, i) => (i === cells.length - 1 ? c : c.padEnd(widths[i]!))).join("  ");

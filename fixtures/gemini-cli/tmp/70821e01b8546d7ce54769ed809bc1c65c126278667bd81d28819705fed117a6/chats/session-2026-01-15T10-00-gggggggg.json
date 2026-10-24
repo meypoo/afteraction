@@ -1,0 +1,234 @@
+{
+  "sessionId": "gggggggg-0000-4000-8000-000000000001",
+  "projectHash": "70821e01b8546d7ce54769ed809bc1c65c126278667bd81d28819705fed117a6",
+  "startTime": "2026-01-15T10:00:00.000Z",
+  "lastUpdated": "2026-01-15T10:05:00.000Z",
+  "messages": [
+    {
+      "id": "m1",
+      "timestamp": "2026-01-15T10:00:01.000Z",
+      "type": "user",
+      "content": "Fix the failing login test."
+    },
+    {
+      "id": "m2",
+      "timestamp": "2026-01-15T10:00:05.000Z",
+      "type": "gemini",
+      "content": "I'll look at the test first.",
+      "model": "gemini-2.5-pro",
+      "thoughts": [
+        {
+          "subject": "Plan",
+          "description": "Read the test, then run it.",
+          "timestamp": "2026-01-15T10:00:03.000Z"
+        }
+      ],
+      "tokens": {
+        "input": 1200,
+        "output": 80,
+        "cached": 200,
+        "thoughts": 40,
+        "tool": 0,
+        "total": 1320
+      },
+      "toolCalls": [
+        {
+          "id": "c1",
+          "name": "read_file",
+          "args": {
+            "file_path": "/home/user/projects/demo-app/src/login.test.ts"
+          },
+          "result": [
+            {
+              "functionResponse": {
+                "id": "c1",
+                "name": "read_file",
+                "response": {
+                  "output": "<file placeholder>"
+                }
+              }
+            }
+          ],
+          "status": "success",
+          "timestamp": "2026-01-15T10:00:06.000Z",
+          "displayName": "ReadFile"
+        },
+        {
+          "id": "c2",
+          "name": "run_shell_command",
+          "args": {
+            "command": "npm test",
+            "description": "Run tests"
+          },
+          "result": [
+            {
+              "functionResponse": {
+                "id": "c2",
+                "name": "run_shell_command",
+                "response": {
+                  "output": "Command: npm test\nDirectory: (root)\nOutput: 3 passing\nError: (none)\nExit Code: 0\nSignal: (none)\nBackground PIDs: (none)\nProcess Group PGID: 4242"
+                }
+              }
+            }
+          ],
+          "status": "success",
+          "timestamp": "2026-01-15T10:00:10.000Z",
+          "resultDisplay": "3 passing"
+        }
+      ]
+    },
+    {
+      "id": "m3",
+      "timestamp": "2026-01-15T10:01:00.000Z",
+      "type": "gemini",
+      "content": "",
+      "model": "gemini-2.5-pro",
+      "tokens": {
+        "input": 2000,
+        "output": 150,
+        "cached": 1000,
+        "thoughts": 0,
+        "tool": 0,
+        "total": 2150
+      },
+      "toolCalls": [
+        {
+          "id": "c3",
+          "name": "replace",
+          "args": {
+            "file_path": "/home/user/projects/demo-app/src/login.ts",
+            "old_string": "timeout = 10",
+            "new_string": "timeout = 30",
+            "instruction": "Raise the timeout"
+          },
+          "result": [
+            {
+              "functionResponse": {
+                "id": "c3",
+                "name": "replace",
+                "response": {
+                  "output": "Successfully modified file"
+                }
+              }
+            }
+          ],
+          "status": "success",
+          "timestamp": "2026-01-15T10:01:01.000Z"
+        },
+        {
+          "id": "c4",
+          "name": "write_file",
+          "args": {
+            "file_path": "/home/user/projects/demo-app/src/retry.ts",
+            "content": "export const retries = 3;\n"
+          },
+          "result": [
+            {
+              "functionResponse": {
+                "id": "c4",
+                "name": "write_file",
+                "response": {
+                  "output": "Created file"
+                }
+              }
+            }
+          ],
+          "status": "success",
+          "timestamp": "2026-01-15T10:01:02.000Z"
+        },
+        {
+          "id": "c5",
+          "name": "run_shell_command",
+          "args": {
+            "command": "npm run lint",
+            "dir_path": "src"
+          },
+          "result": [
+            {
+              "functionResponse": {
+                "id": "c5",
+                "name": "run_shell_command",
+                "response": {
+                  "output": "Command: npm run lint\nDirectory: src\nOutput: (empty)\nError: lint failed\nExit Code: 1\nSignal: (none)\nBackground PIDs: (none)\nProcess Group PGID: 4243"
+                }
+              }
+            }
+          ],
+          "status": "success",
+          "timestamp": "2026-01-15T10:01:03.000Z"
+        },
+        {
+          "id": "c6",
+          "name": "web_fetch",
+          "args": {
+            "prompt": "Summarize https://example.com/docs/timeouts please"
+          },
+          "result": [
+            {
+              "functionResponse": {
+                "id": "c6",
+                "name": "web_fetch",
+                "response": {
+                  "output": "<summary placeholder>"
+                }
+              }
+            }
+          ],
+          "status": "success",
+          "timestamp": "2026-01-15T10:01:04.000Z"
+        },
+        {
+          "id": "c7",
+          "name": "glob",
+          "args": {
+            "pattern": "**/*.env"
+          },
+          "result": [
+            {
+              "functionResponse": {
+                "id": "c7",
+                "name": "glob",
+                "response": {
+                  "output": "No files found"
+                }
+              }
+            }
+          ],
+          "status": "error",
+          "timestamp": "2026-01-15T10:01:05.000Z",
+          "resultDisplay": "No files found"
+        }
+      ]
+    },
+    {
+      "id": "m4",
+      "timestamp": "2026-01-15T10:02:00.000Z",
+      "type": "info",
+      "content": "Request cancelled."
+    },
+    {
+      "id": "m5",
+      "timestamp": "2026-01-15T10:02:10.000Z",
+      "type": "error",
+      "content": "Quota exceeded."
+    },
+    {
+      "id": "m6",
+      "timestamp": "2026-01-15T10:02:20.000Z",
+      "type": "compression",
+      "content": "?"
+    },
+    "not an object",
+    {
+      "id": "m7",
+      "timestamp": "2026-01-15T10:03:00.000Z",
+      "type": "gemini",
+      "content": [
+        {
+          "text": "Done: the timeout is 30s now."
+        }
+      ],
+      "model": "gemini-2.5-pro"
+    }
+  ]
+}

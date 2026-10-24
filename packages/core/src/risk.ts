@@ -111,12 +111,14 @@ function isInside(p: string, root: string): boolean {
 /** OS temp directories, where agents keep scratch files. */
 export function isTempPath(p: string): boolean {
   const n = "/" + p.replace(/\\/g, "/").replace(/^\/+/, "").toLowerCase();
-  return /^\/(private\/)?(var\/)?tmp(\/|$)/.test(n) || /\/appdata\/local\/temp(\/|$)/.test(n) ||
+  return /^\/(private\/)?(var\/)?tmp(\/|$)/.test(n) || /^\/(private\/)?var\/folders\//.test(n) || /\/appdata\/local\/temp(\/|$)/.test(n) ||
     /^\/(\$tmpdir|\$\{tmpdir\}|%temp%|%tmp%|\$env:temp|\$env:tmp)(\/|$)/.test(n);
 }
 
-/** The agent's own config/memory directory (~/.claude). */
-export const isAgentStatePath = (p: string) => /(^|[\\/])\.claude([\\/]|$)/.test(p);
+/** An agent's own config/memory directory (~/.claude, ~/.codex, ~/.gemini, OpenCode's data and config dirs, …). */
+export const isAgentStatePath = (p: string) =>
+  /(^|[\\/])\.(claude|codex|gemini|cursor|continue|aider)([\\/]|$)/.test(p) ||
+  /[\\/]\.(local[\\/]share|config)[\\/]opencode([\\/]|$)/.test(p);
 
 const isAbsolute = (p: string) => p.startsWith("/") || /^[a-zA-Z]:[\\/]/.test(p) || p.startsWith("\\\\") || p.startsWith("~");
 
@@ -178,6 +180,8 @@ const PIPE_TO_SHELL = [
   new RegExp(`\\b(${FETCHERS})\\b[^;&\\n]*\\|\\s*(sudo\\s+)?(${SHELLS})\\b(?!\\s+-[ce]\\b)`, "i"),
   /\b(bash|sh|zsh)\s+<\(\s*(curl|wget)\b/i,
   /\b(bash|sh|zsh)\s+-c\s+["']?\$\(\s*(curl|wget)\b/i,
+  /\b(eval|source)\s+["']?\$\(\s*(curl|wget)\b/i, // eval "$(curl …)"
+  /(^|[\s;&|(])(source|\.)\s+<\(\s*(curl|wget)\b/i, // source <(curl …)
   /\b(iex|invoke-expression)\s*\(+\s*(iwr|irm|invoke-webrequest|invoke-restmethod|new-object\s+net\.webclient)\b/i,
 ];
 
@@ -205,7 +209,12 @@ function isSecretPath(p: string): boolean {
   return false;
 }
 
-const FILE_READERS = new Set(["cat", "less", "more", "head", "tail", "bat", "type", "get-content", "gc", "source"]);
+const FILE_READERS = new Set([
+  "cat", "less", "more", "head", "tail", "bat", "type", "get-content", "gc", "source", "nl", "tac", "xxd", "od", "strings", "base64",
+  "grep", "egrep", "fgrep", "rg", "sed", "awk", "gawk", "select-string", "sls",
+]);
+/** Copiers read every argument but the last (the destination): `cp .env.example .env` reads no secret. */
+const FILE_COPIERS = new Set(["cp", "scp", "rsync", "copy-item", "copy", "cpi"]);
 
 export const SECRET_PATTERNS: { name: string; re: RegExp }[] = [
   { name: "AWS access key", re: /\b(AKIA|ASIA)[0-9A-Z]{16}\b/g },
@@ -213,6 +222,13 @@ export const SECRET_PATTERNS: { name: string; re: RegExp }[] = [
   { name: "OpenAI API key", re: /\bsk-(proj-|svcacct-)?[A-Za-z0-9_-]{20,}/g },
   { name: "GitHub token", re: /\b(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{36}\b/g },
   { name: "Stripe live key", re: /\b(sk|rk)_live_[0-9a-zA-Z]{24,}/g },
+  { name: "GitHub fine-grained token", re: /\bgithub_pat_[A-Za-z0-9_]{40,}/g },
+  { name: "GitLab token", re: /\bglpat-[A-Za-z0-9_-]{20,}/g },
+  { name: "Slack token", re: /\bxox[abposr]-[A-Za-z0-9-]{10,}/g },
+  { name: "Google API key", re: /\bAIza[0-9A-Za-z_-]{35}\b/g },
+  { name: "npm token", re: /\bnpm_[A-Za-z0-9]{36}\b/g },
+  { name: "Hugging Face token", re: /\bhf_[A-Za-z0-9]{34,}\b/g },
+  { name: "Private key", re: /-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY-----/g },
 ];
 
 /** Text produced by or written during an event: command output, written content, tool results. */
@@ -299,10 +315,12 @@ export const RULES: RiskRule[] = [
     match: (e) => {
       if (e.kind === "file_read") return isSecretPath(str(e.payload.path));
       return segments(command(e)).some((s) => {
-        if (!FILE_READERS.has(s.program)) return false;
+        const copier = FILE_COPIERS.has(s.program);
+        if (!FILE_READERS.has(s.program) && !copier) return false;
         const redirect = s.args.findIndex((a) => /^\d?>/.test(a));
-        const args = redirect >= 0 ? s.args.slice(0, redirect) : s.args;
-        return args.some((a) => !a.startsWith("-") && isSecretPath(a));
+        let args = (redirect >= 0 ? s.args.slice(0, redirect) : s.args).filter((a) => !a.startsWith("-"));
+        if (copier) args = args.slice(0, -1);
+        return args.some((a) => isSecretPath(a));
       });
     },
   },
@@ -350,7 +368,7 @@ export const RULES: RiskRule[] = [
       segments(command(e)).some((s) => {
         const la = lower(s.args);
         let sends = false;
-        if (s.program === "curl") sends = s.args.some((a) => /^(-d|-F|-T)/.test(a) || /^--(data|form|upload-file)/.test(a));
+        if (s.program === "curl") sends = s.args.some((a) => /^(-d|-F|-T)/.test(a) || /^--(data|form|upload-file|json)/.test(a));
         else if (s.program === "wget") sends = la.some((a) => /^--(post|body)-(data|file)/.test(a));
         else if (/^(iwr|irm|invoke-webrequest|invoke-restmethod)$/.test(s.program))
           sends = la.includes("-body") || la.includes("-infile") || la.some((a, i) => a === "-method" && la[i + 1] === "post");
@@ -370,7 +388,7 @@ export const RULES: RiskRule[] = [
       segments(command(e)).some((s) => {
         if (s.program === "icacls") return /everyone:\(?f/i.test(s.args.join(" "));
         if (s.program !== "chmod") return false;
-        return s.args.some((a) => a === "-R" || a === "--recursive" || /^0?777$/.test(a) || /^[ugoa]*\+[rwx]*w[rwx]*$/.test(a) && /[oa]/.test(a.split("+")[0]!));
+        return s.args.some((a) => a === "-R" || a === "--recursive" || /^0?[0-7]?[0-7]{2}[2367]$/.test(a) || /^[ugoa]*\+[rwx]*w[rwx]*$/.test(a) && /[oa]/.test(a.split("+")[0]!));
       }),
   },
   {

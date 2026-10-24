@@ -7,7 +7,10 @@ observation, it says so.
 | Source | Status |
 |---|---|
 | Claude Code | 27 files, 56,416 lines, versions `2.1.229` – `2.1.304`, Windows 11, entrypoints `cli` and `claude-desktop`. 0 lines failed to parse as JSON. |
-| Codex CLI | **Not inspected.** Codex is not installed on this machine: no `~/.codex`, no `CODEX_HOME`, no `codex` on PATH, nothing in either WSL distro. No format is documented below until real logs exist. |
+| OpenCode | 1 real session on `1.19.4` (one SQLite database for all sessions), 2026-10-23. |
+| Google Antigravity | 9 conversations (2025-11 – 2026-09). Conversation files are encrypted; 1 has a readable `transcript.jsonl` (138 lines, 0 parse errors), the rest are metadata only (2026-10-23). |
+| Gemini CLI, Cursor, GitHub Copilot (VS Code), Cline / Roo Code / Kilo Code, Aider, Continue | **Not yet verified against real logs.** Formats taken from each tool's own code (see "Unverified formats" below), 2026-10-24. Copilot was also checked against 2 small real chats. |
+| Codex | 24 files from Codex Desktop `0.163.0-alpha.11.2`, Windows 11, inspected 2026-10-23. 22 were imports of Claude Code sessions. No Codex CLI rollouts on this machine; CLI-only shapes are from Codex's open-source schema. |
 
 ---
 
@@ -210,10 +213,379 @@ prompts and request bodies and are large.
 
 ---
 
-## Codex CLI
+## Codex (CLI and Desktop)
 
-Not available on this machine. The spec's location `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl`
-is unverified. The Codex adapter (M4) needs real logs before its format can be documented here.
+Inspected on 2026-10-23 on Windows 11: 24 rollout files from **Codex Desktop**, `cli_version`
+`0.163.0-alpha.11.2`, `originator: "Codex Desktop"`, `source: "vscode"`. No Codex CLI rollouts were on
+the machine. The CLI rows below (`function_call` shells, `exec_command_end`, `patch_apply_end`,
+`token_count`, the pre-envelope format) come from Codex's open-source rollout schema, not from observed
+files; the fixtures for them are hand-written and marked as such.
+
+### Locations
+
+```
+~/.codex/                         # or $CODEX_HOME
+  sessions/YYYY/MM/DD/rollout-<local time>-<thread id>.jsonl   # one thread per file
+  archived_sessions/rollout-*.jsonl                            # inference: archived threads move here
+  session_index.jsonl, *.sqlite, plugins/, …                   # app state, not logs: ignore
+  external_agent_session_imports.json                          # see "Imported sessions" below
+```
+
+- The spec's location is correct. The folder date and file-name time are **local** time
+  (`rollout-2026-10-23T21-12-21-…` for a thread created at 12:12:21Z in Asia/Tokyo); line timestamps are UTC.
+- The thread id (a UUIDv7) is the file-name suffix and `session_meta.payload.id`.
+- Discovery walks only `sessions/` and `archived_sessions/` when the root has them, because `~/.codex`
+  also holds large plugin and cache folders.
+
+### Imported sessions (important)
+
+Codex Desktop can import other agents' sessions. On this machine 22 of 24 rollouts were copies of
+**Claude Code** transcripts, listed in `~/.codex/external_agent_session_imports.json`
+(`source_path` → `imported_thread_id`). Ingesting them would count those sessions twice.
+
+An imported rollout's turns all have `turn_id: "external-import-turn-N"` in `task_started` (and in
+`item_completed`); their `response_item`s carry no turn id, so the adapter tracks the current turn from
+`task_started`. Lines inside import turns are skipped. A file with nothing else yields no session.
+If someone continues an imported thread in Codex, only the new turns are kept.
+
+### Line envelope
+
+Every line is `{"timestamp": ISO-8601 UTC, "type": …, "payload": {…}}`. Desktop lines also have an
+`ordinal`. Line types seen:
+
+| `type` | Count (24 files) | Use |
+|---|---|---|
+| `session_meta` | 1 per file, first line | `id`, `cwd`, `cli_version`, `originator`, `git.branch`. Also `base_instructions` (large; dropped from `raw`). |
+| `turn_context` | 1 per turn | `model` (e.g. `gpt-5.6-terra`), `cwd`, `approval_policy`, `sandbox_policy`. |
+| `response_item` | most lines | The model conversation, see below. |
+| `event_msg` | many | UI stream; mostly mirrors response items. Used for command results, errors and usage. |
+| `token_usage_record` | 1 per model response (Desktop) | `usage` for that response. |
+| `world_state` | a few | App state snapshots (AGENTS.md text, approved command prefixes). Ignored. |
+| `compacted` | CLI schema only | Summary that replaced earlier history; kept as a `user_message` with `compact_summary`. |
+
+Early CLI rollouts (schema) had no envelope: a bare `{id, timestamp, instructions, git}` first line,
+then bare response items and `{"record_type": "state"}` lines. The adapter reads those too.
+
+### `response_item` payloads
+
+| `payload.type` | Notes |
+|---|---|
+| `message` | `role` `user` / `assistant` / `developer`. Content parts `input_text` / `output_text` / `input_image`. Assistant messages have `phase` (`commentary`, `final_answer`). |
+| `reasoning` | `summary: [{type: "summary_text", text}]`, `encrypted_content`. Of 13 real items, 9 had an empty summary; none had readable full text. |
+| `custom_tool_call` / `custom_tool_call_output` | Free-form tool input. In Desktop the only one seen is `exec` (below). In the CLI schema `apply_patch` uses it. |
+| `function_call` / `function_call_output` | JSON `arguments` string. CLI shells: `shell` / `container.exec` / `shell_command` / `exec_command` with `command` (argv array or string) or `cmd`, and `workdir`. |
+| `local_shell_call` | CLI schema: `action: {type: "exec", command: [...], working_directory}`. |
+| `web_search_call` | CLI schema: `action: {type: "search", query}`. |
+| `additional_tools` | Tool definitions sent to the model. Ignored. |
+
+**User messages that are not typed by the person.** Desktop marks each message with
+`internal_chat_message_metadata_passthrough.content_item_kinds`; the typed prompt is `user.text`.
+Others seen: `agents_md.instructions`, `environments.environment_context`,
+`additional_content.codex_apps_open_page`. Without that field (CLI), injected context starts with
+`<environment_context>`, `<user_instructions>` or `# AGENTS.md instructions`. Both become
+`user_message` with `meta: true`; the title is the first typed prompt.
+
+**Desktop `exec` scripts.** Codex Desktop calls tools from a JavaScript cell:
+`custom_tool_call {name: "exec", input: "const r = await tools.exec_command({cmd, workdir}); text(r.output);"}`.
+The commands and patches the script ran are logged separately, after the call and before its output, as
+`event_msg {type: "item_completed", item: {type: "CommandExecution" | "FileChange"}}`. The adapter turns
+those items into `shell_command` / file events (marked `via: "exec"`) and drops the script call itself;
+a script that ran no command (e.g. listing tools) stays a `tool_call` named `exec`.
+
+`CommandExecution`: `command` argv (`[".../pwsh.exe", "-Command", "<script>"]`), `cwd` as a
+`file:///D:/…` URL, `parsed_cmd`, `status` (`completed`, inferred also `failed`/`declined`),
+`aggregated_output`, `exit_code`, `duration {secs, nanos}`.
+
+`FileChange`: `changes: {"<abs path>": {type: "add", content} | {type: "update", unified_diff, move_path} | {type: "delete"}}`.
+Only `add` was observed; the other shapes are inferred from the CLI schema.
+
+`item_completed` also carries `UserMessage`, `AgentMessage` and `Reasoning` items. They duplicate
+response items and are ignored.
+
+### Results and usage
+
+- CLI shell results: `function_call_output.output` is either a JSON string
+  `{"output": …, "metadata": {"exit_code", "duration_seconds"}}` or plain text
+  `Exit code: N\nWall time: … seconds\nOutput:\n…`. `event_msg/exec_command_end` (same `call_id`) has
+  `exit_code`, `aggregated_output` and `duration`, and wins when present.
+- CLI patch results: `event_msg/patch_apply_end {call_id, success, stdout, stderr}`.
+- Usage, Desktop: `token_usage_record.usage` = `{input_tokens, cached_input_tokens,
+  cache_write_input_tokens, output_tokens, reasoning_output_tokens, total_tokens}`, one per response.
+  `event_msg/token_count` repeats the same numbers (`last_token_usage`) and is ignored when records exist.
+- Usage, CLI: `event_msg/token_count.info.last_token_usage`; `info` can be `null`, and a count can repeat
+  with unchanged `total_token_usage`, which is skipped.
+- OpenAI's `input_tokens` **includes** `cached_input_tokens`. The adapter stores
+  `tokens_in = input − cached − cache_write` and `cache_read = cached`, matching the Claude Code meaning.
+  That cache writes are also inside `input_tokens` is an inference: every real record had 0 writes.
+  `reasoning_output_tokens` is part of `output_tokens`.
+- Prices: `prices.json` has OpenAI's Standard-tier text models (`openai_source`, checked 2026-10-23).
+  OpenAI's 30-minute and 12-hour cache-write prices go in `cache_write_5m` / `cache_write_1h`; logs don't say
+  which cache was written, so writes are priced at the 30-minute rate. Models with no cached or write price
+  are charged the input rate for those tokens. Above 272K prompt tokens the long-context rates apply.
+  `gpt-5-codex` and other Codex models missing from OpenAI's page stay unpriced rather than guessed.
+
+### Mapping
+
+| Source | Event |
+|---|---|
+| typed user `message` | `user_message` |
+| injected user `message` | `user_message`, `meta: true` |
+| `developer` / `system` `message` | not an event |
+| assistant `message` | `assistant_message` |
+| `reasoning` | `thinking` (`summary_only` when only the summary exists, `redacted` when empty) |
+| shell `function_call` / `local_shell_call` / `CommandExecution` | `shell_command` |
+| `apply_patch` / `FileChange` add | `file_write`, `operation: "create"` (one event per file) |
+| `apply_patch` / `FileChange` update | `file_edit` with `unified_diff` |
+| `apply_patch` / `FileChange` delete | `file_write`, `operation: "delete"` |
+| `web_search_call` | `tool_call` named `web_search` (`web_fetch` if it has a URL) |
+| other tool calls | `tool_call` |
+| output with no known call | `tool_result` |
+| `event_msg/turn_aborted`, `error`, `stream_error` | `error` |
+| unknown line or response item type | `unknown` (with warning) |
+| unknown `event_msg` type | warning only, once per type per file |
+
+---
+
+## OpenCode
+
+Inspected 2026-10-23: schema on `1.18.29`, then one real session on `1.19.4` (npm global install,
+Windows 11, provider `opencode`, model `big-pickle`): 1 session, ~70 messages, ~270 parts, including an
+automatic compaction.
+
+### Location
+
+`~/.local/share/opencode/opencode.db` (SQLite, WAL mode, so `-wal`/`-shm` sit next to it and
+hold recent writes). Same path on Windows. `XDG_DATA_HOME` is assumed to move it (inference, not
+observed). `log/opencode.log` is a process log; `snapshot/` holds git snapshots of the worktree.
+No JSON `storage/` directory in these versions.
+
+### Tables read
+
+- `session`: `id`, `project_id`, `parent_id` (child sessions, not observed), `directory`
+  (forward slashes: `D:/proj`), `title` (generated), `version`, `agent`, `model`
+  (`{"id","providerID"}`), `cost`, `tokens_input/output/reasoning/cache_read/cache_write` (sums of the
+  message usage), `time_created`/`time_updated` (Unix **milliseconds**).
+- `message`: `id`, `session_id`, `time_created`, `data` (JSON). Ids sort by time (`msg_…`).
+- `part`: `id`, `message_id`, `session_id`, `data` (JSON). Ids sort in order within a message.
+
+Never read: `account`, `credential`, `control_account` (access tokens). Other tables (`event`,
+`todo`, `permission`, `session_share`, `session_message`, `session_input`) are not needed.
+
+### `message.data`
+
+```json
+{ "role": "user", "time": {"created": 1792761653662}, "agent": "build",
+  "model": {"providerID": "opencode", "modelID": "big-pickle"}, "summary": {"diffs": [...]} }
+{ "role": "assistant", "parentID": "msg_…", "mode": "build" | "compaction", "agent": "build",
+  "path": {"cwd": "D:\proj", "root": "D:\proj"}, "modelID": "big-pickle", "providerID": "opencode",
+  "cost": 0, "tokens": {"total", "input", "output", "reasoning", "cache": {"read", "write"}},
+  "time": {"created", "completed"}, "finish": "tool-calls" | "stop", "summary": true }
+```
+
+`summary: true` with `mode: "compaction"` marks the compaction summary message. The user message's
+`summary.diffs` is a worktree diff, not the user's work.
+
+### `part.data` types
+
+| `type` | Content |
+|---|---|
+| `text` | `text`, `time.{start,end}`; `synthetic: true` for the injected "Continue…" after compaction |
+| `reasoning` | `text` (can be empty), `time` |
+| `tool` | `tool`, `callID`, `state: {status, input, output, metadata, title, time: {start, end}}` |
+| `step-start` / `step-finish` | `snapshot` hash; `step-finish` repeats the message's `tokens` and `cost` |
+| `patch` | `hash`, `files`: files that changed in the worktree during the step |
+| `compaction` | `auto`, `overflow`, `tail_start_id` (in a user message) |
+
+**`patch` parts are not the agent's edits.** During the real session they listed files that another
+program changed in the same folder at the same time. The adapter ignores them.
+
+Tools seen: `bash` (`input.command`, optional `input.timeout`; `metadata.exit`, `metadata.output`,
+`metadata.truncated`) and `read` (`input.filePath`, a file or a directory; `metadata.display.type`).
+Only `completed` status was seen. `write`, `edit` and other tools have not been seen yet, so they are
+kept as `tool_call` with their input until a real session shows their shape.
+
+### What the adapter does
+
+- One session per row: `discover()` returns `<db>#<session id>` for each, because ingest works per
+  file. The fingerprint is the session's update time plus its message and part counts.
+- Usage is per assistant message and goes on its first event; reasoning tokens count as output.
+  Model is `modelID`, so models in `prices.json` get a cost; others show "—".
+- `project_path` is the first assistant `path.cwd` (backslashes, matching other agents), else
+  `session.directory`.
+
+---
+
+## Google Antigravity
+
+Inspected 2026-10-23, Antigravity IDE installed at `D:\Antigravity`, data last written 2026-09-05.
+
+### Locations
+
+`~/.gemini/antigravity/` (with older copies in `antigravity-backup/` and `antigravity-ide/`):
+
+| Path | Content | Readable |
+|---|---|---|
+| `conversations/<uuid>.pb` | one file per conversation (9 here, 67 KB – 3.2 MB) | **No.** Byte entropy ≈ 8.0 bits/byte and no compression magic: encrypted. |
+| `implicit/<uuid>.pb` | 6 files, up to 11 MB | No, same as above. |
+| `agyhub_summaries_proto.pb` | plain protobuf, one entry per conversation | Yes (no `.proto` schema; field meanings inferred) |
+| `brain/<uuid>/` | agent artifacts per conversation: `task.md`, `implementation_plan.md`, `walkthrough.md`, each with `.metadata.json` and numbered `.resolved.N` revisions, plus browser screenshots (`*.png`, `*.webp`) | Yes |
+| `annotations/<uuid>.pbtxt` | `last_user_view_time` only | Yes |
+| `code_tracker/active/no_repo/<md5>_<file>` | copies of files the agent touched | Yes, but no link to a conversation |
+| `antigravity_state.pbtxt` | onboarding state and last selected model (`MODEL_…` enum) | Yes |
+
+`%APPDATA%\Antigravity\User\globalStorage\state.vscdb` holds IDE state (auth, theme, agent-manager
+init state) but no transcripts.
+
+### `agyhub_summaries_proto.pb` (inferred field meanings)
+
+Repeated field 1, each `{1: conversation uuid, 2: summary}`. In the summary: `1` title (string),
+`2` step count (varint, inferred), `3` last-modified `{seconds, nanos}`, `7` created
+`{seconds, nanos}`, `9.1` workspace `file:///` URI, `4`/`17.3`/`17.18` further uuids (meaning
+unknown), `16` and `22` varints (unknown).
+
+### `brain/*.metadata.json`
+
+```json
+{ "artifactType": "ARTIFACT_TYPE_TASK", "summary": "<one-line description>", "updatedAt": "<ISO-8601>" }
+```
+
+### `brain/<uuid>/.system_generated/logs/transcript.jsonl` (readable, newer versions only)
+
+Found for 1 of 9 conversations (the only one written in 2026-09; 138 lines, all valid JSON). The
+others predate it. The log starts at `step_index` 25, so earlier steps of a conversation can be
+missing. Same folder: `messages/<uuid>.json` (background-task notifications, with the original
+`toolCall.argumentsJson` and a `toolu_vrtx_…` call id), `tasks/task-N.log` (background command output),
+`click_feedback/*.png`.
+
+One JSON object per step:
+
+```json
+{ "step_index": 31, "source": "MODEL", "type": "PLANNER_RESPONSE", "status": "DONE",
+  "created_at": "2026-09-05T11:04:38Z", "content": "…", "thinking": "…",
+  "tool_calls": [{ "name": "run_command", "args": { "CommandLine": "\"npm run dev\"", "Cwd": "\"d:\\\\proj\"", "WaitMsBeforeAsync": "5000" } }],
+  "error": "…" }
+```
+
+- `source`: `USER_EXPLICIT`, `MODEL`, `SYSTEM`. `status`: `DONE`, `RUNNING` (background task started).
+- **Every `args` value is itself JSON-encoded** (`"\"list\""`, `"5000"`, `"true"`, arrays as JSON text).
+  Newer lines add `toolAction` / `toolSummary` (UI labels).
+- No model id, no token counts, no cost anywhere in the transcript.
+
+| `type` | Meaning |
+|---|---|
+| `USER_INPUT` | prompt, wrapped in `<USER_REQUEST>…</USER_REQUEST>` plus `<ADDITIONAL_METADATA>` |
+| `PLANNER_RESPONSE` | model turn: optional `thinking`, `content`, `tool_calls` (one per line observed) |
+| `RUN_COMMAND`, `VIEW_FILE`, `CODE_ACTION`, `GREP_SEARCH`, `LIST_DIRECTORY`, `GENERIC` | result of the previous tool call. `content` starts `Created At: <ts>\nCompleted At: <ts>\n`; commands then say `The command failed with exit code: N` or `The command completed successfully.` then `Output:`; edits carry a diff between `[diff_block_start]` and `[diff_block_end]` |
+| `ERROR_MESSAGE` | `error` (quota, invalid tool call) |
+| `SYSTEM_MESSAGE`, `EPHEMERAL_MESSAGE`, `CONVERSATION_HISTORY` | injected by Antigravity, not actions |
+
+Tools seen: `run_command`, `view_file`, `write_to_file` (`IsArtifact: true` for brain documents),
+`replace_file_content`, `multi_replace_file_content` (`ReplacementChunks`), `grep_search`, `list_dir`,
+`manage_task`, `schedule`.
+
+### What the adapter does
+
+- One session per conversation. Discovery takes `brain/<uuid>/…/transcript.jsonl` when it exists,
+  else `conversations/<uuid>.pb`. Title, workspace and times come from the summaries file.
+- With a transcript: full timeline (prompts, thinking, commands with exit codes and output, reads,
+  edits with diffs, errors). Artifact writes become `tool_call`, not `file_write`, so Antigravity's own
+  folder is not flagged as a write outside the project.
+- Without one (encrypted only): metadata-only session, with one `assistant_message` per brain
+  document (`payload.metadata_only: true`). No timeline, commands, risks or cost.
+- Cost is shown as unknown ("—"), never $0, because no token usage is logged.
+- If Antigravity later writes readable transcripts somewhere else, add a reader next to
+  `parseTranscript` in `packages/core/src/adapters/antigravity.ts`.
+
+---
+
+## Unverified formats (from source code, 2026-10-24)
+
+These adapters were written before any real session existed on the author's machine, from each
+tool's own code: the installed build where one was on the machine, the public repository otherwise.
+Their fixtures are hand-written in those shapes. Treat every statement here as unverified until a real
+session has been ingested, then replace it with what the real logs show.
+
+### Gemini CLI
+
+Source: installed `@google/gemini-cli` 0.18.4 (`ChatRecordingService`, `tools/*`).
+
+- `~/.gemini/tmp/<sha256 of project root>/chats/session-<time>-<id8>.json`, one JSON object per
+  session, rewritten in place: `{sessionId, projectHash, startTime, lastUpdated, messages[]}`.
+- Message: `{id, timestamp, type: "user" | "gemini" | "info" | "error" | "warning", content}`; `gemini`
+  messages add `model`, `thoughts[{subject, description, timestamp}]`, `tokens{input, output, cached,
+  thoughts, tool, total}` and `toolCalls[{id, name, args, result, status, timestamp, resultDisplay}]`.
+- Tools: `run_shell_command {command, description, dir_path}` (result text `Command: … Output: …
+  Error: … Exit Code: …`), `read_file {file_path}`, `write_file {file_path, content}`,
+  `replace {file_path, old_string, new_string, instruction}`, `web_fetch {prompt}`, others.
+- The project root is stored only as its hash; the adapter recovers it by hashing directories the
+  session's tools used. `input` includes cached tokens; thoughts are counted as output.
+
+### Cursor
+
+Source: installed Cursor 2.1.39 bundle, plus the real (empty-draft) `state.vscdb` on this machine.
+
+- `<User>/globalStorage/state.vscdb`, table `cursorDiskKV(key, value)`:
+  `composerData:<id>` = `{composerId, name, createdAt, lastUpdatedAt (ms), modelConfig.modelName,
+  fullConversationHeadersOnly[{bubbleId, type}]}` (observed); older chats keep `conversation[]` inline
+  (seen in Cursor's migration code). Bubbles: `bubbleId:<composerId>:<bubbleId>` =
+  `{type: 1 user | 2 assistant, text, thinking.text, tokenCount{inputTokens, outputTokens},
+  toolFormerData{tool (enum), name, toolCallId, status, rawArgs, params, result}, createdAt}`.
+  The bubble key format is from public notes; it was not found in the minified bundle.
+- Workspace folder: `<User>/workspaceStorage/<hash>/state.vscdb` key `composer.composerData` lists
+  `allComposers[].composerId` (observed); `workspace.json` gives the folder.
+- All 25 chats on this machine are empty drafts, which discovery skips.
+
+### GitHub Copilot (VS Code chat)
+
+Source: installed VS Code workbench bundle; 2 small real chats on this machine.
+
+- `<User>/workspaceStorage/<hash>/chatSessions/<id>.jsonl` (and `globalStorage/emptyWindowChatSessions/`).
+  Newer files are a mutation log: `{kind: 0, v}` whole state, `{kind: 1, k: path, v}` set,
+  `{kind: 2, k, v, i?}` truncate the array at `i` then push `v`, `{kind: 3, k}` delete. Older `.json`
+  files are the state itself; VS Code can leave both after migrating, and the `.jsonl` wins.
+- State: `{sessionId, creationDate, lastMessageDate, customTitle, requests[]}`; request: `{timestamp,
+  modelId ("copilot/<model>"), message.text, response[], result.errorDetails, isCanceled}`.
+- Response parts: markdown `{value}` (no `kind`), `thinking`, `toolInvocationSerialized {toolId,
+  invocationMessage, pastTenseMessage, resultDetails, toolSpecificData}` (terminal: `commandLine.original`,
+  `terminalCommandState{exitCode, duration}`, `terminalCommandOutput.text`), `textEditGroup {uri, edits}`;
+  `progressMessage`, `mcpServersStarting`, `codeblockUri`, `undoStop` carry no action.
+- No token usage is stored, so cost is unknown.
+
+### Cline, Roo Code, Kilo Code
+
+Source: Cline repository (`apps/vscode/src/shared/ExtensionMessage.ts`, `core/storage/disk.ts`).
+
+- `<editor User>/globalStorage/<extension id>/tasks/<taskId>/` (also `~/.cline/data/tasks/` for the
+  CLI): `ui_messages.json` (array of `{ts, type: "say" | "ask", say | ask, text, partial, modelInfo}`),
+  `api_conversation_history.json`, `task_metadata.json` (`model_usage[{model_id, …}]`).
+- `api_req_started` text is JSON `{tokensIn, tokensOut, cacheWrites, cacheReads, cost}`; `tool` text is
+  JSON `{tool: readFile | editedExistingFile | newFileCreated | webFetch | …, path, diff, content}`;
+  `command` / `command_output` carry the command and its output (no exit code).
+- The working directory is taken from `# Current Working Directory (…)` in the first API request.
+- Roo Code and Kilo Code are forks assumed to share the layout; their titles get a `[Roo]`/`[Kilo]` prefix.
+
+### Aider
+
+Source: Aider repository (`aider/io.py`, `aider/coders/base_coder.py`).
+
+- `.aider.chat.history.md` in each repository Aider ran in; discovery searches the home folder
+  (3 levels, skipping hidden folders and `node_modules`). One run per `# aider chat started at <local
+  time>` header, so paths are `<file>#<run>`.
+- `#### ` lines are prompts (`/run x` and `!x` are commands), `> ` lines are Aider's notices
+  (`Model:`/`Main model:`, `Tokens: N sent, N cache write, N cache hit, N received.`, `Applied edit to
+  <file>`, `Commit <hash> <msg>`, `Running <cmd>`), anything else is the model's reply. Only the run's
+  start time is recorded.
+
+### Continue
+
+Source: Continue repository (`core/index.d.ts`, `core/tools/builtIn.ts`).
+
+- `~/.continue/sessions/<sessionId>.json`: `{sessionId, title, workspaceDirectory, chatModelTitle,
+  history[{message{role, content, toolCalls, usage}, toolCallStates[{toolCallId, toolCall, status,
+  parsedArgs, output}], reasoning}]}`; `sessions.json` gives `dateCreated`. Messages have no timestamps.
+- Tools: `read_file`, `create_new_file`, `single_find_and_replace`, `multi_edit`, `edit_existing_file`,
+  `run_terminal_command`, `fetch_url_content`, others as tool calls. `chatModelTitle` is a display name,
+  so it may not match a price.
 
 ---
 

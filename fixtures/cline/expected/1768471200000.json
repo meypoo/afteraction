@@ -1,0 +1,326 @@
+{
+  "session": {
+    "id": "cline:1768471200000",
+    "source": "cline",
+    "project_path": "C:\\Users\\USER\\projects\\demo-app",
+    "git_branch": null,
+    "started_at": "2026-01-15T10:00:00.000Z",
+    "ended_at": "2026-01-15T10:00:01.700Z",
+    "model": "claude-sonnet-5-5",
+    "title": "Add input validation to the signup form.",
+    "total_input_tokens": 7100,
+    "total_output_tokens": 510,
+    "total_cache_read_tokens": 2500,
+    "total_cache_write_tokens": 500,
+    "est_cost_usd": null,
+    "max_risk": "none",
+    "source_file": "<fixture>",
+    "source_hash": "<hash>"
+  },
+  "events": [
+    {
+      "id": "cline:1768471200000:0",
+      "session_id": "cline:1768471200000",
+      "seq": 0,
+      "ts": "2026-01-15T10:00:00.000Z",
+      "kind": "user_message",
+      "summary": "Add input validation to the signup form.",
+      "payload": {
+        "text": "Add input validation to the signup form."
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "cline:1768471200000:1",
+      "session_id": "cline:1768471200000",
+      "seq": 1,
+      "ts": "2026-01-15T10:00:00.200Z",
+      "kind": "thinking",
+      "summary": "Read the form first.",
+      "payload": {
+        "text": "Read the form first."
+      },
+      "tokens_in": 3000,
+      "tokens_out": 200,
+      "cache_read": 0,
+      "cache_write": 500,
+      "usage_extra": null,
+      "model": "claude-sonnet-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "cline:1768471200000:2",
+      "session_id": "cline:1768471200000",
+      "seq": 2,
+      "ts": "2026-01-15T10:00:00.300Z",
+      "kind": "assistant_message",
+      "summary": "I'll start with the form component.",
+      "payload": {
+        "text": "I'll start with the form component."
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "claude-sonnet-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "cline:1768471200000:3",
+      "session_id": "cline:1768471200000",
+      "seq": 3,
+      "ts": "2026-01-15T10:00:00.400Z",
+      "kind": "file_read",
+      "summary": "Read src/signup.tsx",
+      "payload": {
+        "path": "src/signup.tsx",
+        "tool_name": "readFile"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "claude-sonnet-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "cline:1768471200000:4",
+      "session_id": "cline:1768471200000",
+      "seq": 4,
+      "ts": "2026-01-15T10:00:00.600Z",
+      "kind": "file_edit",
+      "summary": "Edit src/signup.tsx",
+      "payload": {
+        "path": "src/signup.tsx",
+        "old_excerpt": "const valid = true;",
+        "new_excerpt": "const valid = validate(form);",
+        "lines_added": 1,
+        "lines_removed": 1,
+        "tool_name": "editedExistingFile"
+      },
+      "tokens_in": 4000,
+      "tokens_out": 300,
+      "cache_read": 2500,
+      "cache_write": 0,
+      "usage_extra": null,
+      "model": "claude-sonnet-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "cline:1768471200000:5",
+      "session_id": "cline:1768471200000",
+      "seq": 5,
+      "ts": "2026-01-15T10:00:00.800Z",
+      "kind": "file_write",
+      "summary": "Write src/validate.ts",
+      "payload": {
+        "path": "src/validate.ts",
+        "content_excerpt": "export function validate() {}\n",
+        "bytes": 30,
+        "lines_added": 1,
+        "lines_removed": 0,
+        "tool_name": "newFileCreated"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "claude-sonnet-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "cline:1768471200000:6",
+      "session_id": "cline:1768471200000",
+      "seq": 6,
+      "ts": "2026-01-15T10:00:00.900Z",
+      "kind": "shell_command",
+      "summary": "$ npm test",
+      "payload": {
+        "command": "npm test",
+        "exit_code": null,
+        "stdout_excerpt": "2 passing\n1 failing"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "claude-sonnet-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "cline:1768471200000:7",
+      "session_id": "cline:1768471200000",
+      "seq": 7,
+      "ts": "2026-01-15T10:00:01.100Z",
+      "kind": "user_message",
+      "summary": "Also check the email format.",
+      "payload": {
+        "text": "Also check the email format."
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "cline:1768471200000:8",
+      "session_id": "cline:1768471200000",
+      "seq": 8,
+      "ts": "2026-01-15T10:00:01.200Z",
+      "kind": "tool_call",
+      "summary": "github/create_issue",
+      "payload": {
+        "tool_name": "github/create_issue",
+        "input": {
+          "title": "Validation"
+        },
+        "output_excerpt": "{\"number\": 7}"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "claude-sonnet-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "cline:1768471200000:9",
+      "session_id": "cline:1768471200000",
+      "seq": 9,
+      "ts": "2026-01-15T10:00:01.400Z",
+      "kind": "web_fetch",
+      "summary": "Fetch https://example.com/email-rules",
+      "payload": {
+        "tool_name": "webFetch",
+        "url": "https://example.com/email-rules"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "claude-sonnet-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "cline:1768471200000:10",
+      "session_id": "cline:1768471200000",
+      "seq": 10,
+      "ts": "2026-01-15T10:00:01.500Z",
+      "kind": "error",
+      "summary": "Error: Cline tried to use write_to_file without value for required parameter 'path'.",
+      "payload": {
+        "message": "Cline tried to use write_to_file without value for required parameter 'path'.",
+        "source": "error"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "claude-sonnet-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "cline:1768471200000:11",
+      "session_id": "cline:1768471200000",
+      "seq": 11,
+      "ts": "2026-01-15T10:00:01.600Z",
+      "kind": "unknown",
+      "summary": "Unknown: unknown say value \"mystery_say\"",
+      "payload": {
+        "reason": "unknown say value \"mystery_say\""
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "cline:1768471200000:12",
+      "session_id": "cline:1768471200000",
+      "seq": 12,
+      "ts": null,
+      "kind": "unknown",
+      "summary": "Unknown: message is not an object",
+      "payload": {
+        "reason": "message is not an object"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "cline:1768471200000:13",
+      "session_id": "cline:1768471200000",
+      "seq": 13,
+      "ts": "2026-01-15T10:00:01.700Z",
+      "kind": "assistant_message",
+      "summary": "Validation added and tests pass.",
+      "payload": {
+        "text": "Validation added and tests pass."
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "claude-sonnet-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "cline:1768471200000:14",
+      "session_id": "cline:1768471200000",
+      "seq": 14,
+      "ts": "2026-01-15T10:00:01.700Z",
+      "kind": "assistant_message",
+      "summary": "(no content)",
+      "payload": {
+        "text": ""
+      },
+      "tokens_in": 100,
+      "tokens_out": 10,
+      "cache_read": 0,
+      "cache_write": 0,
+      "usage_extra": null,
+      "model": "claude-sonnet-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    }
+  ]
+}

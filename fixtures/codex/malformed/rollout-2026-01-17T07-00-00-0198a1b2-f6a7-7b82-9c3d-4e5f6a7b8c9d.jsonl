@@ -1,0 +1,13 @@
+{"timestamp":"2026-01-17T07:00:01.000Z","type":"session_meta","payload":{"id":"0198a1b2-f6a7-7b82-9c3d-4e5f6a7b8c9d","timestamp":"2026-01-17T07:00:00.000Z","cwd":"/tmp/demo","cli_version":"0.46.0"}}
+{"timestamp":"2026-01-17T07:00:02.000Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"First prompt."}]}}
+{"timestamp":"2026-01-17T07:00:03.000Z","type":"response_item","payload":{"type":"message","role":"assis
+
+[1,2,3]
+not json at all
+{"timestamp":"2026-01-17T07:00:03.000Z","type":"mystery_line","payload":{"a":1}}
+{"timestamp":"2026-01-17T07:00:04.000Z","type":"response_item","payload":{"type":"brand_new_item","data":1}}
+{"timestamp":"2026-01-17T07:00:05.000Z","type":"event_msg","payload":{"type":"brand_new_event"}}
+{"timestamp":"2026-01-17T07:00:06.000Z","type":"event_msg","payload":{"type":"brand_new_event"}}
+{"timestamp":"yesterday","type":"response_item","payload":{"type":"function_call_output","call_id":"call_orphan","output":"orphan output"}}
+{"timestamp":"2026-01-17T07:00:07.000Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"Second prompt."}]}}
+{"timestamp":"2026-01-17T07:00:09.000Z","type":"response_item","payload":{"type":"mess

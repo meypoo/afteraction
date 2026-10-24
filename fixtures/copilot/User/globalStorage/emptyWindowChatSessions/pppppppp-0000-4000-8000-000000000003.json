@@ -1,0 +1,21 @@
+{
+  "version": 3,
+  "sessionId": "pppppppp-0000-4000-8000-000000000003",
+  "creationDate": 1768474800000,
+  "lastMessageDate": 1768474801000,
+  "requests": [
+    {
+      "requestId": "r",
+      "timestamp": 1768474800500,
+      "message": {
+        "text": "What does the build script do?"
+      },
+      "response": [
+        {
+          "value": "It bundles the CLI."
+        }
+      ],
+      "result": {}
+    }
+  ]
+}

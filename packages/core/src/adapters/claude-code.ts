@@ -1,7 +1,6 @@
 // Claude Code adapter. Format notes: docs/log-formats.md.
 import { createReadStream } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
-import { createHash } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import readline from "node:readline";
@@ -16,6 +15,7 @@ import {
   type SourceAdapter,
   type UsageExtra,
 } from "../model.js";
+import { statFingerprint } from "./util.js";
 
 type Obj = Record<string, unknown>;
 
@@ -498,15 +498,12 @@ async function subagentFiles(sessionFile: string): Promise<SubagentFile[]> {
   return out;
 }
 
-/** Cheap change detector: sizes and mtimes of the session file and its subagent files. */
+/** Cheap change detector over everything parse() reads: the session file, subagent logs and their metadata. */
 export async function claudeFingerprint(sessionFile: string): Promise<string> {
-  const files = [sessionFile, ...(await subagentFiles(sessionFile)).map((s) => s.file)];
-  const h = createHash("sha1");
-  for (const f of files) {
-    const s = await stat(f);
-    h.update(`${path.basename(f)}:${s.size}:${Math.trunc(s.mtimeMs)}\n`);
-  }
-  return h.digest("hex");
+  await stat(sessionFile); // a vanished session file is an error, not a "missing" stamp
+  const subs = await subagentFiles(sessionFile);
+  const files = [sessionFile, ...subs.flatMap((s) => [s.file, path.join(path.dirname(s.file), `agent-${s.agentId}.meta.json`)])];
+  return statFingerprint(files);
 }
 
 function mostCommonModel(transcripts: Transcript[]): string | null {

@@ -9,7 +9,9 @@ export interface Rates {
   input: number;
   output: number;
   cache_read: number;
+  /** Short-lived cache writes: Anthropic's 5-minute cache, OpenAI's 30-minute cache. */
   cache_write_5m: number;
+  /** Long-lived cache writes: Anthropic's 1-hour cache, OpenAI's 12-hour cache. */
   cache_write_1h: number;
 }
 
@@ -89,7 +91,12 @@ export interface SessionCost {
   unpricedModels: string[];
 }
 
+/** Shown as the "model" when a log records no token usage at all (e.g. Antigravity): cost is unknown, not $0. */
+export const NO_USAGE = "(no token usage in log)";
+
 export function sessionCost(events: Billable[], prices: Prices): SessionCost {
+  const hasUsage = events.some((e) => [e.tokens_in, e.tokens_out, e.cache_read, e.cache_write].some((t) => t !== null));
+  if (events.length > 0 && !hasUsage) return { usd: null, unpricedModels: [NO_USAGE] };
   let usd = 0;
   const unpriced = new Set<string>();
   for (const e of events) {

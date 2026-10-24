@@ -1,0 +1,886 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flight Recorder</title>
+<meta name="description" content="The black box for your coding agent. Replay every command, file, risk and dollar from Claude Code sessions, 100% locally.">
+<meta property="og:title" content="Flight Recorder">
+<meta property="og:description" content="See exactly what your coding agent did: every command, file, risk and dollar, replayed locally.">
+<meta property="og:image" content="assets/replay.png">
+<meta name="theme-color" content="#0b0c0f">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='1.5' y='3.5' width='21' height='17' rx='4.5' fill='%23f0592a'/%3E%3Cpath d='M4.5 13h3l1.6-4.2 2.6 7.4 2.1-5.2 1.2 2H19.5' fill='none' stroke='%231a0c06' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preload" href="fonts/geist.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/geist-mono.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+/* Flight Recorder "Instrument" tokens (dark), from packages/web/src/index.css. */
+@font-face { font-family: "Geist"; src: url("fonts/geist.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Geist Mono"; src: url("fonts/geist-mono.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+
+:root {
+  --bg: #0b0c0f;
+  --surface: #121418;
+  --raised: #1a1d22;
+  --sunken: #0e1013;
+  --line: #22262d;
+  --line-strong: #30353e;
+  --fg: #e7e9ec;
+  --fg-2: #a6acb6;
+  --muted: #6f7682;
+  --accent: #5cc4b5;
+  --accent-fg: #06201c;
+  --accent-soft: rgb(92 196 181 / 0.12);
+  --brand: #f0592a;
+  --ok: #4cc38a;
+  --ok-soft: rgb(76 195 138 / 0.12);
+  --low: #8ea6c8;
+  --low-soft: rgb(142 166 200 / 0.12);
+  --medium: #e2b34d;
+  --medium-soft: rgb(226 179 77 / 0.13);
+  --high: #f0706a;
+  --high-soft: rgb(240 112 106 / 0.13);
+  --critical: #e5484d;
+  --sans: "Geist", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --mono: "Geist Mono", ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, monospace;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --wrap: 1180px;
+  --gutter: clamp(16px, 4vw, 40px);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; overflow-x: clip; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 400 15px/1.6 var(--sans);
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+img, video { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+code, kbd, pre, .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+::selection { background: color-mix(in srgb, var(--accent) 30%, transparent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+h1, h2, h3 { text-wrap: balance; letter-spacing: -0.02em; margin: 0; font-weight: 600; }
+p { margin: 0; }
+.wrap { width: min(var(--wrap), 100% - 2 * var(--gutter)); margin-inline: auto; }
+.label { font: 500 12px/16px var(--mono); color: var(--muted); letter-spacing: 0.02em; }
+
+/* ---------- Scroll tape: the page itself is a session ---------- */
+.tape-top {
+  position: fixed; inset: 0 0 auto 0; height: 3px; z-index: 60;
+  display: flex; gap: 2px; padding: 0 2px; pointer-events: none;
+}
+.tape-top i { flex: 1; background: var(--line); transition: background .2s; }
+.tape-top i.on { background: color-mix(in srgb, var(--fg) 30%, transparent); }
+.tape-top i.risk.on { background: var(--high); }
+.tape-top i.head { background: var(--accent) !important; }
+
+/* ---------- Nav ---------- */
+.nav {
+  position: fixed; top: 3px; inset-inline: 0; z-index: 50;
+  transition: background .3s, border-color .3s, backdrop-filter .3s;
+  border-bottom: 1px solid transparent;
+}
+.nav.solid { background: rgb(11 12 15 / 0.72); backdrop-filter: blur(14px) saturate(1.4); border-color: var(--line); }
+.nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 56px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; }
+.nav-links { display: flex; align-items: center; gap: 26px; font-size: 14px; color: var(--fg-2); }
+.nav-links a:hover { color: var(--fg); }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px;
+  border-radius: 8px; border: 1px solid var(--line-strong); background: var(--raised);
+  color: var(--fg); font: 500 14px/1 var(--sans); cursor: pointer;
+  transition: background .15s, border-color .15s, transform .1s;
+}
+.btn:hover { background: #22262d; border-color: #3b414b; }
+.btn:active { transform: scale(0.97); }
+.btn.primary { background: var(--accent); color: var(--accent-fg); border-color: transparent; }
+.btn.primary:hover { background: #74d3c5; }
+@media (max-width: 720px) { .nav-links .hide-sm { display: none; } }
+
+/* ---------- Hero ---------- */
+.hero { position: relative; padding: 150px 0 40px; isolation: isolate; }
+.hero::before { /* faint instrument grid */
+  content: ""; position: absolute; inset: 0; z-index: -2;
+  background-image:
+    linear-gradient(to right, rgb(255 255 255 / 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.035) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, #000 30%, transparent 75%);
+}
+.hero::after { /* one soft light, like a cockpit at night */
+  content: ""; position: absolute; z-index: -1; left: 50%; top: 260px; width: min(1100px, 100%); height: 640px;
+  transform: translateX(-50%);
+  background: radial-gradient(closest-side, rgb(92 196 181 / 0.09), transparent);
+  filter: blur(20px);
+}
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 10px; padding: 6px 12px 6px 8px;
+  border: 1px solid var(--line-strong); border-radius: 999px; background: rgb(18 20 24 / 0.7);
+  font: 500 12.5px/1 var(--mono); color: var(--fg-2);
+}
+.rec { width: 8px; height: 8px; border-radius: 50%; background: var(--high); box-shadow: 0 0 0 0 rgb(240 112 106 / .6); animation: rec 1.8s infinite; }
+@keyframes rec { 0% { box-shadow: 0 0 0 0 rgb(240 112 106 / .55); } 70% { box-shadow: 0 0 0 9px rgb(240 112 106 / 0); } 100% { box-shadow: 0 0 0 0 rgb(240 112 106 / 0); } }
+.hero-copy { text-align: center; display: grid; justify-items: center; gap: 26px; }
+.hero h1 {
+  font-size: clamp(44px, 8.2vw, 104px); line-height: 0.98; letter-spacing: -0.045em; font-weight: 600;
+  max-width: 13ch;
+}
+.hero h1 .dim { color: var(--muted); }
+.hero .lede { font-size: clamp(17px, 2vw, 20px); line-height: 1.55; color: var(--fg-2); max-width: 600px; }
+.ctas { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+.cmd {
+  display: inline-flex; align-items: center; gap: 12px; height: 46px; padding: 0 8px 0 16px;
+  border-radius: 10px; background: var(--surface); border: 1px solid var(--line-strong);
+  font: 500 15px/1 var(--mono); color: var(--fg); cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.cmd:hover { border-color: var(--accent); }
+.cmd .p { color: var(--muted); }
+.cmd .copy { display: inline-grid; place-items: center; height: 32px; padding: 0 10px; border-radius: 7px; background: var(--raised); color: var(--fg-2); font: 500 12px/1 var(--sans); }
+.cmd.copied .copy { background: var(--accent-soft); color: var(--accent); }
+.cmd.big { height: 54px; font-size: 17px; }
+.cta-alt { height: 46px; padding: 0 18px; border-radius: 10px; font-size: 15px; }
+.fine { font-size: 13px; color: var(--muted); }
+.fine b { color: var(--fg-2); font-weight: 500; }
+
+/* ---------- Live recorder console ---------- */
+.console-wrap { margin-top: 72px; perspective: 1800px; }
+.console {
+  position: relative; max-width: 980px; margin-inline: auto;
+  border: 1px solid var(--line-strong); border-radius: 14px; overflow: hidden;
+  background: linear-gradient(180deg, #121418, #0e1013);
+  box-shadow: 0 40px 120px -30px rgb(0 0 0 / .9), 0 0 0 1px rgb(255 255 255 / .03) inset;
+}
+.console-bar {
+  display: flex; align-items: center; gap: 14px; padding: 12px 16px;
+  border-bottom: 1px solid var(--line); font: 500 12.5px/1 var(--mono); color: var(--muted);
+}
+.console-bar .title { color: var(--fg-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.console-bar .right { margin-left: auto; display: flex; gap: 14px; align-items: center; white-space: nowrap; }
+.live { color: var(--high); display: inline-flex; align-items: center; gap: 7px; }
+.ctape { position: relative; display: flex; align-items: flex-end; gap: 3px; height: 30px; padding: 0 16px 8px; border-bottom: 1px solid var(--line); background: var(--sunken); }
+.ctape i { width: 4px; height: 7px; background: var(--line-strong); border-radius: 1px; opacity: 0; transform: scaleY(0); transform-origin: bottom; transition: opacity .3s, transform .4s var(--ease); }
+.ctape i.in { opacity: 1; transform: none; }
+.ctape i.prompt { height: 14px; background: #3d4450; }
+.ctape i.low { background: var(--low); }
+.ctape i.high { background: var(--high); height: 12px; }
+.ctape i.now { background: var(--accent); }
+.console-body { display: grid; grid-template-columns: 1.25fr 1fr; min-height: 388px; }
+.events { padding: 10px 8px; border-right: 1px solid var(--line); font: 13px/1 var(--mono); }
+.ev {
+  display: grid; grid-template-columns: 70px 18px minmax(0, 1fr) auto; align-items: center; gap: 10px;
+  height: 34px; padding: 0 10px; border-radius: 6px; color: var(--fg-2);
+  opacity: 0; transform: translateY(6px); transition: opacity .35s var(--ease), transform .35s var(--ease), background .3s;
+  white-space: nowrap;
+}
+.ev.in { opacity: 1; transform: none; }
+.ev .t { color: var(--muted); font-size: 12px; }
+.ev .k { width: 18px; height: 18px; border-radius: 4px; display: grid; place-items: center; background: var(--raised); color: var(--muted); font-size: 10px; }
+.ev .k.p { background: var(--accent-soft); color: var(--accent); }
+.ev .k.w { background: var(--ok-soft); color: var(--ok); }
+.ev .x { overflow: hidden; text-overflow: ellipsis; }
+.ev .x b { color: var(--fg); font-weight: 500; }
+.ev.sel { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+.ev.alarm { animation: alarm 1.2s var(--ease); }
+@keyframes alarm { 0%, 30% { background: rgb(240 112 106 / .22); } 100% { background: var(--accent-soft); } }
+.chip { font: 500 11px/1 var(--mono); padding: 4px 7px; border-radius: 4px; display: inline-flex; align-items: center; gap: 5px; }
+.chip::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.chip.low { background: var(--low-soft); color: var(--low); }
+.chip.medium { background: var(--medium-soft); color: var(--medium); }
+.chip.high { background: var(--high-soft); color: var(--high); }
+.chip.critical { background: var(--critical); color: #fff; }
+.chip.critical::before { background: #fff; }
+.fail { color: var(--high); font-size: 13px; }
+.pass { color: var(--ok); font-size: 13px; }
+.detail { padding: 18px; display: grid; align-content: start; gap: 14px; font-size: 13px; }
+.detail .idle { color: var(--muted); font: 12.5px/1.6 var(--mono); }
+.detail .pane { display: grid; gap: 14px; opacity: 0; transform: translateY(8px); transition: opacity .4s var(--ease), transform .4s var(--ease); }
+.detail .pane.in { opacity: 1; transform: none; }
+.flags { border-radius: 8px; background: rgb(240 112 106 / .08); border: 1px solid rgb(240 112 106 / .18); padding: 12px; display: grid; gap: 10px; }
+.flag { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; align-items: start; }
+.flag code { font-size: 12.5px; color: var(--fg); }
+.flag p { grid-column: 2; color: var(--fg-2); font-size: 12px; line-height: 1.45; }
+.box { border-radius: 8px; background: var(--sunken); border: 1px solid var(--line); padding: 10px 12px; font: 12.5px/1.65 var(--mono); color: var(--fg-2); overflow: hidden; }
+.box .hl { color: var(--fg); }
+.mask { background: var(--raised); color: var(--muted); border-radius: 3px; padding: 0 4px; }
+.console-foot {
+  display: flex; flex-wrap: wrap; gap: 8px 28px; padding: 12px 16px; border-top: 1px solid var(--line);
+  font: 12.5px/1 var(--mono); color: var(--muted);
+}
+.console-foot b { color: var(--fg); font-weight: 500; }
+.console-foot .r b { color: var(--high); }
+@media (max-width: 820px) {
+  .console-body { grid-template-columns: 1fr; }
+  .events { border-right: 0; border-bottom: 1px solid var(--line); }
+  .detail { min-height: 260px; }
+  .ev { grid-template-columns: 62px 18px minmax(0, 1fr) auto; gap: 8px; }
+  .console-bar .right .hide-sm { display: none; }
+}
+
+/* ---------- Sections ---------- */
+section { position: relative; }
+.sec { padding: clamp(96px, 14vw, 180px) 0; }
+.kicker { font: 500 13px/1 var(--mono); color: var(--accent); margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+.kicker::before { content: ""; width: 18px; height: 1px; background: currentColor; }
+.h2 { font-size: clamp(34px, 5.4vw, 64px); line-height: 1.02; letter-spacing: -0.035em; max-width: 18ch; }
+.sub code { font-size: 0.88em; color: var(--fg); background: var(--raised); padding: 1px 6px; border-radius: 4px; }
+.sub { margin-top: 22px; font-size: clamp(16px, 1.7vw, 19px); color: var(--fg-2); max-width: 58ch; line-height: 1.6; }
+
+/* reveal */
+.rv { opacity: 0; transform: translateY(24px); transition: opacity .9s var(--ease), transform .9s var(--ease); }
+.rv.in { opacity: 1; transform: none; }
+.rv.d1 { transition-delay: .08s; } .rv.d2 { transition-delay: .16s; } .rv.d3 { transition-delay: .24s; }
+
+/* ---------- Film: the demo, tilting into place ---------- */
+.film { padding: 40px 0 0; }
+.film-stage { perspective: 2200px; }
+.film-frame {
+  position: relative; max-width: 1120px; margin-inline: auto; border-radius: 14px; overflow: hidden;
+  border: 1px solid var(--line-strong); background: var(--surface);
+  box-shadow: 0 60px 140px -40px rgb(0 0 0 / .95);
+  transform-origin: 50% 0%;
+  transform: rotateX(var(--tilt, 24deg)) scale(var(--sc, .9));
+  will-change: transform;
+}
+.film-frame video { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: var(--sunken); }
+.film-cap { text-align: center; margin-top: 22px; }
+
+/* ---------- Questions ---------- */
+.qs { display: grid; gap: 0; margin-top: 64px; border-top: 1px solid var(--line); }
+.q { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 24px 48px; padding: 30px 0; border-bottom: 1px solid var(--line); align-items: baseline; }
+.q h3 { font-size: clamp(22px, 2.8vw, 34px); letter-spacing: -0.025em; line-height: 1.15; font-weight: 500; }
+.q h3 .n { font: 500 13px/1 var(--mono); color: var(--muted); margin-right: 14px; vertical-align: middle; }
+.q p { color: var(--fg-2); font-size: 16px; }
+.q p code { font-size: 14px; color: var(--fg); background: var(--raised); padding: 1px 6px; border-radius: 4px; }
+@media (max-width: 760px) { .q { grid-template-columns: 1fr; gap: 10px; } }
+
+/* ---------- Story: sticky screen ---------- */
+.story { display: grid; grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr); gap: 56px; margin-top: 40px; }
+.chapters { display: grid; }
+.chapter { min-height: 78vh; display: grid; align-content: center; gap: 16px; padding: 40px 0; opacity: .28; transition: opacity .5s var(--ease); }
+.chapter.on { opacity: 1; }
+.chapter .num { font: 500 13px/1 var(--mono); color: var(--muted); }
+.chapter.on .num { color: var(--accent); }
+.chapter h3 { font-size: clamp(28px, 3.4vw, 42px); line-height: 1.05; letter-spacing: -0.03em; }
+.chapter p { color: var(--fg-2); font-size: 17px; max-width: 44ch; }
+.chapter ul { margin: 4px 0 0; padding: 0; list-style: none; display: grid; gap: 8px; color: var(--fg-2); font-size: 15px; }
+.chapter li { display: flex; gap: 10px; }
+.chapter li::before { content: ""; flex: none; margin-top: 10px; width: 10px; height: 1px; background: var(--muted); }
+.keys { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; color: var(--muted); font-size: 13px; }
+kbd { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 4px; border: 1px solid var(--line-strong); border-bottom-width: 2px; background: var(--raised); color: var(--fg-2); font-size: 12px; }
+.screen-col { position: relative; }
+.screen {
+  position: sticky; top: max(84px, calc(50vh - 230px));
+  border-radius: 12px; border: 1px solid var(--line-strong); overflow: hidden; background: var(--surface);
+  box-shadow: 0 50px 120px -40px rgb(0 0 0 / .9);
+}
+.screen .chrome { display: flex; align-items: center; gap: 7px; height: 34px; padding: 0 12px; border-bottom: 1px solid var(--line); background: var(--sunken); }
+.screen .chrome i { width: 10px; height: 10px; border-radius: 50%; background: var(--line-strong); }
+.screen .chrome span { margin-left: 10px; font: 12px/1 var(--mono); color: var(--muted); transition: opacity .3s; }
+.shots { position: relative; aspect-ratio: 16 / 9; background: var(--bg); }
+.shots img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top left; opacity: 0; transform: scale(1.03); transition: opacity .7s var(--ease), transform 1.2s var(--ease); }
+.shots img.on { opacity: 1; transform: none; }
+.shots img.tui { object-fit: contain; background: #0d0f12; }
+.mshot { display: none; }
+@media (max-width: 900px) {
+  .story { grid-template-columns: 1fr; gap: 0; }
+  .screen-col { display: none; }
+  .chapter { min-height: 0; opacity: 1; padding: 36px 0; }
+  .mshot { display: block; margin-top: 8px; border-radius: 10px; border: 1px solid var(--line-strong); overflow: hidden; }
+}
+
+/* ---------- Risk rules ---------- */
+.rules { margin-top: 56px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.rule { background: var(--bg); padding: 22px 20px; display: grid; gap: 10px; align-content: start; transition: background .25s; position: relative; }
+.rule:hover { background: var(--surface); }
+.rule::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--sev); opacity: 0; transition: opacity .25s; }
+.rule:hover::before { opacity: 1; }
+.rule[data-sev="low"] { --sev: var(--low); } .rule[data-sev="medium"] { --sev: var(--medium); }
+.rule[data-sev="high"] { --sev: var(--high); } .rule[data-sev="critical"] { --sev: var(--critical); }
+.rule code { font-size: 13.5px; color: var(--fg); }
+.rule p { font-size: 13.5px; color: var(--fg-2); line-height: 1.5; }
+.rule .ex { font: 12px/1.4 var(--mono); color: var(--muted); }
+.rule.note { grid-column: span 3; align-content: center; background: var(--sunken); }
+.rule.note p { color: var(--muted); font: 13px/1.6 var(--mono); }
+@media (max-width: 1000px) { .rules { grid-template-columns: repeat(2, minmax(0, 1fr)); } .rule.note { grid-column: span 1; } }
+@media (max-width: 560px) { .rules { grid-template-columns: 1fr; } }
+.rule-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+
+/* ---------- Costs band ---------- */
+.split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 64px; align-items: center; }
+@media (max-width: 900px) { .split { grid-template-columns: 1fr; gap: 40px; } .lead-sm { order: -1; } }
+.bignum { font: 600 clamp(64px, 10vw, 132px)/0.9 var(--mono); letter-spacing: -0.05em; font-variant-numeric: tabular-nums; }
+.bignum small { display: block; margin-top: 14px; font: 500 13px/1 var(--mono); color: var(--muted); letter-spacing: 0; }
+.bars { display: grid; gap: 14px; margin-top: 34px; }
+.bar { display: grid; grid-template-columns: 150px 1fr 70px; gap: 14px; align-items: center; font: 13px/1 var(--mono); color: var(--fg-2); }
+.bar .track { height: 6px; border-radius: 3px; background: var(--raised); overflow: hidden; }
+.bar .fill { height: 100%; width: 0; background: color-mix(in srgb, var(--fg) 55%, transparent); border-radius: 3px; transition: width 1.4s var(--ease); }
+.bar .v { text-align: right; color: var(--fg); }
+.costs-img { border-radius: 12px; border: 1px solid var(--line-strong); overflow: hidden; box-shadow: 0 50px 120px -40px rgb(0 0 0 / .9); transform: rotate(-1.2deg); }
+
+/* ---------- Receipt ---------- */
+.receipt { border-radius: 12px; border: 1px solid var(--line-strong); background: var(--surface); overflow: hidden; }
+.receipt-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); font-size: 13px; color: var(--fg-2); }
+.avatar { width: 22px; height: 22px; border-radius: 50%; background: var(--raised); display: grid; place-items: center; }
+.receipt-body { padding: 20px 22px 22px; font-size: 14px; line-height: 1.65; color: var(--fg-2); display: grid; gap: 10px; }
+.receipt-body h4 { margin: 0 0 4px; font-size: 17px; color: var(--fg); font-weight: 600; }
+.receipt-body b { color: var(--fg); font-weight: 600; }
+.receipt-body code { font-size: 12.5px; background: var(--raised); color: var(--fg); padding: 1px 5px; border-radius: 4px; }
+.receipt-body ul { margin: 0; padding-left: 20px; }
+.receipt-body sub { color: var(--muted); font-size: 12px; }
+.yaml { margin-top: 28px; }
+.yaml pre { margin: 0; font-size: 13px; line-height: 1.7; color: var(--fg-2); }
+.yaml .c { color: var(--muted); } .yaml .k { color: var(--fg); } .yaml .s { color: var(--accent); }
+
+/* ---------- Privacy ---------- */
+.privacy { text-align: center; overflow: hidden; }
+.privacy .h2 { margin-inline: auto; max-width: 16ch; }
+.privacy .sub { margin-inline: auto; }
+.local {
+  margin: 64px auto 0; display: inline-flex; align-items: center; gap: 18px; padding: 18px 26px;
+  border-radius: 14px; border: 1px solid var(--line-strong); background: var(--surface); font: 500 clamp(18px, 3vw, 30px)/1 var(--mono);
+}
+.local .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 18px var(--ok); }
+.facts { margin-top: 64px; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 32px; text-align: left; }
+.fact { border-top: 1px solid var(--line-strong); padding-top: 18px; display: grid; gap: 8px; }
+.fact h3 { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+.fact p { color: var(--fg-2); font-size: 14.5px; }
+
+/* ---------- Terminal TUI band ---------- */
+.term { border-radius: 12px; overflow: hidden; border: 1px solid var(--line-strong); box-shadow: 0 50px 120px -40px rgb(0 0 0 / .9); background: #0d0f12; }
+.cmdlist { margin-top: 28px; display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.cmdlist div { background: var(--surface); padding: 12px 16px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; font-size: 13.5px; }
+.cmdlist code { color: var(--fg); }
+.cmdlist span { color: var(--muted); }
+
+/* ---------- Final CTA ---------- */
+.final { text-align: center; padding: clamp(120px, 16vw, 220px) 0 clamp(100px, 12vw, 160px); position: relative; isolation: isolate; overflow: hidden; }
+.final::before {
+  content: ""; position: absolute; inset: auto 0 0 0; height: 100%; z-index: -1;
+  background: radial-gradient(ellipse 60% 55% at 50% 100%, rgb(92 196 181 / .10), transparent 70%);
+}
+.final h2 { font-size: clamp(48px, 9vw, 120px); line-height: .95; letter-spacing: -0.05em; }
+.final .ctas { margin-top: 44px; }
+.final .fine { margin-top: 20px; }
+.endtape { margin: 90px auto 0; display: flex; gap: 3px; justify-content: center; align-items: flex-end; height: 26px; }
+.endtape i { width: 3px; height: 8px; background: var(--line-strong); border-radius: 1px; }
+.endtape i.p { height: 16px; background: #3d4450; }
+.endtape i.r { background: var(--high); height: 12px; }
+.endtape i.h { background: var(--accent); height: 22px; }
+
+footer { border-top: 1px solid var(--line); padding: 30px 0 40px; color: var(--muted); font-size: 13px; }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 14px 28px; justify-content: space-between; align-items: center; }
+footer nav { display: flex; gap: 22px; flex-wrap: wrap; }
+footer a:hover { color: var(--fg); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  .rv, .ev, .ctape i, .detail .pane { opacity: 1 !important; transform: none !important; }
+  .film-frame { transform: none !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="tape-top" id="tapeTop" aria-hidden="true"></div>
+
+<header class="nav" id="nav">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="Flight Recorder home">
+      <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+        <defs><linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
+        <rect x="1.5" y="3.5" width="21" height="17" rx="4.5" fill="#f0592a"/>
+        <rect x="1.5" y="3.5" width="21" height="17" rx="4.5" fill="url(#sheen)" opacity=".35"/>
+        <path d="M4.5 13h3l1.6-4.2 2.6 7.4 2.1-5.2 1.2 2H19.5" fill="none" stroke="#1a0c06" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Flight Recorder
+    </a>
+    <nav class="nav-links" aria-label="Primary">
+      <a class="hide-sm" href="#features">Features</a>
+      <a class="hide-sm" href="#risks">Risks</a>
+      <a class="hide-sm" href="#privacy">Privacy</a>
+      <a class="btn" href="https://github.com/meypoo/flightrecorder">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        GitHub
+      </a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ============ HERO ============ -->
+  <section class="hero">
+    <div class="wrap">
+      <div class="hero-copy">
+        <span class="eyebrow rv"><span class="rec" aria-hidden="true"></span>flightrec · for Claude Code</span>
+        <h1 class="rv d1">The black box for your <span class="dim">coding agent.</span></h1>
+        <p class="lede rv d2">See exactly what your agent did: every command, file, risk and dollar, replayed on your own machine.</p>
+        <div class="ctas rv d3">
+          <button class="cmd" data-copy="npx flightrec" aria-label="Copy npx flightrec"><span><span class="p">$ </span>npx flightrec</span><span class="copy">Copy</span></button>
+          <a class="btn cta-alt" href="#film">Watch the replay</a>
+        </div>
+        <p class="fine rv d3">Node 20+ · <b>100% local</b> · no account, no telemetry</p>
+      </div>
+
+      <div class="console-wrap rv d2">
+        <div class="console" id="console" aria-label="Animated example of Flight Recorder replaying a session">
+          <div class="console-bar">
+            <span class="live"><span class="rec" aria-hidden="true"></span>REPLAY</span>
+            <span class="title">acme-shop · feat/stripe-webhooks</span>
+            <span class="right"><span class="hide-sm">Claude Code</span><span>claude-opus-5-5</span></span>
+          </div>
+          <div class="ctape" id="ctape" aria-hidden="true"></div>
+          <div class="console-body">
+            <div class="events" id="events"></div>
+            <div class="detail" id="detail"><p class="idle">Waiting for events…</p></div>
+          </div>
+          <div class="console-foot">
+            <span>events <b id="fEvents">0</b></span>
+            <span>tokens <b id="fTokens">0</b></span>
+            <span>est. cost <b id="fCost">$0.00</b></span>
+            <span class="r">flagged <b id="fRisk">0</b></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ WHY ============ -->
+  <section class="sec" id="why">
+    <div class="wrap">
+      <p class="kicker rv">After the flight</p>
+      <h2 class="h2 rv d1">Agents run for hours. Their logs are JSONL nobody reads.</h2>
+      <p class="sub rv d2">When the run is over and the diff looks fine, the real questions are still open. Flight Recorder turns those logs into answers.</p>
+      <div class="qs">
+        <div class="q rv"><h3><span class="n">01</span>What did it run?</h3><p>Every shell command with its output, exit code and duration, in order. Dangerous ones are flagged.</p></div>
+        <div class="q rv"><h3><span class="n">02</span>What did it read and change?</h3><p>Every file touched, with read, write and edit counts, a combined diff, and a flag the moment it opened <code>.env</code>.</p></div>
+        <div class="q rv"><h3><span class="n">03</span>What did it cost?</h3><p>Estimated spend per session, day, project and model, so you can see which task burned the tokens.</p></div>
+        <div class="q rv"><h3><span class="n">04</span>How was this PR produced?</h3><p>Not just what's in the diff. A redacted receipt of the session, ready to paste into the pull request.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FILM ============ -->
+  <section class="film" id="film">
+    <div class="wrap">
+      <div class="film-stage">
+        <div class="film-frame" id="filmFrame">
+          <video src="assets/demo.mp4" poster="assets/demo-poster.png" autoplay muted loop playsinline preload="metadata" aria-label="Screen recording of Flight Recorder: browsing sessions, replaying one, and jumping to a flagged command"></video>
+        </div>
+      </div>
+      <p class="film-cap label rv">npx flightrec --demo · real UI, sample sessions</p>
+    </div>
+  </section>
+
+  <!-- ============ STORY ============ -->
+  <section class="sec" id="features">
+    <div class="wrap">
+      <p class="kicker rv">The instrument</p>
+      <h2 class="h2 rv d1">Calm and precise. Loud only about risk.</h2>
+      <div class="story">
+        <div class="chapters" id="chapters">
+          <article class="chapter" data-shot="0" data-path="localhost:4317/sessions">
+            <span class="num">01 · Sessions</span>
+            <h3>Every run, across every project.</h3>
+            <p>Search by prompt or command, filter by project, date and risk, and see the estimated cost of each session at a glance.</p>
+            <img class="mshot" src="assets/sessions.png" alt="Sessions list with cost and risk columns" loading="lazy">
+          </article>
+          <article class="chapter" data-shot="1" data-path="localhost:4317/sessions/de30a001">
+            <span class="num">02 · Replay</span>
+            <h3>Step through the flight.</h3>
+            <p>A timeline of prompts, messages, commands, reads and edits beside the full detail of each one: output, diffs, message text. Secrets stay masked until you reveal them.</p>
+            <div class="keys"><kbd>j</kbd><kbd>k</kbd> step <kbd>r</kbd> next risk <kbd>space</kbd> play it back</div>
+            <img class="mshot" src="assets/replay.png" alt="Replay of a session with a flagged cat .env command" loading="lazy">
+          </article>
+          <article class="chapter" data-shot="2" data-path="localhost:4317/costs">
+            <span class="num">03 · Costs</span>
+            <h3>Know which task burned the tokens.</h3>
+            <p>Estimated spend by day, project and model, and the most expensive sessions, from the token counts already in your logs. Light theme included.</p>
+            <img class="mshot" src="assets/costs-light.png" alt="Costs page in the light theme" loading="lazy">
+          </article>
+          <article class="chapter" data-shot="3" data-path="~/code/acme-shop — flightrec tui">
+            <span class="num">04 · Terminal</span>
+            <h3>The same replay, over SSH.</h3>
+            <p><code>flightrec tui</code> opens the same data full-screen in your terminal, with the same keys. No browser needed.</p>
+            <div class="keys"><kbd>/</kbd> filter <kbd>s</kbd> reveal <kbd>esc</kbd> back <kbd>q</kbd> quit</div>
+            <img class="mshot" src="assets/tui.png" alt="flightrec tui showing a session timeline in the terminal" loading="lazy">
+          </article>
+        </div>
+        <div class="screen-col" aria-hidden="true">
+          <div class="screen">
+            <div class="chrome"><i></i><i></i><i></i><span id="shotPath">localhost:4317/sessions</span></div>
+            <div class="shots" id="shots">
+              <img class="on" src="assets/sessions.png" alt="">
+              <img src="assets/replay.png" alt="">
+              <img src="assets/costs-light.png" alt="">
+              <img class="tui" src="assets/tui.png" alt="">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ RISKS ============ -->
+  <section class="sec" id="risks" style="padding-top: 40px">
+    <div class="wrap">
+      <p class="kicker rv">Risk flags</p>
+      <h2 class="h2 rv d1">Thirteen rules that catch the moments that matter.</h2>
+      <p class="sub rv d2">Rule-based, deterministic and explainable. Every flagged event says which rule fired and why, and <kbd>r</kbd> jumps straight to the next one.</p>
+      <div class="rules" id="rules"></div>
+    </div>
+  </section>
+
+  <!-- ============ COSTS ============ -->
+  <section class="sec" style="padding-top: 40px">
+    <div class="wrap split">
+      <div>
+        <p class="kicker rv">Costs</p>
+        <h2 class="h2 rv d1">What that session would have cost.</h2>
+        <p class="sub rv d2">Computed from the token counts in the logs and a bundled price table at API list prices. On a subscription you aren't billed per token, so every figure is labelled <em>estimated, API-equivalent</em>.</p>
+        <div class="rv d2" style="margin-top: 40px">
+          <div class="bignum" id="bigCost">$0.00<small>estimated, across 6 sample sessions</small></div>
+          <div class="bars" id="bars">
+            <div class="bar"><span>acme-shop</span><span class="track"><span class="fill" data-w="100"></span></span><span class="v">$0.55</span></div>
+            <div class="bar"><span>data-pipeline</span><span class="track"><span class="fill" data-w="36"></span></span><span class="v">$0.20</span></div>
+            <div class="bar"><span>mobile-app</span><span class="track"><span class="fill" data-w="6"></span></span><span class="v">$0.03</span></div>
+            <div class="bar"><span>docs-site</span><span class="track"><span class="fill" data-w="1"></span></span><span class="v">&lt;$0.01</span></div>
+          </div>
+          <p class="fine" style="margin-top: 16px">From the sample sessions in <code>flightrec --demo</code>.</p>
+        </div>
+      </div>
+      <div class="costs-img rv d1"><img src="assets/costs-light.png" alt="Costs page showing spend by day, project and model" loading="lazy"></div>
+    </div>
+  </section>
+
+  <!-- ============ RECEIPTS ============ -->
+  <section class="sec" style="padding-top: 40px">
+    <div class="wrap split">
+      <div class="rv">
+        <div class="receipt">
+          <div class="receipt-head"><span class="avatar"><svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><rect x="1.5" y="3.5" width="21" height="17" rx="4.5" fill="#f0592a"/></svg></span><b style="color:var(--fg);font-weight:500">flightrec</b> commented on this pull request</div>
+          <div class="receipt-body">
+            <h4>🛫 Agent session receipt</h4>
+            <p><b>Agent:</b> Claude Code · <b>Model:</b> claude-opus-5-5 · <b>Duration:</b> 2m · <b>Est. cost:</b> $0.30 (estimated, API-equivalent)</p>
+            <p><b>Prompt:</b> "Add a Stripe webhook endpoint that marks orders paid or failed. Verify the signature and add a test."</p>
+            <p><b>Files changed (4):</b> src/webhooks/stripe.ts (+28/−0), src/server.ts (+3/−0), test/stripe-webhook.test.ts (+10/−0), test/setup.ts (+2/−0)</p>
+            <p><b>Commands run (4):</b> npm install stripe, npm test ×2, cat .env</p>
+            <div><b>⚠️ Risk flags (3):</b>
+              <ul>
+                <li>high · secret-file-read · <code>cat .env</code></li>
+                <li>high · secret-in-output · <code>cat .env</code></li>
+                <li>low · package-install · <code>npm install stripe</code></li>
+              </ul>
+            </div>
+            <sub>Generated locally by flightrec v0.1.0 — transcript not uploaded.</sub>
+          </div>
+        </div>
+      </div>
+      <div class="lead-sm">
+        <p class="kicker rv">Receipts</p>
+        <h2 class="h2 rv d1">Show your work on the pull request.</h2>
+        <p class="sub rv d2"><code>flightrec receipt latest</code> writes a Markdown summary of a session, with secrets and home paths redacted. Paste it into a PR, or let the experimental GitHub Action post it for you.</p>
+        <div class="box yaml rv d3"><pre><span class="c"># .github/workflows/receipt.yml</span>
+<span class="k">on:</span> pull_request
+<span class="k">jobs:</span>
+  <span class="k">receipt:</span>
+    <span class="k">runs-on:</span> ubuntu-latest
+    <span class="k">steps:</span>
+      - <span class="k">uses:</span> actions/checkout@v4
+      - <span class="k">uses:</span> <span class="s">meypoo/flightrecorder@main</span>
+        <span class="k">with:</span>
+          <span class="k">log-path:</span> .flightrec/session.jsonl</pre></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TERMINAL ============ -->
+  <section class="sec" style="padding-top: 40px">
+    <div class="wrap split">
+      <div>
+        <p class="kicker rv">In the terminal</p>
+        <h2 class="h2 rv d1">Every view has a command.</h2>
+        <p class="sub rv d2">Script it, pipe it, or stay in the shell. Session ids can be the full id, a unique prefix, or <code>latest</code>.</p>
+        <div class="cmdlist rv d2">
+          <div><code>flightrec tui latest</code><span>open the newest session full-screen</span></div>
+          <div><code>flightrec list --since 7d --risk high</code><span>find the risky runs</span></div>
+          <div><code>flightrec risks</code><span>flagged events, grouped by rule</span></div>
+          <div><code>flightrec receipt latest -o receipt.md</code><span>a redacted PR summary</span></div>
+          <div><code>flightrec doctor</code><span>log sources, counts, parse warnings</span></div>
+        </div>
+      </div>
+      <div class="term rv d1"><img src="assets/tui.png" alt="flightrec tui showing a flagged cat .env command" loading="lazy"></div>
+    </div>
+  </section>
+
+  <!-- ============ PRIVACY ============ -->
+  <section class="sec privacy" id="privacy">
+    <div class="wrap">
+      <p class="kicker rv" style="justify-content:center">Privacy</p>
+      <h2 class="h2 rv d1">Nothing leaves your machine.</h2>
+      <p class="sub rv d2">Your agent's logs hold your code, your prompts and sometimes your keys. They should stay where they are.</p>
+      <div class="local rv d2"><span class="dot" aria-hidden="true"></span>127.0.0.1:4317</div>
+      <div class="facts">
+        <div class="fact rv"><h3>No network calls</h3><p>No telemetry, no accounts, no cloud. Fonts are bundled, not fetched.</p></div>
+        <div class="fact rv d1"><h3>Local-only server</h3><p>Listens on 127.0.0.1 and rejects non-local <code>Host</code> headers to block DNS rebinding.</p></div>
+        <div class="fact rv d2"><h3>Secrets masked</h3><p>Hidden in the UI until you reveal them, and always redacted in receipts.</p></div>
+        <div class="fact rv d3"><h3>Read-only on your logs</h3><p>Data lives in one SQLite file. <code>flightrec purge</code> clears it; your agent's logs are never touched.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FINAL ============ -->
+  <section class="final">
+    <div class="wrap">
+      <h2 class="rv">Open the<br>black box.</h2>
+      <div class="ctas rv d1">
+        <button class="cmd big" data-copy="npx flightrec" aria-label="Copy npx flightrec"><span><span class="p">$ </span>npx flightrec</span><span class="copy">Copy</span></button>
+        <button class="cmd big" data-copy="npx flightrec --demo" aria-label="Copy npx flightrec --demo"><span><span class="p">$ </span>npx flightrec --demo</span><span class="copy">Copy</span></button>
+      </div>
+      <p class="fine rv d2">Reads <b>~/.claude/projects</b>, opens <b>localhost:4317</b>. Codex CLI support is planned.</p>
+      <div class="endtape" id="endtape" aria-hidden="true"></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Flight Recorder · costs are estimates at API list prices</span>
+    <nav aria-label="Footer">
+      <a href="https://github.com/meypoo/flightrecorder">GitHub</a>
+      <a href="https://github.com/meypoo/flightrecorder#commands">Commands</a>
+      <a href="https://github.com/meypoo/flightrecorder/blob/main/docs/log-formats.md">Log formats</a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const $ = (s, r = document) => r.querySelector(s);
+
+  /* ---------- copy buttons ---------- */
+  document.querySelectorAll("[data-copy]").forEach((b) => {
+    b.addEventListener("click", async () => {
+      try { await navigator.clipboard.writeText(b.dataset.copy); } catch { return; }
+      const c = $(".copy", b);
+      b.classList.add("copied"); c.textContent = "Copied";
+      setTimeout(() => { b.classList.remove("copied"); c.textContent = "Copy"; }, 1600);
+    });
+  });
+
+  /* ---------- reveal on scroll ---------- */
+  const io = new IntersectionObserver((es) => es.forEach((e) => {
+    if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+  }), { threshold: 0.15, rootMargin: "0px 0px -6% 0px" });
+  document.querySelectorAll(".rv").forEach((el) => io.observe(el));
+
+  /* ---------- scroll tape (top) + nav ---------- */
+  const tapeTop = $("#tapeTop");
+  const N = Math.max(40, Math.min(140, Math.floor(innerWidth / 11)));
+  const riskAt = new Set([Math.round(N * 0.34), Math.round(N * 0.35), Math.round(N * 0.58), Math.round(N * 0.81)]);
+  for (let i = 0; i < N; i++) { const t = document.createElement("i"); if (riskAt.has(i)) t.className = "risk"; tapeTop.appendChild(t); }
+  const ticks = [...tapeTop.children];
+  const nav = $("#nav");
+
+  /* ---------- film tilt ---------- */
+  const film = $("#filmFrame");
+
+  let last = -1;
+  function onScroll() {
+    const y = scrollY, max = document.documentElement.scrollHeight - innerHeight;
+    const p = max > 0 ? y / max : 0;
+    const h = Math.min(N - 1, Math.floor(p * N));
+    if (h !== last) {
+      ticks.forEach((t, i) => { t.classList.toggle("on", i < h); t.classList.toggle("head", i === h); });
+      last = h;
+    }
+    nav.classList.toggle("solid", y > 20);
+    if (!reduce && film) {
+      const r = film.parentElement.getBoundingClientRect();
+      const k = Math.min(1, Math.max(0, 1 - (r.top - innerHeight * 0.15) / (innerHeight * 0.75)));
+      film.style.setProperty("--tilt", (24 * (1 - k)).toFixed(2) + "deg");
+      film.style.setProperty("--sc", (0.88 + 0.12 * k).toFixed(3));
+    }
+  }
+  let raf = 0;
+  addEventListener("scroll", () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; onScroll(); }); }, { passive: true });
+  addEventListener("resize", onScroll);
+  onScroll();
+
+  /* ---------- live console: the demo session, replayed ---------- */
+  const EV = [
+    { t: "10:12:00", k: "p", i: "›", x: "<b>Add a Stripe webhook endpoint that marks orders paid or failed.</b>", tape: "prompt", tok: 18400, cost: 0.03 },
+    { t: "10:12:08", k: "", i: "≡", x: "I'll look at how the server is wired up first…", tok: 21900, cost: 0.02 },
+    { t: "10:12:14", k: "", i: "◱", x: "Read src/server.ts", tok: 26300, cost: 0.02 },
+    { t: "10:12:23", k: "", i: "$", x: "<b>$ npm install stripe</b>", risk: "low", tape: "low", tok: 31800, cost: 0.03 },
+    { t: "10:12:33", k: "w", i: "+", x: "Write src/webhooks/stripe.ts", tok: 36400, cost: 0.03 },
+    { t: "10:12:42", k: "w", i: "✎", x: "Edit src/server.ts", tok: 40100, cost: 0.02 },
+    { t: "10:13:09", k: "", i: "$", x: "<b>$ npm test</b>", end: '<span class="fail">✗</span>', tok: 45200, cost: 0.03 },
+    { t: "10:13:26", k: "", i: "≡", x: "The test fails because the Stripe client needs a key…", tok: 49900, cost: 0.03 },
+    { t: "10:13:32", k: "", i: "$", x: "<b>$ cat .env</b>", risk: "high", tape: "high", alarm: true, tok: 55400, cost: 0.04 },
+    { t: "10:13:41", k: "w", i: "+", x: "Write test/setup.ts", tok: 59100, cost: 0.02 },
+    { t: "10:13:50", k: "", i: "$", x: "<b>$ npm test</b>", end: '<span class="pass">✓</span>', tok: 63800, cost: 0.02 },
+    { t: "10:14:04", k: "", i: "≡", x: "Done. POST /webhooks/stripe verifies the signature…", tok: 68400, cost: 0.01 },
+  ];
+  const DETAIL_IDLE = '<p class="idle">Replaying events… the detail pane opens on anything flagged.</p>';
+  const DETAIL_ENV = `
+    <div class="pane">
+      <span class="label">Command #10 · 2026-10-22 10:13</span>
+      <div class="flags">
+        <div class="flag"><span class="chip high">high</span><code>secret-file-read</code><p>Read a file that usually holds secrets (.env, keys, credentials)</p></div>
+        <div class="flag"><span class="chip high">high</span><code>secret-in-output</code><p>API key pattern in command output, written content or a tool result</p></div>
+      </div>
+      <div class="box"><span class="hl">$ cat .env</span></div>
+      <div class="box">DATABASE_URL=postgres://localhost:5432/acme<br>STRIPE_SECRET_KEY=<span class="mask">sk_live…••••••••</span><br>STRIPE_WEBHOOK_SECRET=<span class="mask">whsec_••••••••</span></div>
+    </div>`;
+  const DETAIL_LOW = `
+    <div class="pane">
+      <span class="label">Command #4 · 2026-10-22 10:12</span>
+      <div class="flags" style="background:rgb(142 166 200 / .07);border-color:rgb(142 166 200 / .18)">
+        <div class="flag"><span class="chip low">low</span><code>package-install</code><p>Package install (supply-chain awareness)</p></div>
+      </div>
+      <div class="box"><span class="hl">$ npm install stripe</span><br>added 1 package in 2.1s</div>
+    </div>`;
+
+  const events = $("#events"), detail = $("#detail"), ctape = $("#ctape");
+  const fE = $("#fEvents"), fT = $("#fTokens"), fC = $("#fCost"), fR = $("#fRisk");
+  const TICKS = 64;
+  for (let i = 0; i < TICKS; i++) ctape.appendChild(document.createElement("i"));
+  const ctTicks = [...ctape.children];
+  const fmtTok = (n) => n >= 1000 ? (n / 1000).toFixed(1) + "k" : String(n);
+
+  function render(ev) {
+    const row = document.createElement("div");
+    row.className = "ev";
+    row.innerHTML = `<span class="t">${ev.t}</span><span class="k ${ev.k}">${ev.i}</span><span class="x">${ev.x}</span>` +
+      (ev.risk ? `<span class="chip ${ev.risk}">${ev.risk}</span>` : (ev.end || "<span></span>"));
+    return row;
+  }
+  function setDetail(html) {
+    detail.innerHTML = html;
+    const pane = $(".pane", detail);
+    if (pane) requestAnimationFrame(() => requestAnimationFrame(() => pane.classList.add("in")));
+  }
+
+  let running = false;
+  async function play() {
+    if (running) return; running = true;
+    const wait = (ms) => new Promise((r) => setTimeout(r, reduce ? 0 : ms));
+    for (;;) {
+      events.innerHTML = ""; setDetail(DETAIL_IDLE);
+      ctTicks.forEach((t) => (t.className = ""));
+      let tok = 0, cost = 0, risks = 0, tick = 0;
+      fE.textContent = "0"; fT.textContent = "0"; fC.textContent = "$0.00"; fR.textContent = "0";
+      await wait(500);
+      let prev = null;
+      for (let n = 0; n < EV.length; n++) {
+        const ev = EV[n];
+        const row = render(ev);
+        events.appendChild(row);
+        requestAnimationFrame(() => requestAnimationFrame(() => row.classList.add("in")));
+        if (prev) prev.classList.remove("sel");
+        row.classList.add("sel"); prev = row;
+        // a few ticks per event on the tape, the last one carries the event's colour
+        const per = Math.floor(TICKS / EV.length);
+        for (let j = 0; j < per && tick < TICKS; j++, tick++) {
+          const t = ctTicks[tick];
+          t.className = "in" + (j === per - 1 && ev.tape ? " " + ev.tape : "");
+        }
+        ctTicks.forEach((t) => t.classList.remove("now"));
+        if (tick > 0) ctTicks[tick - 1].classList.add("now");
+        tok = Math.round(497400 * (n + 1) / EV.length); cost = 0.3 * (n + 1) / EV.length; // ends at the session's real totals
+        fE.textContent = String(n + 1); fT.textContent = fmtTok(tok); fC.textContent = "$" + cost.toFixed(2);
+        if (ev.risk) {
+          risks += ev.risk === "high" ? 2 : 1; fR.textContent = String(risks);
+          setDetail(ev.risk === "high" ? DETAIL_ENV : DETAIL_LOW);
+        }
+        if (ev.alarm) { row.classList.add("alarm"); await wait(3200); }
+        else await wait(ev.risk ? 1700 : 650);
+        if (reduce && n === EV.length - 1) { setDetail(DETAIL_ENV); events.children[8].classList.add("sel"); prev.classList.remove("sel"); }
+      }
+      if (reduce) return;
+      await wait(4200);
+    }
+  }
+  const cio = new IntersectionObserver((es) => { if (es[0].isIntersecting) { play(); cio.disconnect(); } }, { threshold: 0.25 });
+  cio.observe($("#console"));
+
+  /* ---------- sticky story ---------- */
+  const shots = [...document.querySelectorAll("#shots img")];
+  const path = $("#shotPath");
+  const chapters = [...document.querySelectorAll(".chapter")];
+  const sio = new IntersectionObserver((es) => es.forEach((e) => {
+    if (!e.isIntersecting) return;
+    chapters.forEach((c) => c.classList.toggle("on", c === e.target));
+    const k = +e.target.dataset.shot;
+    shots.forEach((s, i) => s.classList.toggle("on", i === k));
+    path.textContent = e.target.dataset.path;
+  }), { rootMargin: "-45% 0px -45% 0px" });
+  chapters.forEach((c) => sio.observe(c));
+  chapters[0].classList.add("on");
+
+  /* ---------- risk rules (from packages/core/src/risk.ts) ---------- */
+  const RULES = [
+    ["rm-root-or-home", "critical", "Recursive forced delete of /, the home directory, a drive root, or * at the project root", "rm -rf ~"],
+    ["destructive-rm", "high", "Recursive forced delete of something other than a build directory", "rm -rf src"],
+    ["pipe-to-shell", "high", "Downloaded script piped straight into a shell or interpreter", "curl -fsSL …/install.sh | sh"],
+    ["git-force", "high", "Force push, hard reset or forced clean", "git push --force-with-lease"],
+    ["secret-file-read", "high", "Read a file that usually holds secrets (.env, keys, credentials)", "cat .env"],
+    ["secret-in-output", "high", "API key pattern in command output, written content or a tool result", "sk_live_…"],
+    ["db-destructive", "high", "DROP TABLE, TRUNCATE, or DELETE FROM without WHERE", "DROP TABLE events"],
+    ["git-history-rewrite", "medium", "Rebase, amend or filter-branch (rewrites history)", "git rebase origin/main"],
+    ["sudo", "medium", "Command run with elevated privileges", "sudo apt install …"],
+    ["outside-project-write", "medium", "File written or edited outside the project directory", "~/.config/loader/config.toml"],
+    ["network-exfil-hint", "medium", "Data uploaded with curl/wget/Invoke-WebRequest to a non-local host", "curl -d @data …"],
+    ["package-install", "low", "Package install (supply-chain awareness)", "npm install stripe"],
+    ["chmod-permissive", "low", "World-writable or recursive permission change", "chmod -R 777 public/uploads"],
+  ];
+  const rules = $("#rules");
+  RULES.forEach(([id, sev, desc, ex], i) => {
+    const d = document.createElement("div");
+    d.className = "rule rv" + (i % 3 ? " d" + (i % 3) : "");
+    d.dataset.sev = sev;
+    d.innerHTML = `<div class="rule-head"><code>${id}</code><span class="chip ${sev}">${sev}</span></div><p>${desc}</p><span class="ex">${ex.replace(/</g, "&lt;")}</span>`;
+    rules.appendChild(d); io.observe(d);
+  });
+  const note = document.createElement("div");
+  note.className = "rule note rv";
+  note.innerHTML = "<p>$ flightrec risks --since 7d<br>Rules are heuristics: check each hit before acting on it.</p>";
+  rules.appendChild(note); io.observe(note);
+
+  /* ---------- cost counter + bars ---------- */
+  const big = $("#bigCost"), bars = [...document.querySelectorAll("#bars .fill")];
+  const bio = new IntersectionObserver((es) => {
+    if (!es[0].isIntersecting) return; bio.disconnect();
+    bars.forEach((b) => (b.style.width = b.dataset.w + "%"));
+    const target = 0.78, t0 = performance.now(), dur = reduce ? 0 : 1600;
+    const step = (now) => {
+      const k = dur ? Math.min(1, (now - t0) / dur) : 1, e = 1 - Math.pow(1 - k, 3);
+      big.firstChild.textContent = "$" + (target * e).toFixed(2);
+      if (k < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }, { threshold: 0.4 });
+  bio.observe($("#bars"));
+
+  /* ---------- end tape ---------- */
+  const end = $("#endtape");
+  const pattern = "p..r....p...r.....p..h";
+  for (let i = 0; i < 64; i++) {
+    const ch = pattern[i % pattern.length], t = document.createElement("i");
+    if (ch !== ".") t.className = i === 63 ? "h" : ch === "h" ? "" : ch;
+    if (i === 63) t.className = "h";
+    end.appendChild(t);
+  }
+})();
+</script>
+</body>
+</html>
