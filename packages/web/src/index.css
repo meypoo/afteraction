@@ -5,7 +5,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
- * Flight Recorder design system ("Instrument"). See DESIGN.md.
+ * Afteraction design system ("Instrument"). See DESIGN.md.
  * One cool graphite neutral family, one accent (signal teal), a semantic risk ramp,
  * and the brand's black-box orange used only in the logo mark.
  * Light values here, dark values under .dark (the default).

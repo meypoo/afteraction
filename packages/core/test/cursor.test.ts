@@ -23,7 +23,7 @@ function build(file: string, sqlFile: string) {
 
 beforeAll(() => {
   // Fixtures are SQL text (*.db is git-ignored); build Cursor's User folder from them.
-  tmp = mkdtempSync(path.join(os.tmpdir(), "flightrec-cursor-"));
+  tmp = mkdtempSync(path.join(os.tmpdir(), "afteraction-cursor-"));
   user = path.join(tmp, "User");
   db = path.join(user, "globalStorage", "state.vscdb");
   build(db, "globalStorage.sql");

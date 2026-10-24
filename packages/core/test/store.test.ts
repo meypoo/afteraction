@@ -35,9 +35,9 @@ async function adapterEventCount(file: string): Promise<number> {
 }
 
 beforeEach(() => {
-  tmp = mkdtempSync(path.join(os.tmpdir(), "flightrec-test-"));
+  tmp = mkdtempSync(path.join(os.tmpdir(), "afteraction-test-"));
   cpSync(path.join(FIXTURES, "projects"), path.join(tmp, "projects"), { recursive: true });
-  db = openDb(path.join(tmp, "db", "flightrec.db"));
+  db = openDb(path.join(tmp, "db", "afteraction.db"));
 });
 
 afterEach(() => {
@@ -250,7 +250,7 @@ describe("parseSince", () => {
 
 describe("database file", () => {
   it.skipIf(process.platform === "win32")("is created with user-only permissions", () => {
-    expect(statSync(path.join(tmp, "db", "flightrec.db")).mode & 0o777).toBe(0o600);
+    expect(statSync(path.join(tmp, "db", "afteraction.db")).mode & 0o777).toBe(0o600);
   });
 });
 

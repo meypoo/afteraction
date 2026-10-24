@@ -56,7 +56,7 @@ export function useDebounced<T>(value: T, ms: number): T {
   return v;
 }
 
-const THEME_KEY = "flightrec-theme";
+const THEME_KEY = "afteraction-theme";
 
 export type ThemePref = "system" | "light" | "dark";
 

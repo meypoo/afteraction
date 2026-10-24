@@ -39,7 +39,7 @@ import {
   type IngestReport,
   type RiskLevel,
   type SourceConfig,
-} from "@flightrec/core";
+} from "@afteraction/core";
 import { writeDemoLogs } from "./demo.js";
 import { newToken, startServer } from "./server.js";
 
@@ -52,7 +52,7 @@ function webRoot(): string {
   const bundled = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../web");
   if (existsSync(path.join(bundled, "index.html"))) return bundled;
   try {
-    return path.join(path.dirname(createRequire(import.meta.url).resolve("@flightrec/web/package.json")), "dist");
+    return path.join(path.dirname(createRequire(import.meta.url).resolve("@afteraction/web/package.json")), "dist");
   } catch {
     return bundled;
   }
@@ -91,7 +91,7 @@ interface GlobalOpts {
   defaultSources: boolean;
 }
 
-/** ~/.flightrec/config.json (or --config): defaults that command-line flags override. */
+/** ~/.afteraction/config.json (or --config): defaults that command-line flags override. */
 interface Config {
   db?: string;
   port?: number;
@@ -101,7 +101,7 @@ interface Config {
 const expandHome = (p: string) => (p === "~" || /^~[\\/]/.test(p) ? path.join(os.homedir(), p.slice(1)) : p);
 
 function loadConfig(explicit?: string): Config {
-  const file = explicit ?? path.join(os.homedir(), ".flightrec", "config.json");
+  const file = explicit ?? path.join(os.homedir(), ".afteraction", "config.json");
   if (!existsSync(file)) {
     if (explicit) throw new CliError(`Config file not found: ${file}`);
     return {};
@@ -168,7 +168,7 @@ async function runIngest(db: Db, opts: GlobalOpts, full: boolean, io: Io): Promi
     onError: (file, err) => io.err(maskSecrets(`error: could not ingest ${file}: ${err instanceof Error ? err.message : String(err)}`)),
   });
   if (report.warnings > MAX_PRINTED_WARNINGS) {
-    io.err(`… and ${report.warnings - MAX_PRINTED_WARNINGS} more warnings (see "flightrec doctor")`);
+    io.err(`… and ${report.warnings - MAX_PRINTED_WARNINGS} more warnings (see "afteraction doctor")`);
   }
   io.out(
     `Ingested ${report.filesSeen} files: ${report.filesParsed} parsed, ${report.filesSkipped} unchanged` +
@@ -197,7 +197,7 @@ export interface CliState {
 
 /** A throwaway database of made-up sessions in a temp dir; the caller closes it and removes `dir`. */
 async function openDemo(state: CliState, io: Io): Promise<{ db: Db; dir: string }> {
-  const dir = mkdtempSync(path.join(os.tmpdir(), "flightrec-demo-"));
+  const dir = mkdtempSync(path.join(os.tmpdir(), "afteraction-demo-"));
   const db = (state.db = openDb(path.join(dir, "demo.db")));
   const report = await ingest(db, { sources: [{ adapter: ADAPTERS.claude!, root: writeDemoLogs(dir) }] });
   io.out(`Demo mode: ${report.sessions} sample sessions (made up; your own logs are not read).`);
@@ -213,13 +213,13 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
   };
 
   program
-    .name("flightrec")
+    .name("afteraction")
     .description("See what your coding agent did: commands, files, tokens. 100% local.")
     .version(VERSION)
     .option("--db <path>", "database file", undefined)
     .option("--source <name=path>", "override a log location, e.g. claude=~/.claude/projects (repeatable)", parseSourceFlag, [])
     .option("--no-default-sources", "read only the sources given with --source or in the config file")
-    .option("--config <path>", "config file (default ~/.flightrec/config.json)")
+    .option("--config <path>", "config file (default ~/.afteraction/config.json)")
     .option("--port <n>", `web UI port (default ${DEFAULT_PORT})`, (v) => Number.parseInt(v, 10))
     .option("--no-open", "don't open the browser")
     .option("--demo", "show made-up sample sessions instead of your own logs (nothing is saved)")
@@ -241,11 +241,11 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
         server = await startServer({ db, port: opts.port, webRoot: webRoot(), version: VERSION, token: newToken() });
       } catch (e) {
         if ((e as { code?: string }).code === "EADDRINUSE") {
-          throw new CliError(`Port ${opts.port} is in use (is flightrec already running?). Try --port ${opts.port + 1}.`);
+          throw new CliError(`Port ${opts.port} is in use (is afteraction already running?). Try --port ${opts.port + 1}.`);
         }
         throw e;
       }
-      io.out(`Flight Recorder is running at ${server.url} (local only; the link carries this launch's access token). Press Ctrl+C to stop.`);
+      io.out(`Afteraction is running at ${server.url} (local only; the link carries this launch's access token). Press Ctrl+C to stop.`);
       if (opts.open) openBrowser(server.url);
       await new Promise<void>((resolve) => {
         const stop = () => {
@@ -289,7 +289,7 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
       }
       if (!opts.reveal) rows = maskDeep(rows);
       if (opts.json) return io.out(JSON.stringify(rows, null, 2));
-      if (!rows.length) return io.out('No sessions found. Run "flightrec ingest" first, or loosen the filters.');
+      if (!rows.length) return io.out('No sessions found. Run "afteraction ingest" first, or loosen the filters.');
       io.out(
         table(
           ["STARTED", "AGENT", "PROJECT", "DURATION", "EVENTS", "TOKENS", "EST. COST", "RISK", "ID", "TITLE"],
@@ -320,7 +320,7 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
     .action((query: string, opts: { json?: boolean; reveal?: boolean }, cmd: Command) => {
       const d = openFor(cmd);
       const id = resolveSession(d, query);
-      if (!id) throw new CliError(`No single session matches "${query}". Use "flightrec list" to see ids.`);
+      if (!id) throw new CliError(`No single session matches "${query}". Use "afteraction list" to see ids.`);
       const s = getSession(d, id)!;
       const events = getEvents(d, id);
       if (opts.json) {
@@ -362,7 +362,7 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
     .option("--no-ingest", "skip reading new logs first")
     .action(async (query: string | undefined, opts: { ingest: boolean }, cmd: Command) => {
       if (!process.stdin.isTTY || !process.stdout.isTTY) {
-        throw new CliError('"flightrec tui" needs an interactive terminal. Use "flightrec list" and "flightrec show" instead.');
+        throw new CliError('"afteraction tui" needs an interactive terminal. Use "afteraction list" and "afteraction show" instead.');
       }
       const g = cmd.optsWithGlobals<GlobalOpts & { demo?: boolean }>();
       let d: Db;
@@ -375,7 +375,7 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
       let initialSessionId: string | undefined;
       if (query) {
         initialSessionId = resolveSession(d, query) ?? undefined;
-        if (!initialSessionId) throw new CliError(`No single session matches "${query}". Use "flightrec list" to see ids.`);
+        if (!initialSessionId) throw new CliError(`No single session matches "${query}". Use "afteraction list" to see ids.`);
       }
       const { runTui } = await import("./tui.js");
       try {
@@ -431,7 +431,7 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
     .action((query: string, opts: { output?: string; redact: boolean }, cmd: Command) => {
       const d = openFor(cmd);
       const id = resolveSession(d, query);
-      if (!id) throw new CliError(`No single session matches "${query}". Use "flightrec list" to see ids.`);
+      if (!id) throw new CliError(`No single session matches "${query}". Use "afteraction list" to see ids.`);
       const md = buildReceipt(getSession(d, id)!, getEvents(d, id), { version: VERSION, redact: opts.redact });
       if (opts.output) {
         writeFileSync(opts.output, md, "utf8");
@@ -458,11 +458,11 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
       const what = `${matching.length} sessions (${matching.reduce((a, s) => a + s.event_count, 0)} events)` +
         (cutoff ? ` that ended before ${cutoff.slice(0, 10)}` : "");
       if (!opts.yes) {
-        io.out(`Would delete ${what} from the flightrec database. Re-run with --yes to delete.`);
+        io.out(`Would delete ${what} from the afteraction database. Re-run with --yes to delete.`);
         return;
       }
       const r = purgeSessions(d, { before: cutoff });
-      io.out(`Deleted ${r.sessions} sessions (${r.events} events). Unchanged logs stay out until "flightrec ingest --full".`);
+      io.out(`Deleted ${r.sessions} sessions (${r.events} events). Unchanged logs stay out until "afteraction ingest --full".`);
     });
 
   program
@@ -471,7 +471,7 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
     .action(async (_opts, cmd: Command) => {
       const g = cmd.optsWithGlobals<GlobalOpts>();
       const dbPath = dbPathFor(g);
-      io.out(`flightrec ${VERSION} · node ${process.versions.node} · ${process.platform}`);
+      io.out(`afteraction ${VERSION} · node ${process.versions.node} · ${process.platform}`);
       io.out("");
       io.out("Sources:");
       for (const { adapter, root } of sourcesFrom(g)) {
@@ -484,7 +484,7 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
       io.out(`Database: ${dbPath}`);
       const d = openFor(cmd);
       const counts = sourceCounts(d);
-      if (!counts.length) io.out('  empty: run "flightrec ingest"');
+      if (!counts.length) io.out('  empty: run "afteraction ingest"');
       for (const c of counts) io.out(`  ${c.source.padEnd(12)} ${c.sessions} sessions · ${c.events} events`);
       const w = warningSummary(d, 10);
       io.out("");

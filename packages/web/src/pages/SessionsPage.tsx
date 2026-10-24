@@ -134,7 +134,7 @@ export function SessionsPage() {
           <Loading />
         ) : sessions.length === 0 ? (
           <EmptyState icon={<Icon.Search />} title={filtered ? "No sessions match these filters" : "No sessions yet"}>
-            {filtered ? "Try a shorter search or clear the filters." : <>Run <code>flightrec ingest</code>, or start with <code>flightrec --demo</code>.</>}
+            {filtered ? "Try a shorter search or clear the filters." : <>Run <code>afteraction ingest</code>, or start with <code>afteraction --demo</code>.</>}
           </EmptyState>
         ) : (
           <table className="w-full border-separate border-spacing-0 text-left">

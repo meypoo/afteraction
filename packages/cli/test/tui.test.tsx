@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { render } from "ink-testing-library";
-import { ADAPTERS, getEvents, ingest, listSessions, openDb, type Db, type NormalizedEvent } from "@flightrec/core";
+import { ADAPTERS, getEvents, ingest, listSessions, openDb, type Db, type NormalizedEvent } from "@afteraction/core";
 import { writeDemoLogs } from "../src/demo.js";
 import { App, detailLines, windowStart, wrap, type TuiData } from "../src/tui.js";
 
@@ -12,7 +12,7 @@ let db: Db;
 let data: TuiData;
 
 beforeAll(async () => {
-  tmp = mkdtempSync(path.join(os.tmpdir(), "flightrec-tui-"));
+  tmp = mkdtempSync(path.join(os.tmpdir(), "afteraction-tui-"));
   db = openDb(path.join(tmp, "demo.db"));
   await ingest(db, { sources: [{ adapter: ADAPTERS.claude!, root: writeDemoLogs(tmp) }] });
   data = { sessions: () => listSessions(db), events: (id) => getEvents(db, id) };

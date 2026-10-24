@@ -1,4 +1,4 @@
-<h1 align="center">Flight Recorder</h1>
+<h1 align="center">Afteraction</h1>
 
 <p align="center">
   <b>See exactly what your coding agent did: every command, file, risk and dollar, replayed locally.</b>
@@ -20,13 +20,13 @@
 </p>
 
 <p align="center">
-  <img src="docs/demo.gif" alt="Flight Recorder replaying a Claude Code session" width="900">
+  <img src="docs/demo.gif" alt="Afteraction replaying a Claude Code session" width="900">
 </p>
 
 ## Quick start
 
 ```sh
-npx @meypoo/flightrec
+npx afteraction
 ```
 
 That reads your Claude Code session logs, stores them in a local SQLite database and opens a replay UI at
@@ -35,10 +35,10 @@ http://localhost:4317 (the link it opens carries a one-off access token). Nothin
 Want to look around first without touching your own logs?
 
 ```sh
-npx @meypoo/flightrec --demo
+npx afteraction --demo
 ```
 
-Prefer the terminal, or working over SSH? `npx @meypoo/flightrec tui` opens the same data full-screen.
+Prefer the terminal, or working over SSH? `npx afteraction tui` opens the same data full-screen.
 
 ## Why
 
@@ -68,21 +68,21 @@ Coding agents run for hours and write detailed logs, but in raw JSONL nobody rea
   </tr>
   <tr>
     <td width="50%"><img src="docs/costs-light.png" alt="Costs page in the light theme"><br><sub><b>Costs:</b> estimated spend by day, project and model (light theme shown).</sub></td>
-    <td width="50%"><img src="docs/tui.png" alt="flightrec tui showing a session timeline in the terminal"><br><sub><b>Terminal:</b> the same replay in <code>flightrec tui</code>.</sub></td>
+    <td width="50%"><img src="docs/tui.png" alt="afteraction tui showing a session timeline in the terminal"><br><sub><b>Terminal:</b> the same replay in <code>afteraction tui</code>.</sub></td>
   </tr>
 </table>
 
 ## In the terminal
 
 ```sh
-flightrec tui                 # browse all sessions
-flightrec tui latest          # jump straight into the newest one
-flightrec tui --demo          # try it on sample data
+afteraction tui                 # browse all sessions
+afteraction tui latest          # jump straight into the newest one
+afteraction tui --demo          # try it on sample data
 ```
 
 `j`/`k` move, `enter` opens a session or event, `r`/`R` jump to the next or previous risk, `/` filters, `s` reveals
-masked secrets, `esc` goes back and `q` quits. It needs an interactive terminal; in scripts use `flightrec list` and
-`flightrec show`.
+masked secrets, `esc` goes back and `q` quits. It needs an interactive terminal; in scripts use `afteraction list` and
+`afteraction show`.
 
 ## Supported agents
 
@@ -102,16 +102,16 @@ masked secrets, `esc` goes back and `q` quits. It needs an interactive terminal;
 ## Commands
 
 ```sh
-flightrec                          # ingest new logs, then open the UI
-flightrec --demo                   # sample sessions, nothing saved
-flightrec ingest [--full]          # ingest only
-flightrec list [--since 7d] [--project <path>] [--agent codex] [--risk high] [--search <text>]
-flightrec show <session-id>        # timeline in the terminal
-flightrec tui [session-id]         # full-screen browser in the terminal (j/k, r for next risk; works over SSH)
-flightrec risks [--since 7d]       # flagged events, grouped by rule
-flightrec receipt <session-id|latest> [-o receipt.md]
-flightrec purge [--before 30d] --yes   # delete stored sessions (never your agent's logs)
-flightrec doctor                   # log sources found, counts, parse warnings
+afteraction                          # ingest new logs, then open the UI
+afteraction --demo                   # sample sessions, nothing saved
+afteraction ingest [--full]          # ingest only
+afteraction list [--since 7d] [--project <path>] [--agent codex] [--risk high] [--search <text>]
+afteraction show <session-id>        # timeline in the terminal
+afteraction tui [session-id]         # full-screen browser in the terminal (j/k, r for next risk; works over SSH)
+afteraction risks [--since 7d]       # flagged events, grouped by rule
+afteraction receipt <session-id|latest> [-o receipt.md]
+afteraction purge [--before 30d] --yes   # delete stored sessions (never your agent's logs)
+afteraction doctor                   # log sources found, counts, parse warnings
 ```
 
 Global options: `--db <path>`, `--source claude=<path>`, `--no-default-sources` (read only the `--source`s you name),
@@ -121,11 +121,11 @@ Session ids can be the full id, the bare UUID, a unique prefix, or `latest`.
 
 ### Config file
 
-`~/.flightrec/config.json` (or `--config <path>`) sets defaults; command-line flags win.
+`~/.afteraction/config.json` (or `--config <path>`) sets defaults; command-line flags win.
 
 ```json
 {
-  "db": "~/flightrec/flightrec.db",
+  "db": "~/afteraction/afteraction.db",
   "port": 4317,
   "sources": { "claude": "~/.claude/projects" }
 }
@@ -141,13 +141,13 @@ cost on the API".
 
 - 100% local. No telemetry, no accounts, no network calls.
 - The UI server listens on `127.0.0.1` only and rejects requests with a non-local `Host` header (DNS-rebinding
-  protection). Each launch makes a random access token: the link flightrec opens trades it for a cookie, and requests
+  protection). Each launch makes a random access token: the link afteraction opens trades it for a cookie, and requests
   without it are refused, so other users and programs on the same machine cannot read your sessions through the port.
   The API is read-only.
 - Secrets found in logs are masked in the UI, the terminal and `--json` output until you ask to reveal them, and are
   redacted in receipts. Masking is pattern-based and best-effort: see [SECURITY.md](SECURITY.md).
-- Your data lives in `~/.flightrec/flightrec.db`. Delete it, or run `flightrec purge`, whenever you like.
-  Flight Recorder never modifies your agents' log files.
+- Your data lives in `~/.afteraction/afteraction.db`. Delete it, or run `afteraction purge`, whenever you like.
+  Afteraction never modifies your agents' log files.
 
 ## Receipts on pull requests (GitHub Action, experimental)
 
@@ -164,11 +164,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: meypoo/flightrecorder@<release tag or commit SHA>
         with:
-          log-path: .flightrec/session.jsonl
+          log-path: .afteraction/session.jsonl
 ```
 
 The action reads only the log you give it (never other agent history on the runner) and runs the exact
-`flightrec` version in its `version` input. Pin the action itself to a tag or commit, and prefer `pull_request` over
+`afteraction` version in its `version` input. Pin the action itself to a tag or commit, and prefer `pull_request` over
 `pull_request_target`.
 
 ## Development
@@ -179,12 +179,12 @@ Requires Node 20+ and pnpm 9.
 pnpm install
 pnpm build
 pnpm test
-pnpm flightrec --demo
+pnpm afteraction --demo
 ```
 
 The repo is a pnpm workspace: `packages/core` (adapters, risk rules, costs, SQLite store), `packages/cli`
-(commands and the local server) and `packages/web` (React UI). `pnpm --filter @flightrec/web dev` runs the UI with
-hot reload against a running `flightrec` on port 4317. Log format notes live in [docs/log-formats.md](docs/log-formats.md).
+(commands and the local server) and `packages/web` (React UI). `pnpm --filter @afteraction/web dev` runs the UI with
+hot reload against a running `afteraction` on port 4317. Log format notes live in [docs/log-formats.md](docs/log-formats.md).
 
 ## License
 

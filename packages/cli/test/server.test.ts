@@ -3,7 +3,7 @@ import { appendFileSync, cpSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, wr
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { claudeCodeAdapter, ingest, openDb, type Db } from "@flightrec/core";
+import { claudeCodeAdapter, ingest, openDb, type Db } from "@afteraction/core";
 import { createApp } from "../src/server.js";
 
 const FIXTURES = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../fixtures/claude-code");
@@ -25,7 +25,7 @@ const json = async (url: string) => {
 };
 
 beforeEach(async () => {
-  tmp = mkdtempSync(path.join(os.tmpdir(), "flightrec-server-"));
+  tmp = mkdtempSync(path.join(os.tmpdir(), "afteraction-server-"));
   cpSync(path.join(FIXTURES, "projects"), path.join(tmp, "projects"), { recursive: true });
   appendFileSync(
     path.join(tmp, "projects", "C--Users-USER-projects-demo-app", `${SID}.jsonl`),
@@ -38,11 +38,11 @@ beforeEach(async () => {
         toolUseResult: { stdout: SECRET, stderr: "", interrupted: false, isImage: false } },
     ].map((l) => JSON.stringify(l)).join("\n") + "\n",
   );
-  db = openDb(path.join(tmp, "flightrec.db"));
+  db = openDb(path.join(tmp, "afteraction.db"));
   await ingest(db, { sources: [{ adapter: claudeCodeAdapter, root: path.join(tmp, "projects") }] });
   const web = path.join(tmp, "web");
   mkdirSync(path.join(web, "assets"), { recursive: true });
-  writeFileSync(path.join(web, "index.html"), "<!doctype html><title>flightrec</title>");
+  writeFileSync(path.join(web, "index.html"), "<!doctype html><title>afteraction</title>");
   writeFileSync(path.join(web, "assets", "app.js"), "console.log(1)");
   writeFileSync(path.join(tmp, "secret.txt"), "do not serve");
   app = createApp({ db, port: PORT, webRoot: web, version: "0.1.0" });
@@ -139,8 +139,8 @@ describe("static files", () => {
   it("serves the built UI with an SPA fallback", async () => {
     const index = await get("/");
     expect(index.headers.get("content-type")).toMatch(/text\/html/);
-    expect(await index.text()).toContain("<title>flightrec</title>");
-    expect(await (await get("/sessions/abc")).text()).toContain("<title>flightrec</title>");
+    expect(await index.text()).toContain("<title>afteraction</title>");
+    expect(await (await get("/sessions/abc")).text()).toContain("<title>afteraction</title>");
     const js = await get("/assets/app.js");
     expect(js.headers.get("content-type")).toMatch(/javascript/);
   });
@@ -211,8 +211,8 @@ describe("access token", () => {
   it("refuses API and page requests without the token", async () => {
     expect((await req("/api/sessions")).status).toBe(401);
     expect((await req("/")).status).toBe(401);
-    expect((await req("/api/sessions", { Cookie: `flightrec_${PORT}=wrong` })).status).toBe(401);
-    expect((await req("/api/sessions", { Cookie: `flightrec_9999=${TOKEN}` })).status).toBe(401);
+    expect((await req("/api/sessions", { Cookie: `afteraction_${PORT}=wrong` })).status).toBe(401);
+    expect((await req("/api/sessions", { Cookie: `afteraction_9999=${TOKEN}` })).status).toBe(401);
     expect((await req("/?token=wrong")).status).toBe(403);
     expect((await req(`/api/sessions?token=${TOKEN}`)).status).toBe(401); // only page URLs trade the token for a cookie
   });

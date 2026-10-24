@@ -54,7 +54,7 @@ export function App() {
         <header className="flex h-12 shrink-0 items-center gap-6 border-b border-line bg-surface px-5">
           <a href="#/" className="flex items-center gap-2.5 text-sm font-semibold tracking-tight">
             <Logo />
-            <span>Flight Recorder</span>
+            <span>Afteraction</span>
           </a>
           <nav aria-label="Main" className="flex h-full items-stretch gap-1">
             {NAV.map((n) => {

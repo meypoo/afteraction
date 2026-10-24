@@ -1,5 +1,5 @@
 {
-  "name": "@flightrec/core",
+  "name": "@afteraction/core",
   "version": "0.1.0",
   "private": true,
   "type": "module",

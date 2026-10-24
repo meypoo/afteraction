@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Flight Recorder</title>
+<title>Afteraction</title>
 <meta name="description" content="The black box for your coding agent. Replay every command, file, risk and dollar from Claude Code sessions, 100% locally.">
-<meta property="og:title" content="Flight Recorder">
+<meta property="og:title" content="Afteraction">
 <meta property="og:description" content="See exactly what your coding agent did: every command, file, risk and dollar, replayed locally.">
 <meta property="og:image" content="assets/replay.png">
 <meta name="theme-color" content="#0b0c0f">
@@ -13,7 +13,7 @@
 <link rel="preload" href="fonts/geist.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/geist-mono.woff2" as="font" type="font/woff2" crossorigin>
 <style>
-/* Flight Recorder "Instrument" tokens (dark), from packages/web/src/index.css. */
+/* Afteraction "Instrument" tokens (dark), from packages/web/src/index.css. */
 @font-face { font-family: "Geist"; src: url("fonts/geist.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Geist Mono"; src: url("fonts/geist-mono.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
 
@@ -392,14 +392,14 @@ footer a:hover { color: var(--fg); }
 
 <header class="nav" id="nav">
   <div class="wrap">
-    <a class="brand" href="#top" aria-label="Flight Recorder home">
+    <a class="brand" href="#top" aria-label="Afteraction home">
       <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
         <defs><linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
         <rect x="1.5" y="3.5" width="21" height="17" rx="4.5" fill="#f0592a"/>
         <rect x="1.5" y="3.5" width="21" height="17" rx="4.5" fill="url(#sheen)" opacity=".35"/>
         <path d="M4.5 13h3l1.6-4.2 2.6 7.4 2.1-5.2 1.2 2H19.5" fill="none" stroke="#1a0c06" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
-      Flight Recorder
+      Afteraction
     </a>
     <nav class="nav-links" aria-label="Primary">
       <a class="hide-sm" href="#features">Features</a>
@@ -419,18 +419,18 @@ footer a:hover { color: var(--fg); }
   <section class="hero">
     <div class="wrap">
       <div class="hero-copy">
-        <span class="eyebrow rv"><span class="rec" aria-hidden="true"></span>flightrec · for Claude Code</span>
+        <span class="eyebrow rv"><span class="rec" aria-hidden="true"></span>afteraction · for Claude Code</span>
         <h1 class="rv d1">The black box for your <span class="dim">coding agent.</span></h1>
         <p class="lede rv d2">See exactly what your agent did: every command, file, risk and dollar, replayed on your own machine.</p>
         <div class="ctas rv d3">
-          <button class="cmd" data-copy="npx @meypoo/flightrec" aria-label="Copy npx @meypoo/flightrec"><span><span class="p">$ </span>npx @meypoo/flightrec</span><span class="copy">Copy</span></button>
+          <button class="cmd" data-copy="npx afteraction" aria-label="Copy npx afteraction"><span><span class="p">$ </span>npx afteraction</span><span class="copy">Copy</span></button>
           <a class="btn cta-alt" href="#film">Watch the replay</a>
         </div>
         <p class="fine rv d3">Node 20+ · <b>100% local</b> · no account, no telemetry</p>
       </div>
 
       <div class="console-wrap rv d2">
-        <div class="console" id="console" aria-label="Animated example of Flight Recorder replaying a session">
+        <div class="console" id="console" aria-label="Animated example of Afteraction replaying a session">
           <div class="console-bar">
             <span class="live"><span class="rec" aria-hidden="true"></span>REPLAY</span>
             <span class="title">acme-shop · feat/stripe-webhooks</span>
@@ -457,7 +457,7 @@ footer a:hover { color: var(--fg); }
     <div class="wrap">
       <p class="kicker rv">After the flight</p>
       <h2 class="h2 rv d1">Agents run for hours. Their logs are JSONL nobody reads.</h2>
-      <p class="sub rv d2">When the run is over and the diff looks fine, the real questions are still open. Flight Recorder turns those logs into answers.</p>
+      <p class="sub rv d2">When the run is over and the diff looks fine, the real questions are still open. Afteraction turns those logs into answers.</p>
       <div class="qs">
         <div class="q rv"><h3><span class="n">01</span>What did it run?</h3><p>Every shell command with its output, exit code and duration, in order. Dangerous ones are flagged.</p></div>
         <div class="q rv"><h3><span class="n">02</span>What did it read and change?</h3><p>Every file touched, with read, write and edit counts, a combined diff, and a flag the moment it opened <code>.env</code>.</p></div>
@@ -472,10 +472,10 @@ footer a:hover { color: var(--fg); }
     <div class="wrap">
       <div class="film-stage">
         <div class="film-frame" id="filmFrame">
-          <video src="assets/demo.mp4" poster="assets/demo-poster.png" autoplay muted loop playsinline preload="metadata" aria-label="Screen recording of Flight Recorder: browsing sessions, replaying one, and jumping to a flagged command"></video>
+          <video src="assets/demo.mp4" poster="assets/demo-poster.png" autoplay muted loop playsinline preload="metadata" aria-label="Screen recording of Afteraction: browsing sessions, replaying one, and jumping to a flagged command"></video>
         </div>
       </div>
-      <p class="film-cap label rv">npx @meypoo/flightrec --demo · real UI, sample sessions</p>
+      <p class="film-cap label rv">npx afteraction --demo · real UI, sample sessions</p>
     </div>
   </section>
 
@@ -505,12 +505,12 @@ footer a:hover { color: var(--fg); }
             <p>Estimated spend by day, project and model, and the most expensive sessions, from the token counts already in your logs. Light theme included.</p>
             <img class="mshot" src="assets/costs-light.png" alt="Costs page in the light theme" loading="lazy">
           </article>
-          <article class="chapter" data-shot="3" data-path="~/code/acme-shop — flightrec tui">
+          <article class="chapter" data-shot="3" data-path="~/code/acme-shop — afteraction tui">
             <span class="num">04 · Terminal</span>
             <h3>The same replay, over SSH.</h3>
-            <p><code>flightrec tui</code> opens the same data full-screen in your terminal, with the same keys. No browser needed.</p>
+            <p><code>afteraction tui</code> opens the same data full-screen in your terminal, with the same keys. No browser needed.</p>
             <div class="keys"><kbd>/</kbd> filter <kbd>s</kbd> reveal <kbd>esc</kbd> back <kbd>q</kbd> quit</div>
-            <img class="mshot" src="assets/tui.png" alt="flightrec tui showing a session timeline in the terminal" loading="lazy">
+            <img class="mshot" src="assets/tui.png" alt="afteraction tui showing a session timeline in the terminal" loading="lazy">
           </article>
         </div>
         <div class="screen-col" aria-hidden="true">
@@ -553,7 +553,7 @@ footer a:hover { color: var(--fg); }
             <div class="bar"><span>mobile-app</span><span class="track"><span class="fill" data-w="6"></span></span><span class="v">$0.03</span></div>
             <div class="bar"><span>docs-site</span><span class="track"><span class="fill" data-w="1"></span></span><span class="v">&lt;$0.01</span></div>
           </div>
-          <p class="fine" style="margin-top: 16px">From the sample sessions in <code>flightrec --demo</code>.</p>
+          <p class="fine" style="margin-top: 16px">From the sample sessions in <code>afteraction --demo</code>.</p>
         </div>
       </div>
       <div class="costs-img rv d1"><img src="assets/costs-light.png" alt="Costs page showing spend by day, project and model" loading="lazy"></div>
@@ -565,7 +565,7 @@ footer a:hover { color: var(--fg); }
     <div class="wrap split">
       <div class="rv">
         <div class="receipt">
-          <div class="receipt-head"><span class="avatar"><svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><rect x="1.5" y="3.5" width="21" height="17" rx="4.5" fill="#f0592a"/></svg></span><b style="color:var(--fg);font-weight:500">flightrec</b> commented on this pull request</div>
+          <div class="receipt-head"><span class="avatar"><svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><rect x="1.5" y="3.5" width="21" height="17" rx="4.5" fill="#f0592a"/></svg></span><b style="color:var(--fg);font-weight:500">afteraction</b> commented on this pull request</div>
           <div class="receipt-body">
             <h4>🛫 Agent session receipt</h4>
             <p><b>Agent:</b> Claude Code · <b>Model:</b> claude-opus-5-5 · <b>Duration:</b> 2m · <b>Est. cost:</b> $0.30 (estimated, API-equivalent)</p>
@@ -579,14 +579,14 @@ footer a:hover { color: var(--fg); }
                 <li>low · package-install · <code>npm install stripe</code></li>
               </ul>
             </div>
-            <sub>Generated locally by flightrec v0.1.0 — transcript not uploaded.</sub>
+            <sub>Generated locally by afteraction v0.1.0 — transcript not uploaded.</sub>
           </div>
         </div>
       </div>
       <div class="lead-sm">
         <p class="kicker rv">Receipts</p>
         <h2 class="h2 rv d1">Show your work on the pull request.</h2>
-        <p class="sub rv d2"><code>flightrec receipt latest</code> writes a Markdown summary of a session, with secrets and home paths redacted. Paste it into a PR, or let the experimental GitHub Action post it for you.</p>
+        <p class="sub rv d2"><code>afteraction receipt latest</code> writes a Markdown summary of a session, with secrets and home paths redacted. Paste it into a PR, or let the experimental GitHub Action post it for you.</p>
         <div class="box yaml rv d3"><pre><span class="c"># .github/workflows/receipt.yml</span>
 <span class="k">on:</span> pull_request
 <span class="k">jobs:</span>
@@ -596,7 +596,7 @@ footer a:hover { color: var(--fg); }
       - <span class="k">uses:</span> actions/checkout@v4
       - <span class="k">uses:</span> <span class="s">meypoo/flightrecorder@main</span>
         <span class="k">with:</span>
-          <span class="k">log-path:</span> .flightrec/session.jsonl</pre></div>
+          <span class="k">log-path:</span> .afteraction/session.jsonl</pre></div>
       </div>
     </div>
   </section>
@@ -609,14 +609,14 @@ footer a:hover { color: var(--fg); }
         <h2 class="h2 rv d1">Every view has a command.</h2>
         <p class="sub rv d2">Script it, pipe it, or stay in the shell. Session ids can be the full id, a unique prefix, or <code>latest</code>.</p>
         <div class="cmdlist rv d2">
-          <div><code>flightrec tui latest</code><span>open the newest session full-screen</span></div>
-          <div><code>flightrec list --since 7d --risk high</code><span>find the risky runs</span></div>
-          <div><code>flightrec risks</code><span>flagged events, grouped by rule</span></div>
-          <div><code>flightrec receipt latest -o receipt.md</code><span>a redacted PR summary</span></div>
-          <div><code>flightrec doctor</code><span>log sources, counts, parse warnings</span></div>
+          <div><code>afteraction tui latest</code><span>open the newest session full-screen</span></div>
+          <div><code>afteraction list --since 7d --risk high</code><span>find the risky runs</span></div>
+          <div><code>afteraction risks</code><span>flagged events, grouped by rule</span></div>
+          <div><code>afteraction receipt latest -o receipt.md</code><span>a redacted PR summary</span></div>
+          <div><code>afteraction doctor</code><span>log sources, counts, parse warnings</span></div>
         </div>
       </div>
-      <div class="term rv d1"><img src="assets/tui.png" alt="flightrec tui showing a flagged cat .env command" loading="lazy"></div>
+      <div class="term rv d1"><img src="assets/tui.png" alt="afteraction tui showing a flagged cat .env command" loading="lazy"></div>
     </div>
   </section>
 
@@ -631,7 +631,7 @@ footer a:hover { color: var(--fg); }
         <div class="fact rv"><h3>No network calls</h3><p>No telemetry, no accounts, no cloud. Fonts are bundled, not fetched.</p></div>
         <div class="fact rv d1"><h3>Local-only server</h3><p>Listens on 127.0.0.1 and rejects non-local <code>Host</code> headers to block DNS rebinding.</p></div>
         <div class="fact rv d2"><h3>Secrets masked</h3><p>Hidden in the UI until you reveal them, and always redacted in receipts.</p></div>
-        <div class="fact rv d3"><h3>Read-only on your logs</h3><p>Data lives in one SQLite file. <code>flightrec purge</code> clears it; your agent's logs are never touched.</p></div>
+        <div class="fact rv d3"><h3>Read-only on your logs</h3><p>Data lives in one SQLite file. <code>afteraction purge</code> clears it; your agent's logs are never touched.</p></div>
       </div>
     </div>
   </section>
@@ -641,8 +641,8 @@ footer a:hover { color: var(--fg); }
     <div class="wrap">
       <h2 class="rv">Open the<br>black box.</h2>
       <div class="ctas rv d1">
-        <button class="cmd big" data-copy="npx @meypoo/flightrec" aria-label="Copy npx @meypoo/flightrec"><span><span class="p">$ </span>npx @meypoo/flightrec</span><span class="copy">Copy</span></button>
-        <button class="cmd big" data-copy="npx @meypoo/flightrec --demo" aria-label="Copy npx @meypoo/flightrec --demo"><span><span class="p">$ </span>npx @meypoo/flightrec --demo</span><span class="copy">Copy</span></button>
+        <button class="cmd big" data-copy="npx afteraction" aria-label="Copy npx afteraction"><span><span class="p">$ </span>npx afteraction</span><span class="copy">Copy</span></button>
+        <button class="cmd big" data-copy="npx afteraction --demo" aria-label="Copy npx afteraction --demo"><span><span class="p">$ </span>npx afteraction --demo</span><span class="copy">Copy</span></button>
       </div>
       <p class="fine rv d2">Reads <b>~/.claude/projects</b>, opens <b>localhost:4317</b>. Codex CLI support is planned.</p>
       <div class="endtape" id="endtape" aria-hidden="true"></div>
@@ -652,7 +652,7 @@ footer a:hover { color: var(--fg); }
 
 <footer>
   <div class="wrap">
-    <span>Flight Recorder · costs are estimates at API list prices</span>
+    <span>Afteraction · costs are estimates at API list prices</span>
     <nav aria-label="Footer">
       <a href="https://github.com/meypoo/flightrecorder">GitHub</a>
       <a href="https://github.com/meypoo/flightrecorder#commands">Commands</a>
@@ -853,7 +853,7 @@ footer a:hover { color: var(--fg); }
   });
   const note = document.createElement("div");
   note.className = "rule note rv";
-  note.innerHTML = "<p>$ flightrec risks --since 7d<br>Rules are heuristics: check each hit before acting on it.</p>";
+  note.innerHTML = "<p>$ afteraction risks --since 7d<br>Rules are heuristics: check each hit before acting on it.</p>";
   rules.appendChild(note); io.observe(note);
 
   /* ---------- cost counter + bars ---------- */

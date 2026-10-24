@@ -1,4 +1,4 @@
-// Full-screen terminal browser (`flightrec tui`): a session list, then a session's timeline and event detail,
+// Full-screen terminal browser (`afteraction tui`): a session list, then a session's timeline and event detail,
 // with the same j/k/r keys as the web UI. Colours follow the web UI's "Instrument" dark palette (packages/web/DESIGN.md):
 // neutral chrome, one teal accent for what you're looking at, and colour otherwise only for risk and diffs.
 import { Box, render, Text, useApp, useInput, useStdout } from "ink";
@@ -19,7 +19,7 @@ import {
   type NormalizedEvent,
   type RiskLevel,
   type SessionRow,
-} from "@flightrec/core";
+} from "@afteraction/core";
 
 export const COLOR = {
   fg: "#e7e9ec",
@@ -111,7 +111,7 @@ function Header({ right }: { right: string }) {
       <Text>
         <Text color={COLOR.brand}>▮</Text>
         <Text color={COLOR.fg} bold>
-          {" "}flightrec
+          {" "}afteraction
         </Text>
       </Text>
       <Text color={COLOR.muted} wrap="truncate">
@@ -182,7 +182,7 @@ function SessionList({ sessions, initial, onOpen }: { sessions: SessionRow[]; in
       </Box>
       <Box flexDirection="column" flexGrow={1}>
         {shown.length === 0 && (
-          <Text color={COLOR.muted}>{sessions.length ? `No sessions match "${query}".` : 'No sessions yet. Run "flightrec ingest", or try --demo.'}</Text>
+          <Text color={COLOR.muted}>{sessions.length ? `No sessions match "${query}".` : 'No sessions yet. Run "afteraction ingest", or try --demo.'}</Text>
         )}
         {shown.slice(start, start + height).map((s, i) => {
           const on = start + i === cur;

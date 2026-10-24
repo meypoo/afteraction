@@ -2,14 +2,14 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { ADAPTERS, getEvents, ingest, listRisks, listSessions, openDb, type Db } from "@flightrec/core";
+import { ADAPTERS, getEvents, ingest, listRisks, listSessions, openDb, type Db } from "@afteraction/core";
 import { writeDemoLogs } from "../src/demo.js";
 
 let tmp: string;
 let db: Db;
 
 beforeEach(() => {
-  tmp = mkdtempSync(path.join(os.tmpdir(), "flightrec-demo-test-"));
+  tmp = mkdtempSync(path.join(os.tmpdir(), "afteraction-demo-test-"));
   db = openDb(path.join(tmp, "demo.db"));
 });
 

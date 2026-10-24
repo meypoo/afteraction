@@ -45,7 +45,7 @@ describe("buildReceipt", () => {
     expect(md).toContain("### 🛫 Agent session receipt");
     expect(md).toContain("**Agent:** Claude Code · **Model:** `claude-opus-5-5` · **Duration:** 42m · **Est. cost:** $3.18 (estimated, API-equivalent)");
     expect(md).toContain("**Prompt:** `Add Stripe webhook handler`");
-    expect(md).toContain("<sub>Generated locally by flightrec v0.1.0 — transcript not uploaded.</sub>");
+    expect(md).toContain("<sub>Generated locally by afteraction v0.1.0 — transcript not uploaded.</sub>");
   });
 
   it("lists changed files relative to the project with line counts", () => {

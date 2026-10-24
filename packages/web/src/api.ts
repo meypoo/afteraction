@@ -1,5 +1,5 @@
-// Typed fetch helpers for the local flightrec API.
-import type { CostSummary, FileTouch, NormalizedEvent, RiskRow, SessionRow } from "@flightrec/core";
+// Typed fetch helpers for the local afteraction API.
+import type { CostSummary, FileTouch, NormalizedEvent, RiskRow, SessionRow } from "@afteraction/core";
 
 export type { CostSummary, FileTouch, NormalizedEvent, RiskRow, SessionRow };
 

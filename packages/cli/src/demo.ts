@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 /**
- * `flightrec --demo`: a handful of made-up Claude Code sessions, written as real JSONL logs so they
+ * `afteraction --demo`: a handful of made-up Claude Code sessions, written as real JSONL logs so they
  * go through the normal adapter. Timestamps are relative to now so the Costs page always has data.
  */
 

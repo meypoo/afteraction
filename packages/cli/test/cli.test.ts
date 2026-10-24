@@ -13,7 +13,7 @@ let dbArgs: string[];
 async function cli(...args: string[]) {
   const out: string[] = [];
   const err: string[] = [];
-  const code = await run(["node", "flightrec", ...dbArgs, ...args], { out: (s) => out.push(s), err: (s) => err.push(s) });
+  const code = await run(["node", "afteraction", ...dbArgs, ...args], { out: (s) => out.push(s), err: (s) => err.push(s) });
   return { code, out: out.join("\n"), err: err.join("\n") };
 }
 
@@ -21,9 +21,9 @@ const ENV_KEYS = ["HOME", "USERPROFILE", "CODEX_HOME", "XDG_DATA_HOME", "APPDATA
 let savedEnv: Partial<Record<(typeof ENV_KEYS)[number], string>>;
 
 beforeEach(() => {
-  tmp = mkdtempSync(path.join(os.tmpdir(), "flightrec-cli-"));
+  tmp = mkdtempSync(path.join(os.tmpdir(), "afteraction-cli-"));
   cpSync(path.join(FIXTURES, "projects"), path.join(tmp, "projects"), { recursive: true });
-  dbArgs = ["--db", path.join(tmp, "flightrec.db"), "--source", `claude=${path.join(tmp, "projects")}`];
+  dbArgs = ["--db", path.join(tmp, "afteraction.db"), "--source", `claude=${path.join(tmp, "projects")}`];
   // Keep adapters without a --source away from the real agent logs in the user's home.
   savedEnv = Object.fromEntries(ENV_KEYS.map((k) => [k, process.env[k]]));
   process.env.HOME = process.env.USERPROFILE = path.join(tmp, "home");
@@ -63,7 +63,7 @@ function appendRisky() {
   appendFileSync(file, lines.map((l) => JSON.stringify(l)).join("\n") + "\n");
 }
 
-describe("flightrec cli", () => {
+describe("afteraction cli", () => {
   it("ingests, then skips unchanged files", async () => {
     const first = await cli("ingest");
     expect(first.code).toBe(0);
@@ -131,7 +131,7 @@ describe("flightrec cli", () => {
   });
 
   it("prints warnings with file and line during ingest", async () => {
-    dbArgs = ["--db", path.join(tmp, "flightrec.db"), "--source", `claude=${FIXTURES}`];
+    dbArgs = ["--db", path.join(tmp, "afteraction.db"), "--source", `claude=${FIXTURES}`];
     const res = await cli("ingest");
     expect(res.code).toBe(0);
     expect(res.err).toMatch(/warning: .*22222222-3333-4444-8555-666666666666\.jsonl:3 invalid JSON/);

@@ -1,6 +1,6 @@
-# Flight Recorder design system: "Instrument"
+# Afteraction design system: "Instrument"
 
-Flight Recorder is a tool you open after something happened, to see exactly what did. The UI should feel like a
+Afteraction is a tool you open after something happened, to see exactly what did. The UI should feel like a
 calm, precise instrument: dense where data is dense, quiet everywhere else, and loud only about risk.
 
 All tokens live in `src/index.css` (`@theme` for light, `.dark` for dark, which is the default). Components live in

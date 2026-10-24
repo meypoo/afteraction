@@ -1,11 +1,11 @@
-name: Flight Recorder receipt
-description: Post a Flight Recorder session receipt (commands, files, risks, cost) as a pull request comment.
+name: Afteraction receipt
+description: Post an Afteraction session receipt (commands, files, risks, cost) as a pull request comment.
 branding:
   icon: activity
   color: blue
 
 # Stub (SPEC M5). CI runners have no agent history of their own, so the session log has to be
-# committed or uploaded into the workspace first, e.g. `.flightrec/session.jsonl` from
+# committed or uploaded into the workspace first, e.g. `.afteraction/session.jsonl` from
 # ~/.claude/projects/<project>/<session-id>.jsonl. The receipt is redacted (secrets, home paths).
 # Only that log is read (--no-default-sources): other agents' history on a self-hosted runner stays out.
 
@@ -17,7 +17,7 @@ inputs:
     description: Session id, unique prefix, or "latest".
     default: latest
   version:
-    description: Exact @meypoo/flightrec version to run from npm. Pinned so a new or compromised release cannot run in your workflow unreviewed; bump it deliberately.
+    description: Exact afteraction version to run from npm. Pinned so a new or compromised release cannot run in your workflow unreviewed; bump it deliberately.
     default: 0.1.0
   github-token:
     description: Token used to post the comment. It only needs pull-requests write. Avoid pull_request_target, which hands this token to runs on untrusted fork code.
@@ -43,12 +43,12 @@ runs:
         VERSION: ${{ inputs.version }}
       run: |
         set -euo pipefail
-        logs="$RUNNER_TEMP/flightrec-logs/projects/ci"
+        logs="$RUNNER_TEMP/afteraction-logs/projects/ci"
         mkdir -p "$logs"
         if [ -f "$LOG_PATH" ]; then cp -- "$LOG_PATH" "$logs/"; elif [ -d "$LOG_PATH" ]; then cp -R -- "$LOG_PATH"/. "$logs/"; else echo "log-path not found: $LOG_PATH" >&2; exit 1; fi
-        [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || { echo "version must be an exact flightrec version like 0.1.0, not '$VERSION'" >&2; exit 1; }
-        out="$RUNNER_TEMP/flightrec-receipt.md"
-        fr() { npx --yes "@meypoo/flightrec@$VERSION" --db "$RUNNER_TEMP/flightrec.db" --no-default-sources --source "claude=$RUNNER_TEMP/flightrec-logs/projects" "$@"; }
+        [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || { echo "version must be an exact afteraction version like 0.1.0, not '$VERSION'" >&2; exit 1; }
+        out="$RUNNER_TEMP/afteraction-receipt.md"
+        fr() { npx --yes "afteraction@$VERSION" --db "$RUNNER_TEMP/afteraction.db" --no-default-sources --source "claude=$RUNNER_TEMP/afteraction-logs/projects" "$@"; }
         fr ingest
         fr receipt "$SESSION" -o "$out"
         echo "path=$out" >> "$GITHUB_OUTPUT"

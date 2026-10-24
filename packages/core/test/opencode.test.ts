@@ -18,7 +18,7 @@ let dbFile: string;
 
 beforeAll(() => {
   // The fixture is SQL text (diffable, and *.db is git-ignored); build the database from it.
-  tmp = mkdtempSync(path.join(os.tmpdir(), "flightrec-opencode-"));
+  tmp = mkdtempSync(path.join(os.tmpdir(), "afteraction-opencode-"));
   root = path.join(tmp, "opencode");
   mkdirSync(root);
   dbFile = path.join(root, "opencode.db");

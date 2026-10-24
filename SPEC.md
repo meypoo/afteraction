@@ -1,6 +1,6 @@
-# Flight Recorder — Product & Technical Spec (v0.1 MVP)
+# Afteraction — Product & Technical Spec (v0.1 MVP)
 
-> Working name: **Flight Recorder** (`flightrec` CLI). Rename freely.
+> Working name: **Afteraction** (`afteraction` CLI). Rename freely.
 > One-liner: *See exactly what your coding agent did — every command, file, risk and dollar — replayed locally.*
 
 ---
@@ -24,7 +24,7 @@ The agents already write detailed logs to disk, but in raw JSONL formats nobody 
 3. Local web UI: session list, timeline replay, file diffs, risk flags, cost.
 4. Rule-based risk detection with severity levels.
 5. Export a "session receipt" (Markdown) suitable for a PR comment.
-6. One-command run: `npx flightrec` opens the UI in the browser.
+6. One-command run: `npx afteraction` opens the UI in the browser.
 7. 100% local. No telemetry, no network calls except optional price-table refresh (off by default).
 
 **Non-goals (MVP)**
@@ -128,18 +128,18 @@ Session `max_risk` = highest event severity. False positives are acceptable at `
 ## 8. CLI
 
 ```
-flightrec                  # ingest (incremental) then open UI at http://localhost:4317
-flightrec ingest [--full]  # ingest only
-flightrec list [--since 7d] [--project <path>] [--risk high]
-flightrec show <session-id>            # terminal timeline
-flightrec tui [session-id]             # full-screen terminal browser (Ink): session list, timeline, detail
-flightrec receipt <session-id> [-o file.md]
-flightrec risks [--since 7d]           # all flagged events
-flightrec doctor                       # show discovered sources, counts, parse warnings
-flightrec --version / --help
+afteraction                  # ingest (incremental) then open UI at http://localhost:4317
+afteraction ingest [--full]  # ingest only
+afteraction list [--since 7d] [--project <path>] [--risk high]
+afteraction show <session-id>            # terminal timeline
+afteraction tui [session-id]             # full-screen terminal browser (Ink): session list, timeline, detail
+afteraction receipt <session-id> [-o file.md]
+afteraction risks [--since 7d]           # all flagged events
+afteraction doctor                       # show discovered sources, counts, parse warnings
+afteraction --version / --help
 ```
 
-Flags: `--db <path>` (default `~/.flightrec/flightrec.db`), `--port`, `--no-open`, `--source name=path`.
+Flags: `--db <path>` (default `~/.afteraction/afteraction.db`), `--port`, `--no-open`, `--source name=path`.
 UI binds to `127.0.0.1` only.
 
 ## 9. Web UI (local)
@@ -170,7 +170,7 @@ Design: clean, dense, dark-mode default with light mode; works at 1280px+ (mobil
 - high · secret-file-read · read `.env.local`
 - low · package-install · `npm i stripe`
 
-<sub>Generated locally by flightrec vX.Y — transcript not uploaded.</sub>
+<sub>Generated locally by afteraction vX.Y — transcript not uploaded.</sub>
 ```
 
 Option `--redact` masks secrets and home-directory paths. Redaction is **on by default** for receipts.
@@ -202,7 +202,7 @@ fixtures/      anonymized sample logs per agent + expected normalized JSON
 - Server binds to 127.0.0.1; reject non-local Host headers (DNS-rebinding protection).
 - DB stored with user-only permissions (0600).
 - Secrets found by rules are **masked in the UI by default** (click to reveal).
-- `flightrec purge [--before 30d]` deletes stored data.
+- `afteraction purge [--before 30d]` deletes stored data.
 
 ## 13. Quality bar
 - Unit tests for every adapter (fixture → expected JSON snapshot) and every risk rule (positive + negative cases).
@@ -215,7 +215,7 @@ fixtures/      anonymized sample logs per agent + expected normalized JSON
 - **M2 — Risk + cost:** rule engine with tests, pricing, `risks`, `receipt`.
 - **M3 — Web UI:** sessions, replay, files, risks, costs.
 - **M4 — Codex adapter** + cross-agent filters.
-- **M5 — Launch polish:** README with GIF, `npx` publish, demo fixture dataset (`flightrec --demo`), GitHub Action stub that posts a receipt.
+- **M5 — Launch polish:** README with GIF, `npx` publish, demo fixture dataset (`afteraction --demo`), GitHub Action stub that posts a receipt.
 
 ## 15. v2 ideas (not now)
 Cursor/OpenCode/Gemini/Aider adapters · live tail mode · optional LLM "explain this session" (BYO key) · GitHub App posting receipts automatically · team export · pre-execution guard hook that blocks risky commands.

@@ -1,7 +1,7 @@
 *.db
 *.db-*
 .env*
-.flightrec/
+.afteraction/
 coverage/
 dist/
 node_modules/

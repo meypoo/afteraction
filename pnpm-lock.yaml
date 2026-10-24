@@ -54,10 +54,10 @@ importers:
         specifier: 18.3.1
         version: 18.3.1
     devDependencies:
-      '@flightrec/core':
+      '@afteraction/core':
         specifier: workspace:^
         version: link:../core
-      '@flightrec/web':
+      '@afteraction/web':
         specifier: workspace:^
         version: link:../web
       '@types/react':
@@ -98,7 +98,7 @@ importers:
         specifier: 18.3.1
         version: 18.3.1(react@18.3.1)
     devDependencies:
-      '@flightrec/core':
+      '@afteraction/core':
         specifier: workspace:^
         version: link:../core
       '@tailwindcss/postcss':

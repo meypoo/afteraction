@@ -1,19 +1,19 @@
 # Security notes
 
-Flight Recorder processes local agent transcripts, which can contain commands, file paths, prompts, command
-output and credentials. Treat its database (`~/.flightrec/flightrec.db`) and its web UI as sensitive.
+Afteraction processes local agent transcripts, which can contain commands, file paths, prompts, command
+output and credentials. Treat its database (`~/.afteraction/afteraction.db`) and its web UI as sensitive.
 
 Everything in an agent log is untrusted input: a prompt, a file the agent read or a web page it fetched can put
-arbitrary text into titles, commands, paths and output. Flight Recorder is built to display that text, never to
+arbitrary text into titles, commands, paths and output. Afteraction is built to display that text, never to
 act on it.
 
 ## What protects what
 
-**Local web UI** (`flightrec`, `packages/cli/src/server.ts`)
+**Local web UI** (`afteraction`, `packages/cli/src/server.ts`)
 
 - Listens on `127.0.0.1` only and answers only requests whose `Host` is `127.0.0.1`, `localhost` or `[::1]` on its
   own port, which defeats DNS rebinding.
-- Each launch generates a random access token. The URL flightrec prints and opens carries it once; the server
+- Each launch generates a random access token. The URL afteraction prints and opens carries it once; the server
   swaps it for an `HttpOnly`, `SameSite=Strict` cookie (named per port) and redirects. Requests without the cookie
   or an `Authorization: Bearer` header get 401. Other local users and processes can reach a loopback port, so this
   is what keeps them out, including from `?reveal=1`.
@@ -26,7 +26,7 @@ act on it.
 - The UI renders log content as React text. The one HTML sink is syntax highlighting in diffs, where highlight.js
   escapes the code before adding its own spans; the CSP is a second line of defence.
 
-**Terminal output** (`flightrec list/show/risks/doctor`, `flightrec tui`)
+**Terminal output** (`afteraction list/show/risks/doctor`, `afteraction tui`)
 
 - Control characters in log text are shown as visible stand-ins (`␛`), so escape sequences cannot clear the screen,
   set the window title, plant OSC 8 links or write the clipboard (OSC 52). Bidi override characters, which can make
@@ -49,7 +49,7 @@ act on it.
   newlines flattened and a fence longer than any backtick run inside, so a PR comment cannot gain links, images,
   @mentions or headings from log content.
 - The action ingests only the log you pass (`--no-default-sources`), so other agents' history on a self-hosted
-  runner is never read or posted. It runs an exact, pinned `flightrec` version and refuses `latest`. Pin the action
+  runner is never read or posted. It runs an exact, pinned `afteraction` version and refuses `latest`. Pin the action
   itself to a tag or commit, give the token only `pull-requests: write`, and avoid `pull_request_target`.
 
 **Ingestion** (`packages/core/src/adapters/*`)
@@ -62,16 +62,16 @@ act on it.
 
 **Storage**
 
-- The database, its `-wal` and `-shm` files are created user-only (`0600`), and `~/.flightrec` is kept `0700`. On
+- The database, its `-wal` and `-shm` files are created user-only (`0600`), and `~/.afteraction` is kept `0700`. On
   Windows these modes are no-ops; access follows your profile directory's ACLs.
-- `flightrec purge` turns on `secure_delete`, vacuums and truncates the WAL, so purged rows do not linger in free
+- `afteraction purge` turns on `secure_delete`, vacuums and truncates the WAL, so purged rows do not linger in free
   pages.
 
 ## Known limitations
 
 - The launch token travels in the URL handed to your browser, so for a moment it is visible in the process list of
-  the browser-opening command. Restarting flightrec issues a new one.
-- Same-user processes can read `~/.flightrec/flightrec.db` directly; the token protects the port, not the file.
+  the browser-opening command. Restarting afteraction issues a new one.
+- Same-user processes can read `~/.afteraction/afteraction.db` directly; the token protects the port, not the file.
 - Whole-file adapters (Gemini CLI, Cline, Continue, Copilot, Aider, Antigravity) read each log into memory. A
   multi-gigabyte log fails that file's ingest with an error; it does not stop the others.
 - Risk rules are heuristics with false positives and negatives.

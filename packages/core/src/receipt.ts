@@ -173,6 +173,6 @@ export function buildReceipt(session: SessionRow, events: NormalizedEvent[], opt
     lines.push("**Risk flags:** none");
   }
   lines.push("");
-  lines.push(`<sub>Generated locally by flightrec v${opts.version} — transcript not uploaded.</sub>`);
+  lines.push(`<sub>Generated locally by afteraction v${opts.version} — transcript not uploaded.</sub>`);
   return lines.join("\n") + "\n";
 }

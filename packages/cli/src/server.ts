@@ -22,7 +22,7 @@ import {
   sourceCounts,
   type Db,
   type RiskLevel,
-} from "@flightrec/core";
+} from "@afteraction/core";
 
 export interface ServerOptions {
   db: Db;
@@ -86,7 +86,7 @@ export function createApp(opts: ServerOptions): Hono {
   const { db, port, webRoot, version } = opts;
   const allowedHosts = new Set([`127.0.0.1:${port}`, `localhost:${port}`, `[::1]:${port}`]);
   // Cookies are shared by every port on a host, so the name carries the port.
-  const cookieName = `flightrec_${port}`;
+  const cookieName = `afteraction_${port}`;
   const app = new Hono();
 
   // Hardening headers on every response, including the 401/403s and error pages below.
@@ -100,7 +100,7 @@ export function createApp(opts: ServerOptions): Hono {
   // DNS-rebinding protection: only answer requests addressed to the loopback host we listen on.
   app.use("*", async (c, next) => {
     const host = (c.req.header("host") ?? "").toLowerCase();
-    if (!allowedHosts.has(host)) return c.text("Forbidden: flightrec only answers on localhost.", 403);
+    if (!allowedHosts.has(host)) return c.text("Forbidden: afteraction only answers on localhost.", 403);
     await next();
   });
 
@@ -109,7 +109,7 @@ export function createApp(opts: ServerOptions): Hono {
     app.use("*", async (c, next) => {
       const fromUrl = c.req.query("token");
       if (fromUrl !== undefined && c.req.method === "GET" && !c.req.path.startsWith("/api/")) {
-        if (!sameSecret(fromUrl, token)) return c.text("Forbidden: wrong token. Open the URL flightrec printed in your terminal.", 403);
+        if (!sameSecret(fromUrl, token)) return c.text("Forbidden: wrong token. Open the URL afteraction printed in your terminal.", 403);
         const url = new URL(c.req.url);
         url.searchParams.delete("token");
         c.header("Set-Cookie", `${cookieName}=${token}; Path=/; HttpOnly; SameSite=Strict`);
@@ -123,7 +123,7 @@ export function createApp(opts: ServerOptions): Hono {
       const bearer = /^Bearer (\S+)$/.exec(c.req.header("authorization") ?? "")?.[1];
       const given = cookie ?? bearer;
       if (!given || !sameSecret(given, token)) {
-        const msg = "Unauthorized: open the URL flightrec printed in your terminal (it carries this launch's token).";
+        const msg = "Unauthorized: open the URL afteraction printed in your terminal (it carries this launch's token).";
         return c.req.path.startsWith("/api/") ? c.json({ error: msg }, 401) : c.text(msg, 401);
       }
       await next();
@@ -227,7 +227,7 @@ export function createApp(opts: ServerOptions): Hono {
   app.get("*", (c) => {
     const index = path.join(root, "index.html");
     if (!existsSync(index)) {
-      return c.text('The web UI has not been built. Run "pnpm build" in the flightrec repo, then restart.', 503);
+      return c.text('The web UI has not been built. Run "pnpm build" in the afteraction repo, then restart.', 503);
     }
     let rel: string;
     try {

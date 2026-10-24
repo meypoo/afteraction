@@ -9,7 +9,7 @@ import type { EventKind, NormalizedEvent, ParseWarning, RiskLevel, Session } fro
 export type Db = Database.Database;
 
 export function defaultDbPath(): string {
-  return path.join(os.homedir(), ".flightrec", "flightrec.db");
+  return path.join(os.homedir(), ".afteraction", "afteraction.db");
 }
 
 const SCHEMA_VERSION = 4; // 4: timestamps stored as UTC; duplicate session ids kept apart
@@ -117,7 +117,7 @@ export function openDb(file = defaultDbPath()): Db {
   db.pragma("foreign_keys = ON");
   const version = db.pragma("user_version", { simple: true }) as number;
   if (version > SCHEMA_VERSION) {
-    throw new Error(`Database ${file} was created by a newer flightrec (schema ${version}).`);
+    throw new Error(`Database ${file} was created by a newer afteraction (schema ${version}).`);
   }
   if (version > 0 && version < SCHEMA_VERSION) {
     // Everything here is derived from the agents' own logs, so an older layout is rebuilt, not migrated.

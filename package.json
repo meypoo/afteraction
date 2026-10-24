@@ -1,5 +1,5 @@
 {
-  "name": "flightrec-monorepo",
+  "name": "afteraction-monorepo",
   "private": true,
   "type": "module",
   "engines": {
@@ -9,7 +9,7 @@
     "build": "pnpm -r build",
     "typecheck": "pnpm -r build && pnpm -r typecheck",
     "test": "vitest run",
-    "flightrec": "node packages/cli/dist/index.js",
+    "afteraction": "node packages/cli/dist/index.js",
     "lint": "eslint ."
   },
   "devDependencies": {

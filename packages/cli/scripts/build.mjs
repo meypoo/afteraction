@@ -1,4 +1,4 @@
-// Bundles the CLI with @flightrec/core inlined, so the published `flightrec` package is self-contained:
+// Bundles the CLI with @afteraction/core inlined, so the published `afteraction` package is self-contained:
 // dist/index.js, prices.json (read by core's cost code relative to the bundle) and web/ (the built UI).
 import { build } from "esbuild";
 import { cpSync, readFileSync, rmSync } from "node:fs";
