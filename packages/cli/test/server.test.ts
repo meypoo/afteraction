@@ -119,6 +119,13 @@ describe("api", () => {
     expect(md).not.toContain(SECRET);
   });
 
+  it("checks the session's claims against its commands", async () => {
+    const report = await json(`/api/sessions/${encodeURIComponent(ID)}/claims`);
+    // The fixture's messages are placeholders, so there is nothing to check.
+    expect(report).toEqual({ claims: [], counts: { supported: 0, contradicted: 0, unverified: 0 } });
+    expect((await get("/api/sessions/claude%3Anope/claims")).status).toBe(404);
+  });
+
   it("lists risks and costs", async () => {
     const r = await json("/api/risks");
     expect(r.risks.map((x: { risk_rules: string[] }) => x.risk_rules)).toEqual([["secret-in-output"]]);

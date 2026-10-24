@@ -35,12 +35,12 @@ export function App() {
     setTheme(t);
   };
 
-  const sessionMatch = /^\/session\/([^/]+)(\/files)?$/.exec(route.path);
+  const sessionMatch = /^\/session\/([^/]+)(?:\/(files|claims))?$/.exec(route.path);
   const section = sessionMatch ? "/" : route.path;
 
   let page;
   if (sessionMatch) {
-    page = <SessionPage id={safeDecode(sessionMatch[1]!)} tab={sessionMatch[2] ? "files" : "timeline"} params={route.params} />;
+    page = <SessionPage id={safeDecode(sessionMatch[1]!)} tab={sessionMatch[2] === "files" ? "files" : sessionMatch[2] === "claims" ? "claims" : "timeline"} params={route.params} />;
   } else if (route.path === "/risks") page = <RisksPage />;
   else if (route.path === "/costs") page = <CostsPage />;
   else page = <SessionsPage />;

@@ -1,6 +1,9 @@
+import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { clineAdapter } from "../src/adapters/cline.js";
 import { checkClaims, claimSummary, classifyCommand, findClaims, testCounts } from "../src/claims.js";
 import type { EventKind, NormalizedEvent } from "../src/model.js";
+import { collect, FIXTURES_ROOT } from "./helpers.js";
 
 let seq = 0;
 function ev(kind: EventKind, payload: Record<string, unknown>): NormalizedEvent {
@@ -166,5 +169,21 @@ describe("checkClaims", () => {
     expect(report.counts).toEqual({ supported: 1, contradicted: 1, unverified: 1 });
     expect(claimSummary(report.counts)).toBe("1 contradicted · 1 unverified · 1 supported");
     expect(claimSummary({ supported: 0, contradicted: 0, unverified: 0 })).toBe("no checkable claims");
+  });
+});
+
+describe("checkClaims on adapter output", () => {
+  it("works from any adapter's normalized events (Cline: no exit code, mocha summary)", async () => {
+    const { events } = await collect(clineAdapter, path.join(FIXTURES_ROOT, "cline", "tasks", "1768471200000", "ui_messages.json"));
+    const { claims } = checkClaims(events);
+    expect(claims).toEqual([
+      expect.objectContaining({
+        kind: "tests",
+        text: "Validation added and tests pass.",
+        verdict: "contradicted",
+        reason: "The last test run before this claim failed (1 failed).",
+        evidence: expect.objectContaining({ command: "npm test", exit_code: null, outcome: "fail", passed: 2, failed: 1 }),
+      }),
+    ]);
   });
 });

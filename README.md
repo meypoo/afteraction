@@ -58,6 +58,9 @@ Coding agents run for hours and write detailed logs, but in raw JSONL nobody rea
 - **Files:** every file a session touched, with read/write/edit counts and a combined diff.
 - **Risks:** rule-based flags such as `rm -rf`, force pushes, history rewrites, reading `.env` or keys, API keys in
   output, `curl | sh`, `DROP TABLE`, package installs, writes outside the project.
+- **Claims vs evidence:** when the agent says "tests pass", "9/9 passed", "build succeeds", "lint clean" or "fixed",
+  Afteraction checks the commands it actually ran before saying so and marks each claim supported, contradicted or
+  unverified, with the run that decided it.
 - **Costs:** estimated spend by day, project and model, and the most expensive sessions.
 - **Receipts:** a Markdown summary of a session for a PR comment, with secrets and home paths redacted.
 
@@ -109,6 +112,7 @@ afteraction list [--since 7d] [--project <path>] [--agent codex] [--risk high] [
 afteraction show <session-id>        # timeline in the terminal
 afteraction tui [session-id]         # full-screen browser in the terminal (j/k, r for next risk; works over SSH)
 afteraction risks [--since 7d]       # flagged events, grouped by rule
+afteraction claims <session-id>      # "tests pass", "fixed" … checked against the commands actually run
 afteraction receipt <session-id|latest> [-o receipt.md]
 afteraction purge [--before 30d] --yes   # delete stored sessions (never your agent's logs)
 afteraction doctor                   # log sources found, counts, parse warnings

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { ADAPTERS, getEvents, ingest, listRisks, listSessions, openDb, type Db } from "@afteraction/core";
+import { ADAPTERS, checkClaims, getEvents, ingest, listRisks, listSessions, openDb, type Db } from "@afteraction/core";
 import { writeDemoLogs } from "../src/demo.js";
 
 let tmp: string;
@@ -44,5 +44,25 @@ describe("demo dataset", () => {
     expect(edits).toHaveLength(2);
     expect(edits[0]!.payload.unified_diff).toContain("-Install the CLI with your package manager of choise:");
     expect(edits[0]!.payload.unified_diff).toContain("+Install the CLI with your package manager of choice:");
+
+    // Claims vs evidence: the dark-mode session claims 9/9 tests after a failing run.
+    const claims = Object.fromEntries(sessions.map((s) => [s.title, checkClaims(getEvents(db, s.id)).claims.map((c) => `${c.kind}:${c.verdict}`)]));
+    expect(claims).toMatchInlineSnapshot(`
+      {
+        "Add a Stripe webhook endpoint that marks orders paid or failed. Verify the signature and add a test.": [
+          "tests:supported",
+        ],
+        "Add a dark mode toggle with a ThemeProvider.": [
+          "tests:contradicted",
+          "typecheck:supported",
+        ],
+        "Fix the typos in docs/getting-started.md": [],
+        "Staging data is a mess. Wipe the events table, reseed it, and install the new loader CLI.": [],
+        "Switch the checkout module from REST calls to our GraphQL client.": [
+          "tests:supported",
+        ],
+        "main moved on. Rebase this branch onto it, clean the build, and push.": [],
+      }
+    `);
   });
 });

@@ -300,7 +300,7 @@ function runOf(e: NormalizedEvent): Run | null {
   const { checks, exitReliable, chunks } = classifyCommand(command);
   if (!checks.length) return null;
   const exit = typeof e.payload.exit_code === "number" ? e.payload.exit_code : null;
-  const output = [e.payload.stdout_excerpt, e.payload.stderr_excerpt, e.payload.result_excerpt].map(str).filter(Boolean).join("\n");
+  const output = [e.payload.stdout_excerpt, e.payload.stderr_excerpt, e.payload.result_excerpt, e.payload.error].map(str).filter(Boolean).join("\n");
   const counts = checks.includes("tests") ? testCounts(output) : {};
 
   let outcome: RunOutcome = "unknown";
