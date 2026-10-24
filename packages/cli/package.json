@@ -28,10 +28,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/meypoo/flightrecorder.git",
+    "url": "git+https://github.com/meypoo/afteraction.git",
     "directory": "packages/cli"
   },
-  "homepage": "https://github.com/meypoo/flightrecorder#readme",
+  "homepage": "https://meypoo.github.io/afteraction/",
+  "bugs": "https://github.com/meypoo/afteraction/issues",
   "description": "See what your coding agent did: commands, files, tokens and risks. 100% local.",
   "keywords": [
     "claude-code",

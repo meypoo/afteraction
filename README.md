@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="site/favicon.svg" width="56" height="56" alt="">
+</p>
+
 <h1 align="center">Afteraction</h1>
 
 <p align="center">
@@ -5,22 +9,26 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/meypoo/flightrecorder/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/meypoo/flightrecorder/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/meypoo/afteraction/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/meypoo/afteraction/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="Node 20+" src="https://img.shields.io/badge/node-%3E%3D20-339933?logo=node.js&logoColor=white">
   <img alt="100% local" src="https://img.shields.io/badge/data-100%25%20local-0f766e">
-  <img alt="Claude Code" src="https://img.shields.io/badge/agents-Claude%20Code-d97757">
+  <a href="https://www.npmjs.com/package/afteraction"><img alt="npm" src="https://img.shields.io/npm/v/afteraction?color=cb3837&logo=npm"></a>
+  <img alt="Agents" src="https://img.shields.io/badge/agents-Claude%20Code%20%C2%B7%20Codex%20%C2%B7%20OpenCode%20%C2%B7%20more-d97757">
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-blue"></a>
 </p>
 
 <p align="center">
+  <a href="https://meypoo.github.io/afteraction/"><b>Website</b></a> ·
   <a href="#quick-start">Quick start</a> ·
   <a href="#what-you-get">Features</a> ·
+  <a href="#claims-vs-evidence">Claims vs evidence</a> ·
   <a href="#in-the-terminal">Terminal UI</a> ·
   <a href="#commands">Commands</a> ·
   <a href="#privacy">Privacy</a>
 </p>
 
 <p align="center">
-  <img src="docs/demo.gif" alt="Afteraction replaying a Claude Code session" width="900">
+  <img src="docs/demo.gif" alt="Afteraction replaying a Claude Code session: a flagged cat .env, a supported and a contradicted claim, then the Risks and Costs pages" width="900">
 </p>
 
 ## Quick start
@@ -70,12 +78,30 @@ Coding agents run for hours and write detailed logs, but in raw JSONL nobody rea
     <td width="50%"><img src="docs/replay.png" alt="Replay of a session with a flagged cat .env command"><br><sub><b>Replay:</b> step through the timeline; risky events are flagged and secrets masked.</sub></td>
   </tr>
   <tr>
+    <td width="50%"><img src="docs/check.png" alt="A 'tests pass' claim marked contradicted by a failed jest run"><br><sub><b>Claims vs evidence:</b> "all 9 tests pass", contradicted by the jest run before it.</sub></td>
     <td width="50%"><img src="docs/costs-light.png" alt="Costs page in the light theme"><br><sub><b>Costs:</b> estimated spend by day, project and model (light theme shown).</sub></td>
-    <td width="50%"><img src="docs/tui.png" alt="afteraction tui showing a session timeline in the terminal"><br><sub><b>Terminal:</b> the same replay in <code>afteraction tui</code>.</sub></td>
   </tr>
 </table>
 
+## Claims vs evidence
+
+Agents end a run with a summary: "tests pass", "build succeeds", "fixed". Afteraction reads that summary, finds the
+last matching test, build, lint or typecheck run before it, and marks each claim **supported**, **contradicted** or
+**unverified**, with the command that decided it. You see the verdict in the replay, in `afteraction claims <id>`
+and in the PR receipt.
+
+```text
+❌ contradicted · tests · "tsc is clean and all 9 tests pass."
+   The last test run before this claim failed (exited 1, 1 failed). · ran npx jest src/theme
+✅ supported · typecheck · "tsc is clean and all 9 tests pass."
+   The last typecheck run before this claim passed (exited 0). · ran npx tsc --noEmit
+```
+
 ## In the terminal
+
+<p align="center">
+  <img src="docs/tui.png" alt="afteraction tui showing a flagged cat .env command" width="760">
+</p>
 
 ```sh
 afteraction tui                 # browse all sessions
@@ -166,7 +192,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: meypoo/flightrecorder@<release tag or commit SHA>
+      - uses: meypoo/afteraction@<release tag or commit SHA>
         with:
           log-path: .afteraction/session.jsonl
 ```
