@@ -82,6 +82,18 @@ describe("tui", () => {
     unmount();
   });
 
+  it("marks claims and jumps to the next one with c", async () => {
+    const dark = data.sessions().find((s) => s.title.includes("dark mode"))!;
+    const { lastFrame, stdin, unmount } = render(<App data={data} initialSessionId={dark.id} />);
+    await press(stdin);
+    expect(lastFrame()).toContain("no risks · 1 contrad");
+    expect(lastFrame()).toContain("✗ claim");
+    await press(stdin, "c");
+    expect(lastFrame()).toContain("✗ CONTRADICTED tests claim · The last test run before this claim failed");
+    expect(lastFrame()).toContain("$ npx jest src/theme");
+    unmount();
+  });
+
   it("jumps to the next risk with r", async () => {
     const risky = data.sessions().find((s) => s.max_risk !== "none")!;
     const first = data.events(risky.id).find((e) => e.risk_level !== "none" && e.kind !== "thinking")!;

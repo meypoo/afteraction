@@ -6,6 +6,7 @@ import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import path from "node:path";
 import {
   buildReceipt,
+  checkClaims,
   COST_LABEL,
   costSummary,
   fileTouches,
@@ -189,6 +190,12 @@ export function createApp(opts: ServerOptions): Hono {
     const id = c.req.param("id");
     if (!getSession(db, id)) return c.json({ error: "session not found" }, 404);
     return c.json(out(c, { events: getEvents(db, id) }));
+  });
+
+  app.get("/api/sessions/:id/claims", (c) => {
+    const id = c.req.param("id");
+    if (!getSession(db, id)) return c.json({ error: "session not found" }, 404);
+    return c.json(out(c, checkClaims(getEvents(db, id))));
   });
 
   app.get("/api/sessions/:id/receipt", (c) => {

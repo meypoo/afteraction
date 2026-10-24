@@ -63,6 +63,16 @@ function appendRisky() {
   appendFileSync(file, lines.map((l) => JSON.stringify(l)).join("\n") + "\n");
 }
 
+/** End the demo session with the agent saying everything works. */
+function appendClaims() {
+  const sid = "11111111-2222-4333-8444-555555555555";
+  const file = path.join(tmp, "projects", "C--Users-USER-projects-demo-app", `${sid}.jsonl`);
+  const line = { type: "assistant", uuid: "00000000-0000-4000-8000-999999999995", timestamp: "2026-01-16T12:00:00.000Z", sessionId: sid,
+    message: { id: "msg_claim", model: "claude-opus-5-5", role: "assistant",
+      content: [{ type: "text", text: "Done. All tests pass and the build succeeds. Lint is clean." }] } };
+  appendFileSync(file, JSON.stringify(line) + "\n");
+}
+
 describe("afteraction cli", () => {
   it("ingests, then skips unchanged files", async () => {
     const first = await cli("ingest");
@@ -174,6 +184,29 @@ describe("afteraction cli", () => {
     const file = path.join(tmp, "receipt.md");
     expect((await cli("receipt", "1111", "-o", file)).out).toBe(`Receipt written to ${file}`);
     expect(readFileSync(file, "utf8")).toContain("Agent session receipt");
+  });
+
+  it("checks the agent's claims against the commands it ran", async () => {
+    appendClaims();
+    await cli("ingest");
+    const claims = await cli("claims", "1111");
+    expect(claims.code).toBe(0);
+    // npm test failed and files changed after it; npm run build passed; no lint ran.
+    expect(claims.out).toMatch(/\? UNVERIFIED\s+tests\s+#\d+.*"All tests pass and the build succeeds\."/);
+    expect(claims.out).toContain("The last test run failed; 2 files changed after it and it was not re-run.");
+    expect(claims.out).toMatch(/✓ SUPPORTED\s+build/);
+    expect(claims.out).toContain("$ npm run build");
+    expect(claims.out).toMatch(/\? UNVERIFIED\s+lint.*\n\s+No lint command was run/);
+    expect(claims.out).toContain("2 unverified · 1 supported. Claims are found by pattern matching");
+    const json = JSON.parse((await cli("claims", "1111", "--json")).out) as { counts: Record<string, number> };
+    expect(json.counts).toEqual({ supported: 1, contradicted: 0, unverified: 2 });
+
+    const show = await cli("show", "1111");
+    expect(show.out).toContain("claims: 2 unverified · 1 supported (afteraction claims 11111111 for details)");
+    expect(show.out).toMatch(/assistant_message\s+Done\. All tests pass.*\? tests claim unverified, ✓ build claim supported, \? lint claim unverified/);
+
+    const receipt = await cli("receipt", "1111");
+    expect(receipt.out).toContain("**🔎 Claims vs evidence (3):** 2 unverified · 1 supported");
   });
 
   it("list --search filters by full-text match", async () => {

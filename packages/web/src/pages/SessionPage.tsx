@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { api, type FileTouch, type NormalizedEvent } from "../api";
+import { api, type Claim, type ClaimReport, type ClaimVerdict, type FileTouch, type NormalizedEvent } from "../api";
 import { asAddedDiff, Diff } from "../components/Diff";
 import { EventDetail } from "../components/EventDetail";
 import { Icon } from "../components/icons";
@@ -12,9 +12,30 @@ const SPEEDS = [0.5, 1, 2, 4, 8];
 const RISK_RANK: Record<string, number> = { none: 0, low: 1, medium: 2, high: 3, critical: 4 };
 const TICK_COLOR = ["", "bg-risk-low", "bg-risk-medium", "bg-risk-high", "bg-risk-critical"];
 
-export function SessionPage({ id, tab, params }: { id: string; tab: "timeline" | "files"; params: URLSearchParams }) {
+const VERDICT_STYLE: Record<ClaimVerdict, string> = {
+  contradicted: "bg-risk-high-soft text-risk-high",
+  unverified: "bg-risk-medium-soft text-risk-medium",
+  supported: "bg-ok-soft text-ok",
+};
+const VERDICT_ORDER: ClaimVerdict[] = ["contradicted", "unverified", "supported"];
+
+function VerdictBadge({ verdict, label, title }: { verdict: ClaimVerdict; label?: string; title?: string }) {
+  const Glyph = verdict === "supported" ? Icon.Check : verdict === "contradicted" ? Icon.X : Icon.Alert;
+  return (
+    <span title={title} className={`inline-flex shrink-0 items-center gap-1 rounded-chip px-1.5 text-2xs font-medium leading-5 ${VERDICT_STYLE[verdict]}`}>
+      <Glyph className="size-3" />
+      {label ?? verdict}
+    </span>
+  );
+}
+
+/** The worst verdict among a message's claims, for its timeline row. */
+const worst = (claims: Claim[]) => VERDICT_ORDER.find((v) => claims.some((c) => c.verdict === v))!;
+
+export function SessionPage({ id, tab, params }: { id: string; tab: "timeline" | "files" | "claims"; params: URLSearchParams }) {
   const detail = useAsync(() => api.session(id), [id]);
   const evs = useAsync(() => api.events(id), [id]);
+  const claimReport = useAsync(() => api.claims(id), [id]);
   const [copied, setCopied] = useState<string>("");
 
   if (detail.error) return <ErrorBox error={detail.error} />;
@@ -23,6 +44,7 @@ export function SessionPage({ id, tab, params }: { id: string; tab: "timeline" |
 
   const { session: s, files } = detail.data;
   const events = evs.data.events;
+  const report: ClaimReport = claimReport.data ?? { claims: [], counts: { supported: 0, contradicted: 0, unverified: 0 } };
   const flagged = events.filter((e) => e.risk_level !== "none").length;
   const unpriced = JSON.parse(s.unpriced_models) as string[];
   const base = `/session/${encodeURIComponent(id)}`;
@@ -62,7 +84,7 @@ export function SessionPage({ id, tab, params }: { id: string; tab: "timeline" |
             {copied || "Copy receipt"}
           </Button>
         </div>
-        <div className="mt-4 grid grid-cols-3 gap-x-6 gap-y-3 pl-10 md:grid-cols-6">
+        <div className="mt-4 grid grid-cols-3 gap-x-6 gap-y-3 pl-10 md:grid-cols-7">
           <Stat label="Duration" value={fmtDuration(s.started_at, s.ended_at)} />
           <Stat
             label="Tokens in / out"
@@ -79,11 +101,27 @@ export function SessionPage({ id, tab, params }: { id: string; tab: "timeline" |
           <Stat label="Files touched" value={files.length} />
           <Stat label="Events" value={events.length} />
           <Stat label="Risks" value={<span className="flex items-center gap-2">{flagged} <RiskBadge level={s.max_risk} /></span>} />
+          <Stat
+            label="Claims"
+            value={
+              report.claims.length ? (
+                <a href={`#${base}/claims`} className="flex items-center gap-1.5 hover:opacity-80">
+                  {VERDICT_ORDER.filter((v) => report.counts[v]).map((v) => (
+                    <VerdictBadge key={v} verdict={v} label={String(report.counts[v])} title={`${report.counts[v]} ${v}`} />
+                  ))}
+                </a>
+              ) : (
+                "—"
+              )
+            }
+            hint="What the agent said (tests pass, build succeeds, fixed) checked against the commands it ran"
+          />
         </div>
         <nav className="mt-3 flex gap-1 pl-8" aria-label="Session views">
           {[
             { href: `#${base}`, label: "Timeline", on: tab === "timeline" },
             { href: `#${base}/files`, label: `Files`, count: files.length, on: tab === "files" },
+            { href: `#${base}/claims`, label: `Claims`, count: report.claims.length, on: tab === "claims" },
           ].map((t) => (
             <a
               key={t.label}
@@ -100,7 +138,9 @@ export function SessionPage({ id, tab, params }: { id: string; tab: "timeline" |
       </div>
       <div className="min-h-0 flex-1">
         {tab === "timeline" ? (
-          <Timeline events={events} projectPath={s.project_path} params={params} base={base} />
+          <Timeline events={events} claims={report.claims} projectPath={s.project_path} params={params} base={base} />
+        ) : tab === "claims" ? (
+          <ClaimsTab report={report} loading={!claimReport.data && !claimReport.error} error={claimReport.error} projectPath={s.project_path} base={base} />
         ) : (
           <FilesTab files={files} events={events} projectPath={s.project_path} />
         )}
@@ -151,9 +191,14 @@ function Tape({ events, selectedSeq, onSelect }: { events: NormalizedEvent[]; se
   );
 }
 
-function Timeline({ events, projectPath, params, base }: {
-  events: NormalizedEvent[]; projectPath: string | null; params: URLSearchParams; base: string;
+function Timeline({ events, claims, projectPath, params, base }: {
+  events: NormalizedEvent[]; claims: Claim[]; projectPath: string | null; params: URLSearchParams; base: string;
 }) {
+  const claimsBySeq = useMemo(() => {
+    const m = new Map<number, Claim[]>();
+    for (const c of claims) m.set(c.seq, [...(m.get(c.seq) ?? []), c]);
+    return m;
+  }, [claims]);
   const [showThinking, setShowThinking] = useState(false);
   const [showMeta, setShowMeta] = useState(false);
   const [playing, setPlaying] = useState(false);
@@ -267,14 +312,79 @@ function Timeline({ events, projectPath, params, base }: {
                   </span>
                   {e.payload.is_error === true && <Icon.X className="size-3.5 shrink-0 text-risk-high" aria-label="failed" />}
                   {e.risk_level !== "none" && <RiskBadge level={e.risk_level} title={e.risk_rules.join(", ")} />}
+                  {claimsBySeq.has(e.seq) && (
+                    <VerdictBadge
+                      verdict={worst(claimsBySeq.get(e.seq)!)}
+                      label="claim"
+                      title={claimsBySeq.get(e.seq)!.map((c) => `${c.kind}: ${c.verdict}`).join(", ")}
+                    />
+                  )}
                 </div>
               );
             })}
           </div>
         </div>
         <div className="min-w-0 flex-1 overflow-auto bg-surface">
+          {selected && claimsBySeq.has(selected.seq) && (
+            <div className="space-y-2 border-b border-line p-4">
+              {claimsBySeq.get(selected.seq)!.map((c) => <ClaimCard key={c.kind} claim={c} projectPath={projectPath} base={base} />)}
+            </div>
+          )}
           {selected ? <EventDetail event={selected} projectPath={projectPath} /> : <EmptyState title="No events" />}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function ClaimCard({ claim: c, projectPath, base }: { claim: Claim; projectPath: string | null; base: string }) {
+  return (
+    <div className="rounded-control border border-line bg-bg px-3 py-2.5 text-sm">
+      <div className="flex items-center gap-2">
+        <VerdictBadge verdict={c.verdict} />
+        <span className="label">{c.kind} claim</span>
+        <a className="num ml-auto font-mono text-2xs text-muted hover:text-accent" href={`#${base}?e=${c.seq}`}>#{c.seq} · {fmtTime(c.ts)}</a>
+      </div>
+      <p className="mt-1.5 text-fg">“{c.text}”</p>
+      <p className="mt-1 text-xs text-fg-2">{c.reason}</p>
+      {c.evidence && (
+        <a href={`#${base}?e=${c.evidence.seq}`} className="mt-2 flex items-center gap-2 rounded-control bg-sunken px-2 py-1 font-mono text-xs hover:bg-raised">
+          <span className="num shrink-0 text-muted">#{c.evidence.seq}</span>
+          <span className="min-w-0 flex-1 truncate" title={c.evidence.command}>$ {c.evidence.command.split("\n")[0]}</span>
+          {c.evidence.outcome === "fail" && <Icon.X className="size-3.5 shrink-0 text-risk-high" aria-label="failed" />}
+          {c.evidence.outcome === "pass" && <Icon.Check className="size-3.5 shrink-0 text-ok" aria-label="passed" />}
+        </a>
+      )}
+      {!!c.changed_files?.length && (
+        <div className="mt-1.5 truncate font-mono text-2xs text-muted" title={c.changed_files.join("\n")}>
+          changed since: {c.changed_files.map((p) => relPath(p, projectPath)).join(", ")}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ClaimsTab({ report, loading, error, projectPath, base }: {
+  report: ClaimReport; loading: boolean; error: unknown; projectPath: string | null; base: string;
+}) {
+  if (error) return <ErrorBox error={error} />;
+  if (loading) return <Loading />;
+  if (!report.claims.length) {
+    return (
+      <EmptyState icon={<Icon.Check />} title="No checkable claims">
+        The agent never said things like “tests pass”, “the build succeeds”, “lint is clean” or “fixed” in this session.
+      </EmptyState>
+    );
+  }
+  const sorted = [...report.claims].sort((a, b) => VERDICT_ORDER.indexOf(a.verdict) - VERDICT_ORDER.indexOf(b.verdict) || a.seq - b.seq);
+  return (
+    <div className="h-full overflow-auto bg-surface">
+      <div className="mx-auto max-w-3xl space-y-3 p-5">
+        <p className="text-xs text-muted">
+          Success claims in the agent’s messages, each checked against the last matching command it ran before saying so.
+          Claims are found by pattern matching: open the evidence before acting on a verdict.
+        </p>
+        {sorted.map((c) => <ClaimCard key={`${c.seq}:${c.kind}`} claim={c} projectPath={projectPath} base={base} />)}
       </div>
     </div>
   );

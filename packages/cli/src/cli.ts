@@ -9,6 +9,8 @@ import {
   ADAPTERS,
   AGENT_LABELS,
   buildReceipt,
+  checkClaims,
+  claimSummary,
   COST_LABEL,
   defaultDbPath,
   listRisks,
@@ -45,6 +47,7 @@ import { newToken, startServer } from "./server.js";
 
 
 export const VERSION = "0.1.0";
+const CLAIM_MARK = { supported: "✓", contradicted: "✗", unverified: "?" } as const;
 const DEFAULT_PORT = 4317;
 
 /** Built web UI: copied next to the bundle by scripts/build.mjs, else the workspace's web package. */
@@ -330,6 +333,12 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
       const files = fileTouches(d, id);
       const mask = (t: string) => (opts.reveal ? t : maskSecrets(t));
       const flagged = events.filter((e) => e.risk_level !== "none").length;
+      const { claims, counts } = checkClaims(events);
+      const claimMark = new Map<number, string>();
+      for (const c of claims) {
+        const mark = `${CLAIM_MARK[c.verdict]} ${c.kind} claim ${c.verdict}`;
+        claimMark.set(c.seq, claimMark.has(c.seq) ? `${claimMark.get(c.seq)}, ${mark}` : mark);
+      }
       const unpriced = JSON.parse(s.unpriced_models) as string[];
       io.out(mask(s.title));
       io.out(
@@ -342,6 +351,7 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
           `est. cost: ${fmtCost(s.est_cost_usd)} (${COST_LABEL.toLowerCase()})` +
             (unpriced.length ? ` · no price for ${unpriced.join(", ")}` : ""),
           `risk: ${s.max_risk}${flagged ? ` (${flagged} flagged events)` : ""}`,
+          `claims: ${claimSummary(counts)}${claims.length ? ` (afteraction claims ${s.id.replace(/^[a-z_]+:/, "").slice(0, 8)} for details)` : ""}`,
           `${events.length} events · ${files.length} files touched · id ${s.id}`,
         ].join("\n"),
       );
@@ -350,8 +360,33 @@ export function buildProgram(io: Io = defaultIo, state: CliState = {}): Command 
         const nested = e.payload.subagent_id && e.kind !== "subagent_end" ? "  ↳ " : "";
         const failed = e.payload.is_error === true ? " ✗" : "";
         const risk = e.risk_level !== "none" ? `  ⚠ ${e.risk_level}: ${e.risk_rules.join(", ")}` : "";
-        io.out(`${String(e.seq).padStart(4)}  ${fmtTime(e.ts)}  ${e.kind.padEnd(17)} ${nested}${mask(truncate(e.summary, 100))}${failed}${risk}`);
+        const claim = claimMark.has(e.seq) ? `  ${claimMark.get(e.seq)}` : "";
+        io.out(`${String(e.seq).padStart(4)}  ${fmtTime(e.ts)}  ${e.kind.padEnd(17)} ${nested}${mask(truncate(e.summary, 100))}${failed}${risk}${claim}`);
       }
+    });
+
+  program
+    .command("claims")
+    .description("check what the agent said (\"tests pass\", \"build succeeds\", \"fixed\") against the commands it ran")
+    .argument("<session-id>", "full id, uuid, a unique prefix, or \"latest\"")
+    .option("--json", "print JSON (secrets masked unless --reveal)")
+    .option("--reveal", "show secrets instead of masking them")
+    .action((query: string, opts: { json?: boolean; reveal?: boolean }, cmd: Command) => {
+      const d = openFor(cmd);
+      const id = resolveSession(d, query);
+      if (!id) throw new CliError(`No single session matches "${query}". Use "afteraction list" to see ids.`);
+      const report = checkClaims(getEvents(d, id));
+      if (opts.json) return io.out(JSON.stringify(opts.reveal ? report : maskDeep(report), null, 2));
+      if (!report.claims.length) return io.out("No checkable claims (tests pass, build succeeds, lint clean, fixed …) in this session.");
+      const mask = (t: string) => (opts.reveal ? t : maskSecrets(t));
+      for (const c of report.claims) {
+        io.out(`${CLAIM_MARK[c.verdict]} ${c.verdict.toUpperCase().padEnd(12)} ${c.kind.padEnd(9)} #${c.seq}  ${fmtTime(c.ts)}  "${mask(truncate(c.text, 100))}"`);
+        io.out(`    ${c.reason}`);
+        if (c.evidence) io.out(`    #${c.evidence.seq}  $ ${mask(truncate(c.evidence.command.split("\n")[0]!, 100))}`);
+        if (c.changed_files?.length) io.out(`    changed since: ${c.changed_files.slice(0, 5).map((f) => mask(baseName(f))).join(", ")}${c.changed_files.length > 5 ? " …" : ""}`);
+      }
+      io.out("");
+      io.out(`${claimSummary(report.counts)}. Claims are found by pattern matching: check the evidence before acting on it.`);
     });
 
   program

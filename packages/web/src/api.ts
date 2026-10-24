@@ -1,7 +1,7 @@
 // Typed fetch helpers for the local afteraction API.
-import type { CostSummary, FileTouch, NormalizedEvent, RiskRow, SessionRow } from "@afteraction/core";
+import type { Claim, ClaimReport, ClaimVerdict, CostSummary, FileTouch, NormalizedEvent, RiskRow, SessionRow } from "@afteraction/core";
 
-export type { CostSummary, FileTouch, NormalizedEvent, RiskRow, SessionRow };
+export type { Claim, ClaimReport, ClaimVerdict, CostSummary, FileTouch, NormalizedEvent, RiskRow, SessionRow };
 
 export interface Meta {
   version: string;
@@ -42,6 +42,7 @@ export const api = {
   events: (id: string) => get<{ events: NormalizedEvent[] }>(`/api/sessions/${enc(id)}/events`),
   event: (id: string, opts: { reveal?: boolean; raw?: boolean }) =>
     get<{ event: NormalizedEvent }>(`/api/events/${enc(id)}${qs({ reveal: opts.reveal ? "1" : undefined, raw: opts.raw ? "1" : undefined })}`),
+  claims: (id: string) => get<ClaimReport>(`/api/sessions/${enc(id)}/claims`),
   receipt: async (id: string) => {
     const res = await fetch(`/api/sessions/${enc(id)}/receipt`);
     if (!res.ok) throw new Error(`${res.status}`);

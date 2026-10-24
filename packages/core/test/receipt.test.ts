@@ -149,3 +149,30 @@ describe("redactText", () => {
     expect(redactText("cd /c/Users/bob/app", "/home/bob")).toBe("cd ~/app");
   });
 });
+
+describe("receipt claims vs evidence", () => {
+  const say = (text: string) => ev("assistant_message", { text });
+  it("lists claims most doubtful first, with the command that decided them", () => {
+    const md = buildReceipt(session, [
+      ev("shell_command", { command: "npm test", exit_code: 1, stdout_excerpt: "Tests  2 failed | 7 passed (9)" }),
+      say("All 9 tests pass."),
+      ev("shell_command", { command: "npm run build", exit_code: 0 }),
+      say("The build succeeds."),
+      say("Lint is clean."),
+    ], { version: "0.1.0", homeDir: HOME });
+    expect(md).toContain("**🔎 Claims vs evidence (3):** 1 contradicted · 1 unverified · 1 supported\n" +
+      "- ❌ contradicted · tests · `All 9 tests pass.` — The last test run before this claim failed (exited 1, 2 failed). · ran `npm test`\n" +
+      "- ❔ unverified · lint · `Lint is clean.` — No lint command was run in this session before the claim.\n" +
+      "- ✅ supported · build · `The build succeeds.` — The last build run before this claim passed (exited 0). · ran `npm run build`");
+  });
+
+  it("keeps changed file names in code spans and leaves the section out when there are no claims", () => {
+    const md = buildReceipt(session, [
+      ev("shell_command", { command: "npm test", exit_code: 0 }),
+      ev("file_edit", { path: `${PROJECT}\\src\\[x](https://evil.example).ts`, lines_added: 1, lines_removed: 0 }),
+      say("Tests pass."),
+    ], { version: "0.1.0", homeDir: HOME });
+    expect(md).toContain("· changed since: `src/[x](https://evil.example).ts`");
+    expect(buildReceipt(session, events, { version: "0.1.0", homeDir: HOME })).not.toContain("Claims vs evidence");
+  });
+});

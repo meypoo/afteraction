@@ -119,6 +119,27 @@ Rules are pure functions over events, defined in one file, each with: `id`, `sev
 
 Session `max_risk` = highest event severity. False positives are acceptable at `low`; every `high`/`critical` rule needs positive **and** negative test cases.
 
+## 6a. Claims vs evidence
+
+Agents often end with "all tests pass" or "fixed" without having run anything, or after a run that failed.
+Afteraction finds such success claims in `assistant_message` text and checks each against the commands the agent ran
+**before** saying it. It works on normalized events only (`shell_command` with `command`, `exit_code`, `is_error`,
+output excerpts; `file_write`/`file_edit`), so every adapter gets it. Computed on read, not stored.
+
+- **Claim kinds:** `tests` ("tests pass", "9/9 passed", "all 12 tests pass"), `build` ("build succeeds", "compiles
+  cleanly"), `typecheck` ("tsc is clean", "no type errors"), `lint` ("lint is clean", "eslint passes"), `fixed`
+  ("I've fixed…", "Fixed the…"). Plans, conditions, questions, negations, fenced code and quotes are skipped.
+- **Evidence:** shell commands classified by what they check (npm/pnpm/yarn/bun scripts, vitest, jest, pytest, go,
+  cargo, tsc, eslint, ruff, make, gradle, …). Outcome from the exit code when it is the check's own (not hidden by
+  `| tail`, `|| true` or a later `;` command), else from test-runner summaries in the output; otherwise unknown.
+- **Verdicts:** `contradicted` — the last decisive matching run before the claim failed, or reported fewer passing
+  tests than claimed. `supported` — it passed and no code changed since. `unverified` — no matching run, an unreadable
+  result, the check ran only after the claim, or code (not docs) changed after the last run. `fixed` claims accept any
+  test/build/typecheck/lint run.
+- Shown in: `afteraction claims <id>`, a summary line and per-message marks in `show`, a Claims tab, stat and
+  timeline badges in the web UI (`/api/sessions/:id/claims`), a claim marker and `c`/`C` jumps in the TUI, and a
+  "Claims vs evidence" section in the receipt (only when there are claims).
+
 ## 7. Cost estimation
 - Prices stored in `prices.json` (per model: input, output, cache read, cache write per 1M tokens), versioned in repo with a `last_updated` date shown in the UI.
 - Unknown model → cost shown as "—" with a tooltip, never guessed.
@@ -134,6 +155,7 @@ afteraction list [--since 7d] [--project <path>] [--risk high]
 afteraction show <session-id>            # terminal timeline
 afteraction tui [session-id]             # full-screen terminal browser (Ink): session list, timeline, detail
 afteraction receipt <session-id> [-o file.md]
+afteraction claims <session-id>          # agent's success claims checked against the commands it ran (§6a)
 afteraction risks [--since 7d]           # all flagged events
 afteraction doctor                       # show discovered sources, counts, parse warnings
 afteraction --version / --help
@@ -169,6 +191,9 @@ Design: clean, dense, dark-mode default with light mode; works at 1280px+ (mobil
 **⚠️ Risk flags (2):**
 - high · secret-file-read · read `.env.local`
 - low · package-install · `npm i stripe`
+**🔎 Claims vs evidence (2):** 1 contradicted · 1 supported
+- ❌ contradicted · tests · `All 9 tests pass.` — The last test run before this claim failed (exited 1, 2 failed). · ran `npm test`
+- ✅ supported · build · `The build succeeds.` — The last build run before this claim passed (exited 0). · ran `npm run build`
 
 <sub>Generated locally by afteraction vX.Y — transcript not uploaded.</sub>
 ```

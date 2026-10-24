@@ -5,6 +5,7 @@ export * from "./format.js";
 export * from "./risk.js";
 export * from "./cost.js";
 export * from "./receipt.js";
+export * from "./claims.js";
 export { claudeCodeAdapter, defaultClaudeRoot } from "./adapters/claude-code.js";
 export { codexAdapter, defaultCodexRoot, parseApplyPatch } from "./adapters/codex.js";
 export { antigravityAdapter, defaultAntigravityRoot, readAntigravitySummaries } from "./adapters/antigravity.js";

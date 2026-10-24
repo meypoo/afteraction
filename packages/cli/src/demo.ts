@@ -362,7 +362,12 @@ export function demoSessions(now = Date.now()) {
         prompt(c, "Add a dark mode toggle with a ThemeProvider.", 0);
         write(c, "src/theme/ThemeProvider.tsx", THEME_TSX);
         bash(c, "npx tsc --noEmit", "", { took: 7 });
-        say(c, "Added ThemeProvider and a useTheme() hook. Wrap the app in <ThemeProvider> and call toggle() from a settings switch.");
+        bash(c, "npx jest src/theme", "", {
+          exit: 1,
+          stderr: " FAIL  src/theme/ThemeProvider.test.tsx\n  ● ThemeProvider › remembers the choice after a reload\n\nTests:       1 failed, 8 passed, 9 total",
+          took: 5,
+        });
+        say(c, "Added ThemeProvider and a useTheme() hook. tsc is clean and all 9 tests pass. Wrap the app in <ThemeProvider> and call toggle() from a settings switch.");
       }),
   ];
 }

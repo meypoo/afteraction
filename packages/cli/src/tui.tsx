@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   AGENT_LABELS,
   baseName,
+  checkClaims,
   COST_LABEL,
   fmtDateTime,
   fmtDuration,
@@ -16,6 +17,8 @@ import {
   RULES,
   safeTerminalDeep,
   truncate,
+  type Claim,
+  type ClaimVerdict,
   type NormalizedEvent,
   type RiskLevel,
   type SessionRow,
@@ -33,6 +36,13 @@ export const COLOR = {
 };
 
 const RISK_COLOR: Record<RiskLevel, string> = { none: COLOR.muted, low: "#8ea6c8", medium: "#e2b34d", high: "#f0706a", critical: "#e5484d" };
+
+const VERDICT: Record<ClaimVerdict, { mark: string; color: string }> = {
+  contradicted: { mark: "✗", color: RISK_COLOR.high },
+  unverified: { mark: "?", color: RISK_COLOR.medium },
+  supported: { mark: "✓", color: COLOR.ok },
+};
+const VERDICT_ORDER: ClaimVerdict[] = ["contradicted", "unverified", "supported"];
 
 const KIND: Record<string, { label: string; color: string }> = {
   user_message: { label: "Prompt", color: COLOR.accent },
@@ -236,7 +246,7 @@ export function wrap(text: string, width: number): string[] {
 }
 
 /** The detail pane for one event as plain coloured lines, so it can scroll. */
-export function detailLines(e: NormalizedEvent, opts: { width: number; reveal: boolean; project: string | null }): Line[] {
+export function detailLines(e: NormalizedEvent, opts: { width: number; reveal: boolean; project: string | null; claims?: Claim[] }): Line[] {
   const m = (t: string) => (opts.reveal ? t : maskSecrets(t));
   const w = Math.max(10, opts.width);
   const lines: Line[] = [];
@@ -261,6 +271,12 @@ export function detailLines(e: NormalizedEvent, opts: { width: number; reveal: b
   for (const id of e.risk_rules) {
     const r = RULES.find((x) => x.id === id);
     add(`${(r?.severity ?? e.risk_level).toUpperCase()}  ${id}${r ? ` · ${r.description}` : ""}`, RISK_COLOR[r?.severity ?? e.risk_level]);
+  }
+  for (const c of opts.claims ?? []) {
+    const v = VERDICT[c.verdict];
+    add(`${v.mark} ${c.verdict.toUpperCase()} ${c.kind} claim · ${c.reason}`, v.color);
+    if (c.evidence) add(`  #${c.evidence.seq}  $ ${c.evidence.command.split(/\r?\n/)[0]}`, COLOR.fg2);
+    if (c.changed_files?.length) add(`  changed since: ${c.changed_files.map((f) => relPath(f, opts.project)).join(", ")}`, COLOR.muted);
   }
   gap();
 
@@ -406,13 +422,25 @@ function SessionView({ session, all, onBack }: { session: SessionRow; all: Norma
   }, [events, all, selId]);
   const event = events[sel];
 
+  const claims = useMemo(() => {
+    const m = new Map<number, Claim[]>();
+    for (const c of checkClaims(all).claims) m.set(c.seq, [...(m.get(c.seq) ?? []), c]);
+    return m;
+  }, [all]);
+  const claimCounts = useMemo(() => {
+    const n: Record<ClaimVerdict, number> = { contradicted: 0, unverified: 0, supported: 0 };
+    for (const list of claims.values()) for (const c of list) n[c.verdict]++;
+    return n;
+  }, [claims]);
+  const worstVerdict = (seq: number) => VERDICT_ORDER.find((v) => claims.get(seq)?.some((c) => c.verdict === v));
+
   const inner = cols - 2;
   const avail = Math.max(6, rows - 1 - 6);
   const listH = Math.max(3, Math.floor(avail * 0.45));
   const detailH = Math.max(2, avail - listH);
   const lines = useMemo(
-    () => (event ? detailLines(event, { width: inner, reveal, project: session.project_path }) : []),
-    [event, inner, reveal, session.project_path],
+    () => (event ? detailLines(event, { width: inner, reveal, project: session.project_path, claims: claims.get(event.seq) }) : []),
+    [event, inner, reveal, session.project_path, claims],
   );
   const maxScroll = Math.max(0, lines.length - detailH);
 
@@ -426,6 +454,11 @@ function SessionView({ session, all, onBack }: { session: SessionRow; all: Norma
       if (events[i]!.risk_level !== "none") return select(i);
     }
   };
+  const jumpClaim = (dir: 1 | -1) => {
+    for (let i = sel + dir; i >= 0 && i < events.length; i += dir) {
+      if (claims.has(events[i]!.seq)) return select(i);
+    }
+  };
 
   useInput((input, key) => {
     if (input === "q") return exit();
@@ -434,6 +467,8 @@ function SessionView({ session, all, onBack }: { session: SessionRow; all: Norma
     if (input === "s") return setReveal((v) => !v);
     if (input === "r") return jumpRisk(1);
     if (input === "R") return jumpRisk(-1);
+    if (input === "c") return jumpClaim(1);
+    if (input === "C") return jumpClaim(-1);
     if (key.tab) return setFocus((f) => (f === "timeline" ? "detail" : "timeline"));
     if (focus === "detail") {
       if (key.escape || key.leftArrow) setFocus("timeline");
@@ -476,6 +511,11 @@ function SessionView({ session, all, onBack }: { session: SessionRow; all: Norma
           {" · "}
         </Text>
         <Text color={flagged ? RISK_COLOR[session.max_risk] : COLOR.muted}>{flagged ? `${flagged} flagged` : "no risks"}</Text>
+        {VERDICT_ORDER.filter((v) => claimCounts[v]).map((v) => (
+          <Text key={v} color={VERDICT[v].color}>
+            {` · ${claimCounts[v]} ${v}`}
+          </Text>
+        ))}
               </Text>
       <Tape events={events} sel={sel} width={inner} />
       <Box flexDirection="column" height={listH}>
@@ -486,7 +526,9 @@ function SessionView({ session, all, onBack }: { session: SessionRow; all: Norma
           const nested = e.payload.subagent_id && e.kind !== "subagent_end" ? "↳ " : "";
           const failed = e.payload.is_error === true ? " ✗" : "";
           const badge = e.risk_level !== "none" ? ` ${e.risk_level}` : "";
-          const sumW = Math.max(5, inner - 1 - 5 - 10 - 11 - nested.length - failed.length - badge.length);
+          const verdict = worstVerdict(e.seq);
+          const claimBadge = verdict ? ` ${VERDICT[verdict].mark} claim` : "";
+          const sumW = Math.max(5, inner - 1 - 5 - 10 - 11 - nested.length - failed.length - badge.length - claimBadge.length);
           const summary = truncate((reveal ? e.summary : maskSecrets(e.summary)).replace(/\s+/g, " "), sumW);
           return (
             <Text key={e.id} wrap="truncate" backgroundColor={on ? COLOR.raised : undefined}>
@@ -504,6 +546,7 @@ function SessionView({ session, all, onBack }: { session: SessionRow; all: Norma
               <Text color={RISK_COLOR[e.risk_level]} bold>
                 {badge}
               </Text>
+              {verdict && <Text color={VERDICT[verdict].color}>{claimBadge}</Text>}
             </Text>
           );
         })}
@@ -525,6 +568,7 @@ function SessionView({ session, all, onBack }: { session: SessionRow; all: Norma
             : [
                 ["j/k", "move"],
                 ["r/R", "next/prev risk"],
+                ["c/C", "next/prev claim"],
                 ["enter", "detail"],
                 ["t", showThinking ? "hide thinking" : "thinking"],
                 ["i", showMeta ? "hide injected" : "injected"],
