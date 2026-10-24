@@ -253,3 +253,59 @@ describe("database file", () => {
     expect(statSync(path.join(tmp, "db", "flightrec.db")).mode & 0o777).toBe(0o600);
   });
 });
+
+describe("data integrity", () => {
+  it("keeps a copied log with the same session id as a second session instead of deleting the first", async () => {
+    cpSync(path.join(tmp, "projects", "C--Users-USER-projects-demo-app"), path.join(tmp, "projects", "C--Users-USER-projects-demo-copy"), { recursive: true });
+    await ingest(db, { sources: sources() });
+    const ids = listSessions(db).map((s) => s.id).sort();
+    expect(ids).toHaveLength(2);
+    expect(ids[0]).toBe(DEMO_ID);
+    expect(ids[1]).toMatch(new RegExp(`^${DEMO_ID}~[0-9a-f]{8}$`));
+    expect(getEvents(db, ids[1]!)[0]!.id).toBe(`${ids[1]}:0`);
+    // Unchanged files are skipped on the next run and both stay.
+    const again = await ingest(db, { sources: sources() });
+    expect(again.filesSkipped).toBe(2);
+    expect(listSessions(db)).toHaveLength(2);
+  });
+
+  it("lets a moved log replace its old copy and forgets the old file's ingest state", async () => {
+    await ingest(db, { sources: sources() });
+    const moved = path.join(tmp, "projects", "C--Users-USER-projects-moved");
+    cpSync(path.dirname(demoFile()), moved, { recursive: true });
+    rmSync(path.dirname(demoFile()), { recursive: true, force: true });
+    rmSync(demoFile(), { force: true });
+    await ingest(db, { sources: sources() });
+    expect(listSessions(db).map((s) => s.id)).toEqual([DEMO_ID]);
+    const files = db.prepare("SELECT source_file FROM ingest_files").all() as { source_file: string }[];
+    expect(files.map((f) => path.dirname(f.source_file))).toEqual([moved]);
+  });
+
+  it("stores timestamps as UTC so offsets sort, filter and bucket correctly", async () => {
+    const sid = "11111111-2222-4333-8444-555555555555";
+    appendFileSync(demoFile(), [
+      { type: "assistant", uuid: "00000000-0000-4000-8000-999999999991", timestamp: "2026-01-17T01:30:00+02:00", sessionId: sid,
+        message: { id: "msg_tz", model: "claude-opus-5-5", role: "assistant", content: [{ type: "tool_use", id: "toolu_tz", name: "Bash", input: { command: "date" } }] } },
+      { type: "user", uuid: "00000000-0000-4000-8000-999999999992", timestamp: "2026-01-16T23:30:01Z", sessionId: sid,
+        message: { role: "user", content: [{ type: "tool_result", tool_use_id: "toolu_tz", content: "ok" }] } },
+    ].map((l) => JSON.stringify(l)).join("\n") + "\n");
+    await ingest(db, { sources: sources() });
+    const tz = getEvents(db, DEMO_ID).find((e) => e.kind === "shell_command" && e.payload.command === "date")!;
+    expect(tz.ts).toBe("2026-01-16T23:30:00.000Z");
+    expect(getEvents(db, DEMO_ID).every((e) => e.ts === null || /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(e.ts))).toBe(true);
+    expect(listSessions(db)[0]!.ended_at).toBe("2026-01-16T23:30:00.000Z"); // not the raw "2026-01-17T01:30:00+02:00"
+  });
+
+  it("keeps cost totals, days, projects and models consistent when since cuts through a session", async () => {
+    await ingest(db, { sources: sources() });
+    const events = getEvents(db, DEMO_ID).filter((e) => e.ts && (e.est_cost_usd ?? 0) > 0);
+    const cut = events[Math.floor(events.length / 2)]!.ts!;
+    const c = costSummary(db, { since: cut });
+    const sum = (xs: { usd: number }[]) => xs.reduce((a, x) => a + x.usd, 0);
+    expect(c.total_usd).toBeGreaterThan(0);
+    expect(c.total_usd).toBeLessThan(costSummary(db).total_usd);
+    for (const part of [c.by_day, c.by_project, c.by_model, c.top_sessions.map((s) => ({ usd: s.est_cost_usd ?? 0 }))]) {
+      expect(sum(part)).toBeCloseTo(c.total_usd, 9);
+    }
+  });
+});

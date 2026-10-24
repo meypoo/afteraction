@@ -115,8 +115,10 @@ export function isTempPath(p: string): boolean {
     /^\/(\$tmpdir|\$\{tmpdir\}|%temp%|%tmp%|\$env:temp|\$env:tmp)(\/|$)/.test(n);
 }
 
-/** The agent's own config/memory directory (~/.claude). */
-export const isAgentStatePath = (p: string) => /(^|[\\/])\.claude([\\/]|$)/.test(p);
+/** An agent's own config/memory directory (~/.claude, ~/.codex, ~/.gemini, OpenCode's data and config dirs, …). */
+export const isAgentStatePath = (p: string) =>
+  /(^|[\\/])\.(claude|codex|gemini|cursor|continue|aider)([\\/]|$)/.test(p) ||
+  /[\\/]\.(local[\\/]share|config)[\\/]opencode([\\/]|$)/.test(p);
 
 const isAbsolute = (p: string) => p.startsWith("/") || /^[a-zA-Z]:[\\/]/.test(p) || p.startsWith("\\\\") || p.startsWith("~");
 
@@ -178,6 +180,8 @@ const PIPE_TO_SHELL = [
   new RegExp(`\\b(${FETCHERS})\\b[^;&\\n]*\\|\\s*(sudo\\s+)?(${SHELLS})\\b(?!\\s+-[ce]\\b)`, "i"),
   /\b(bash|sh|zsh)\s+<\(\s*(curl|wget)\b/i,
   /\b(bash|sh|zsh)\s+-c\s+["']?\$\(\s*(curl|wget)\b/i,
+  /\b(eval|source)\s+["']?\$\(\s*(curl|wget)\b/i, // eval "$(curl …)"
+  /(^|[\s;&|(])(source|\.)\s+<\(\s*(curl|wget)\b/i, // source <(curl …)
   /\b(iex|invoke-expression)\s*\(+\s*(iwr|irm|invoke-webrequest|invoke-restmethod|new-object\s+net\.webclient)\b/i,
 ];
 
@@ -205,7 +209,12 @@ function isSecretPath(p: string): boolean {
   return false;
 }
 
-const FILE_READERS = new Set(["cat", "less", "more", "head", "tail", "bat", "type", "get-content", "gc", "source"]);
+const FILE_READERS = new Set([
+  "cat", "less", "more", "head", "tail", "bat", "type", "get-content", "gc", "source", "nl", "tac", "xxd", "od", "strings", "base64",
+  "grep", "egrep", "fgrep", "rg", "sed", "awk", "gawk", "select-string", "sls",
+]);
+/** Copiers read every argument but the last (the destination): `cp .env.example .env` reads no secret. */
+const FILE_COPIERS = new Set(["cp", "scp", "rsync", "copy-item", "copy", "cpi"]);
 
 export const SECRET_PATTERNS: { name: string; re: RegExp }[] = [
   { name: "AWS access key", re: /\b(AKIA|ASIA)[0-9A-Z]{16}\b/g },
@@ -306,10 +315,12 @@ export const RULES: RiskRule[] = [
     match: (e) => {
       if (e.kind === "file_read") return isSecretPath(str(e.payload.path));
       return segments(command(e)).some((s) => {
-        if (!FILE_READERS.has(s.program)) return false;
+        const copier = FILE_COPIERS.has(s.program);
+        if (!FILE_READERS.has(s.program) && !copier) return false;
         const redirect = s.args.findIndex((a) => /^\d?>/.test(a));
-        const args = redirect >= 0 ? s.args.slice(0, redirect) : s.args;
-        return args.some((a) => !a.startsWith("-") && isSecretPath(a));
+        let args = (redirect >= 0 ? s.args.slice(0, redirect) : s.args).filter((a) => !a.startsWith("-"));
+        if (copier) args = args.slice(0, -1);
+        return args.some((a) => isSecretPath(a));
       });
     },
   },
@@ -357,7 +368,7 @@ export const RULES: RiskRule[] = [
       segments(command(e)).some((s) => {
         const la = lower(s.args);
         let sends = false;
-        if (s.program === "curl") sends = s.args.some((a) => /^(-d|-F|-T)/.test(a) || /^--(data|form|upload-file)/.test(a));
+        if (s.program === "curl") sends = s.args.some((a) => /^(-d|-F|-T)/.test(a) || /^--(data|form|upload-file|json)/.test(a));
         else if (s.program === "wget") sends = la.some((a) => /^--(post|body)-(data|file)/.test(a));
         else if (/^(iwr|irm|invoke-webrequest|invoke-restmethod)$/.test(s.program))
           sends = la.includes("-body") || la.includes("-infile") || la.some((a, i) => a === "-method" && la[i + 1] === "post");

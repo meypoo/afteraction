@@ -1,6 +1,6 @@
 // Small helpers shared by the adapters added after Claude Code and Codex.
 import { createHash } from "node:crypto";
-import { readdir, stat } from "node:fs/promises";
+import { open, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { excerpt, type EventKind, type NormalizedEvent } from "../model.js";
 
@@ -46,17 +46,33 @@ export async function listDir(dir: string): Promise<string[]> {
   }
 }
 
-/** sha1 over the names, sizes and mtimes of the given files (missing files count too). */
+const TAIL_BYTES = 64 * 1024;
+
+/**
+ * One file's change stamp: size, nanosecond mtime and a hash of its last 64 KB, so a same-size rewrite
+ * inside one coarse mtime tick is still noticed. Missing files stamp as "missing".
+ */
+export async function fileStamp(f: string): Promise<string> {
+  try {
+    const s = await stat(f, { bigint: true });
+    const fh = await open(f, "r");
+    try {
+      const len = Number(s.size < BigInt(TAIL_BYTES) ? s.size : BigInt(TAIL_BYTES));
+      const buf = Buffer.alloc(len);
+      await fh.read(buf, 0, len, Number(s.size) - len);
+      return `${path.basename(f)}:${s.size}:${s.mtimeNs}:${createHash("sha1").update(buf).digest("hex")}`;
+    } finally {
+      await fh.close();
+    }
+  } catch {
+    return `${path.basename(f)}:missing`;
+  }
+}
+
+/** sha1 over the change stamps of the given files (missing files count too). */
 export async function statFingerprint(files: string[]): Promise<string> {
   const h = createHash("sha1");
-  for (const f of files) {
-    try {
-      const s = await stat(f);
-      h.update(`${path.basename(f)}:${s.size}:${Math.trunc(s.mtimeMs)}\n`);
-    } catch {
-      h.update(`${path.basename(f)}:missing\n`);
-    }
-  }
+  for (const f of files) h.update((await fileStamp(f)) + "\n");
   return h.digest("hex");
 }
 

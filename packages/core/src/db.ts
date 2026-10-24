@@ -1,6 +1,7 @@
 // SQLite storage (better-sqlite3) for sessions, events and ingest state.
 import Database from "better-sqlite3";
-import { chmodSync, mkdirSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { chmodSync, existsSync, mkdirSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import type { EventKind, NormalizedEvent, ParseWarning, RiskLevel, Session } from "./model.js";
@@ -11,7 +12,7 @@ export function defaultDbPath(): string {
   return path.join(os.homedir(), ".flightrec", "flightrec.db");
 }
 
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4; // 4: timestamps stored as UTC; duplicate session ids kept apart
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS sessions (
@@ -152,7 +153,8 @@ export function replaceSession(
     warnings: ParseWarning[]; unpricedModels?: string[];
   },
 ): void {
-  const { sourceFile, session, events, warnings } = args;
+  const { sourceFile, warnings } = args;
+  let { session, events } = args;
   const insertEvent = db.prepare(`INSERT INTO events
     (id, session_id, seq, ts, kind, summary, payload, raw, tokens_in, tokens_out, cache_read, cache_write, usage_extra, est_cost_usd, model, risk_level, risk_rules)
     VALUES (@id, @session_id, @seq, @ts, @kind, @summary, @payload, @raw, @tokens_in, @tokens_out, @cache_read, @cache_write, @usage_extra, @est_cost_usd, @model, @risk_level, @risk_rules)`);
@@ -160,12 +162,25 @@ export function replaceSession(
   const insertWarning = db.prepare("INSERT INTO parse_warnings (source_file, file, line, message) VALUES (?, ?, ?, ?)");
 
   db.transaction(() => {
-    const old = db.prepare("SELECT id FROM sessions WHERE source_file = ? OR id = ?").all(sourceFile, session?.id ?? "") as { id: string }[];
+    const old = db.prepare("SELECT id FROM sessions WHERE source_file = ?").all(sourceFile) as { id: string }[];
     for (const { id } of old) db.prepare("DELETE FROM search WHERE session_id = ?").run(id);
     db.prepare("DELETE FROM sessions WHERE source_file = ?").run(sourceFile);
     db.prepare("DELETE FROM parse_warnings WHERE source_file = ?").run(sourceFile);
     if (session) {
-      db.prepare("DELETE FROM sessions WHERE id = ?").run(session.id); // same session id from another file: last wins
+      // The same session id from another file. If that file is gone (Codex archiving moves rollouts), this one
+      // replaces it and the old file's ingest state goes too. If it still exists (a copied log, the same session in
+      // two checkouts), both are kept: this one gets an id suffixed with a hash of its path.
+      const other = db.prepare("SELECT source_file FROM sessions WHERE id = ?").get(session.id) as { source_file: string } | undefined;
+      if (other && existsSync(other.source_file)) {
+        const id = `${session.id}~${createHash("sha1").update(sourceFile).digest("hex").slice(0, 8)}`;
+        session = { ...session, id };
+        events = events.map((e) => ({ ...e, id: `${id}:${e.seq}`, session_id: id }));
+      } else if (other) {
+        db.prepare("DELETE FROM search WHERE session_id = ?").run(session.id);
+        db.prepare("DELETE FROM sessions WHERE id = ?").run(session.id);
+        db.prepare("DELETE FROM parse_warnings WHERE source_file = ?").run(other.source_file);
+        db.prepare("DELETE FROM ingest_files WHERE source_file = ?").run(other.source_file);
+      }
       db.prepare(`INSERT INTO sessions
         (id, source, project_path, git_branch, started_at, ended_at, model, title, total_input_tokens, total_output_tokens,
          total_cache_read_tokens, total_cache_write_tokens, est_cost_usd, max_risk, source_file, source_hash, event_count,
@@ -428,30 +443,38 @@ export interface CostSummary {
   top_sessions: SessionRow[];
 }
 
-/** Cost breakdowns from per-event estimates. Days are UTC dates of the events. */
+/**
+ * Cost breakdowns, all from the same per-event estimates so that totals, days, projects, models and top
+ * sessions add up, including when `since` cuts through a session (only its events in range count; top
+ * sessions show their in-range cost). Sessions with any unpriced model stay out of every figure and are
+ * counted in `unpriced_sessions`, so no total is a partial guess. Days are UTC dates.
+ */
 export function costSummary(db: Db, opts: { since?: string } = {}): CostSummary {
   const since = opts.since ? parseSince(opts.since) : "";
-  const evWhere = "e.est_cost_usd IS NOT NULL AND COALESCE(e.ts, '') >= @since";
   const p = { since };
+  const ts = "COALESCE(e.ts, s.started_at)";
+  const from = `FROM events e JOIN sessions s ON s.id = e.session_id
+    WHERE s.est_cost_usd IS NOT NULL AND e.est_cost_usd IS NOT NULL AND COALESCE(${ts}, '') >= @since`;
+  const total_usd = (db.prepare(`SELECT COALESCE(SUM(e.est_cost_usd), 0) AS usd ${from}`).get(p) as { usd: number }).usd;
   const by_day = db
-    .prepare(`SELECT substr(e.ts, 1, 10) AS day, SUM(e.est_cost_usd) AS usd FROM events e
-      WHERE ${evWhere} AND e.ts IS NOT NULL GROUP BY day ORDER BY day`)
+    .prepare(`SELECT substr(${ts}, 1, 10) AS day, SUM(e.est_cost_usd) AS usd ${from} AND ${ts} IS NOT NULL GROUP BY day ORDER BY day`)
     .all(p) as { day: string; usd: number }[];
   const by_model = db
     .prepare(`SELECT e.model AS model, SUM(e.est_cost_usd) AS usd,
         SUM(COALESCE(e.tokens_in,0) + COALESCE(e.tokens_out,0) + COALESCE(e.cache_read,0) + COALESCE(e.cache_write,0)) AS tokens
-      FROM events e WHERE ${evWhere} AND e.model IS NOT NULL AND e.est_cost_usd > 0 GROUP BY e.model ORDER BY usd DESC`)
+      ${from} AND e.model IS NOT NULL GROUP BY e.model HAVING usd > 0 OR tokens > 0 ORDER BY usd DESC, tokens DESC`)
     .all(p) as { model: string; usd: number; tokens: number }[];
-  const sWhere = "COALESCE(ended_at, started_at, '') >= @since";
   const by_project = db
-    .prepare(`SELECT project_path, SUM(est_cost_usd) AS usd, COUNT(*) AS sessions FROM sessions
-      WHERE ${sWhere} AND est_cost_usd IS NOT NULL GROUP BY project_path ORDER BY usd DESC`)
+    .prepare(`SELECT s.project_path AS project_path, SUM(e.est_cost_usd) AS usd, COUNT(DISTINCT s.id) AS sessions
+      ${from} GROUP BY s.project_path ORDER BY usd DESC`)
     .all(p) as { project_path: string | null; usd: number; sessions: number }[];
-  const top_sessions = db
-    .prepare(`SELECT * FROM sessions WHERE ${sWhere} AND est_cost_usd IS NOT NULL ORDER BY est_cost_usd DESC LIMIT 10`)
-    .all(p) as SessionRow[];
-  const unpriced_sessions = (db.prepare(`SELECT COUNT(*) AS n FROM sessions WHERE ${sWhere} AND est_cost_usd IS NULL`).get(p) as { n: number }).n;
-  const total_usd = by_project.reduce((a, r) => a + r.usd, 0);
+  const top = db
+    .prepare(`SELECT s.id AS id, SUM(e.est_cost_usd) AS usd ${from} GROUP BY s.id ORDER BY usd DESC LIMIT 10`)
+    .all(p) as { id: string; usd: number }[];
+  const top_sessions = top.map((t) => ({ ...getSession(db, t.id)!, est_cost_usd: t.usd }));
+  const unpriced_sessions = (
+    db.prepare("SELECT COUNT(*) AS n FROM sessions WHERE COALESCE(ended_at, started_at, '') >= @since AND est_cost_usd IS NULL").get(p) as { n: number }
+  ).n;
   return { total_usd, unpriced_sessions, by_day, by_project, by_model, top_sessions };
 }
 

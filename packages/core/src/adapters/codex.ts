@@ -1,7 +1,6 @@
 // Codex adapter (Codex CLI and Codex Desktop rollouts). Format notes: docs/log-formats.md.
 import { createReadStream } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
-import { createHash } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import readline from "node:readline";
@@ -15,6 +14,7 @@ import {
   type Session,
   type SourceAdapter,
 } from "../model.js";
+import { statFingerprint } from "./util.js";
 
 type Obj = Record<string, unknown>;
 
@@ -629,8 +629,8 @@ async function parseRollout(file: string): Promise<Parsed> {
 }
 
 export async function codexFingerprint(file: string): Promise<string> {
-  const s = await stat(file);
-  return createHash("sha1").update(`${path.basename(file)}:${s.size}:${Math.trunc(s.mtimeMs)}`).digest("hex");
+  await stat(file); // a vanished rollout is an error, not a "missing" stamp
+  return statFingerprint([file]);
 }
 
 async function walk(dir: string, depth: number, out: string[]): Promise<void> {

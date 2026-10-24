@@ -162,3 +162,28 @@ describe("opencode adapter: malformed rows", () => {
     expect(gone.warnings).toEqual([{ file: `${dbFile}#ses_missing`, line: null, message: "session not found in database" }]);
   });
 });
+
+describe("opencode adapter: write and edit tools", () => {
+  it("maps write/edit to file events and notices content changed without a time_updated bump", async () => {
+    const ENV = path.win32.join("C:\\Users\\USER", ".env");
+    const APP = path.win32.join(CWD, "src", "app.ts");
+    const dir = path.join(tmp, "opencode-writes");
+    mkdirSync(dir);
+    const file = path.join(dir, "opencode.db");
+    const db = new Database(file);
+    db.exec(readFileSync(path.join(FIXTURES, "opencode.sql"), "utf8"));
+    const part = (id: string, tool: string, input: object) =>
+      db.prepare("INSERT INTO part (id, message_id, session_id, time_created, time_updated, data) VALUES (?, 'msg_00020011', ?, 1768474800010, 1768474800010, ?)")
+        .run(id, S2, JSON.stringify({ type: "tool", tool, callID: id, state: { status: "completed", input, output: "", time: { start: 1768474800010, end: 1768474800011 } } }));
+    part("prt_00090", "write", { filePath: ENV, content: "A=1\nB=2\n" });
+    part("prt_00091", "edit", { filePath: APP, oldString: "a\nb", newString: "c" });
+    const before = await opencodeAdapter.fingerprint(`${file}#${S2}`);
+    db.prepare("UPDATE part SET data = replace(data, 'A=1', 'A=12') WHERE id = 'prt_00090'").run();
+    db.close();
+    expect(await opencodeAdapter.fingerprint(`${file}#${S2}`)).not.toBe(before);
+
+    const { events } = await collect(`${file}#${S2}`);
+    expect(events.find((e) => e.kind === "file_write")?.payload).toMatchObject({ path: ENV, lines_added: 2, content_excerpt: "A=12\nB=2\n" });
+    expect(events.find((e) => e.kind === "file_edit")?.payload).toMatchObject({ path: APP, lines_added: 1, lines_removed: 2, new_excerpt: "c" });
+  });
+});

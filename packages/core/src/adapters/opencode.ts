@@ -24,6 +24,7 @@ type Obj = Record<string, unknown>;
 const isObj = (v: unknown): v is Obj => typeof v === "object" && v !== null && !Array.isArray(v);
 const str = (v: unknown): string | undefined => (typeof v === "string" ? v : undefined);
 const num = (v: unknown): number => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+const lineCount = (s: string) => (s ? s.split("\n").length - (s.endsWith("\n") ? 1 : 0) : 0);
 
 const DB_FILE = "opencode.db";
 
@@ -109,8 +110,26 @@ function toolDraft(part: Obj, ts: string | null, model: string | null): Draft {
       const display = isObj(meta.display) ? meta.display : {};
       return draft("file_read", `Read ${p}`, { path: p, directory: display.type === "directory" ? true : undefined });
     }
-    // Only tools seen in real logs are mapped; everything else (write, edit, grep, task, …) stays a
-    // tool_call until a real session shows its input shape.
+    // write/edit inputs follow OpenCode's tool definitions (filePath, content / oldString, newString);
+    // not yet seen in a real log. Everything else (grep, task, …) stays a tool_call.
+    case "write": {
+      const p = str(input.filePath) ?? "";
+      const content = str(input.content) ?? "";
+      return draft("file_write", `Write ${p}`, {
+        path: p, content_excerpt: excerpt(content), bytes: Buffer.byteLength(content, "utf8"),
+        lines_added: lineCount(content), lines_removed: 0, is_error: status === "error",
+      });
+    }
+    case "edit": {
+      const p = str(input.filePath) ?? "";
+      const oldText = str(input.oldString) ?? "";
+      const newText = str(input.newString) ?? "";
+      return draft("file_edit", `Edit ${p}`, {
+        path: p, old_excerpt: excerpt(oldText), new_excerpt: excerpt(newText),
+        lines_added: lineCount(newText), lines_removed: lineCount(oldText),
+        replace_all: input.replaceAll === true ? true : undefined, is_error: status === "error",
+      });
+    }
     default: {
       const title = str(state.title);
       return draft("tool_call", title ? `${name}: ${oneLine(title)}` : name, {
@@ -127,13 +146,20 @@ interface Row {
   data: string;
 }
 
-/** Cheap change detector: the session's update time plus its message and part counts and latest updates. */
+/**
+ * Cheap change detector: the session's update time plus, for its messages and parts, counts, latest
+ * updates and total data length (so content rewritten without touching time_updated still shows).
+ */
 function sessionFingerprint(db: Database.Database, sessionId: string): string {
   const s = db.prepare("SELECT time_updated FROM session WHERE id = ?").get(sessionId) as { time_updated: number } | undefined;
-  const m = db.prepare("SELECT COUNT(*) AS n, MAX(time_updated) AS t FROM message WHERE session_id = ?").get(sessionId) as { n: number; t: number | null };
-  const p = db.prepare("SELECT COUNT(*) AS n, MAX(time_updated) AS t FROM part WHERE session_id = ?").get(sessionId) as { n: number; t: number | null };
+  const agg = (table: string) =>
+    db.prepare(`SELECT COUNT(*) AS n, MAX(time_updated) AS t, SUM(length(data)) AS b FROM ${table} WHERE session_id = ?`).get(sessionId) as {
+      n: number; t: number | null; b: number | null;
+    };
+  const m = agg("message");
+  const p = agg("part");
   return createHash("sha1")
-    .update(`${sessionId}:${s?.time_updated ?? "missing"}:${m.n}:${m.t}:${p.n}:${p.t}`)
+    .update(`${sessionId}:${s?.time_updated ?? "missing"}:${m.n}:${m.t}:${m.b}:${p.n}:${p.t}:${p.b}`)
     .digest("hex");
 }
 
