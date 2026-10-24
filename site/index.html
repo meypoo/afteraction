@@ -6,15 +6,16 @@
 <title>Afteraction</title>
 <meta name="description" content="The black box for your coding agent. Replay every command, file, risk, claim and dollar from Claude Code, Codex and other coding agents, 100% locally.">
 <meta property="og:title" content="Afteraction">
-<meta property="og:description" content="See exactly what your coding agent did: every command, file, risk and dollar, replayed locally.">
-<meta property="og:image" content="https://meypoo.github.io/afteraction/assets/replay.png">
+<meta property="og:description" content="See exactly what your coding agent did: every command, file, risk and dollar, and whether its claims hold up. Replayed locally.">
+<meta property="og:image" content="https://meypoo.github.io/afteraction/assets/demo-poster.jpg">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="https://meypoo.github.io/afteraction/">
 <meta name="theme-color" content="#0b0c0f">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='1.5' y='3.5' width='21' height='17' rx='4.5' fill='%23f0592a'/%3E%3Cpath d='M4.5 13h3l1.6-4.2 2.6 7.4 2.1-5.2 1.2 2H19.5' fill='none' stroke='%231a0c06' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preload" href="fonts/geist.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/geist-mono.woff2" as="font" type="font/woff2" crossorigin>
 <style>
-/* Afteraction "Instrument" tokens (dark), from packages/web/src/index.css. */
+/* Afteraction "Instrument" tokens (dark), from packages/web/src/index.css, with a marketing type and spacing scale. */
 @font-face { font-family: "Geist"; src: url("fonts/geist.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
 @font-face { font-family: "Geist Mono"; src: url("fonts/geist-mono.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
 
@@ -26,8 +27,9 @@
   --line: #22262d;
   --line-strong: #30353e;
   --fg: #e7e9ec;
-  --fg-2: #a6acb6;
-  --muted: #6f7682;
+  --fg-2: #b0b6bf;
+  --muted: #8a919c;   /* 5.9:1 on --bg, AA for small text */
+  --faint: #5c636e;   /* decoration only, never body text */
   --accent: #5cc4b5;
   --accent-fg: #06201c;
   --accent-soft: rgb(92 196 181 / 0.12);
@@ -41,147 +43,129 @@
   --high: #f0706a;
   --high-soft: rgb(240 112 106 / 0.13);
   --critical: #e5484d;
+
   --sans: "Geist", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
   --mono: "Geist Mono", ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, monospace;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
-  --wrap: 1180px;
-  --gutter: clamp(16px, 4vw, 40px);
+
+  /* type scale: five steps for words, two for data */
+  --t-display: clamp(48px, 7.4vw, 104px);
+  --t-h2: clamp(36px, 5.2vw, 72px);
+  --t-h3: clamp(22px, 2.2vw, 28px);
+  --t-body: 17px;
+  --t-small: 15px;
+  --m-13: 13px;
+  --m-12: 12px;
+
+  /* spacing */
+  --wrap: 1240px;
+  --gutter: clamp(16px, 4vw, 48px);
+  --sec-top: clamp(112px, 13vw, 184px);
+  --sec-bottom: calc(var(--sec-top) + 24px);
+  --rail: 168px;
+
   color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; overflow-x: clip; }
 body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--fg);
-  font: 400 15px/1.6 var(--sans);
+  margin: 0; background: var(--bg); color: var(--fg);
+  font: 400 var(--t-body)/1.6 var(--sans);
   font-feature-settings: "ss01", "cv11";
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
 }
-img, video { display: block; max-width: 100%; }
-a { color: inherit; text-decoration: none; }
-code, kbd, pre, .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+/* grain: breaks the flat digital black */
+body::before {
+  content: ""; position: fixed; inset: 0; z-index: 100; pointer-events: none; opacity: .045; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+img, video { display: block; max-width: 100%; height: auto; }
+a { color: inherit; }
+code, kbd, pre { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 ::selection { background: color-mix(in srgb, var(--accent) 30%, transparent); }
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
-h1, h2, h3 { text-wrap: balance; letter-spacing: -0.02em; margin: 0; font-weight: 600; }
-p { margin: 0; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+h1, h2, h3 { margin: 0; font-weight: 600; text-wrap: balance; }
+p { margin: 0; text-wrap: pretty; }
 .wrap { width: min(var(--wrap), 100% - 2 * var(--gutter)); margin-inline: auto; }
-.label { font: 500 12px/16px var(--mono); color: var(--muted); letter-spacing: 0.02em; }
+.mono { font: 500 var(--m-13)/1.5 var(--mono); }
+.muted { color: var(--muted); }
+.skip { position: absolute; left: 16px; top: -60px; z-index: 200; padding: 10px 14px; border-radius: 8px; background: var(--accent); color: var(--accent-fg); font-weight: 600; text-decoration: none; }
+.skip:focus { top: 12px; }
 
-/* ---------- Scroll tape: the page itself is a session ---------- */
-.tape-top {
-  position: fixed; inset: 0 0 auto 0; height: 3px; z-index: 60;
-  display: flex; gap: 2px; padding: 0 2px; pointer-events: none;
-}
-.tape-top i { flex: 1; background: var(--line); transition: background .2s; }
-.tape-top i.on { background: color-mix(in srgb, var(--fg) 30%, transparent); }
-.tape-top i.risk.on { background: var(--high); }
-.tape-top i.head { background: var(--accent) !important; }
+/* ---------- nav ---------- */
+.nav { position: fixed; inset: 0 0 auto 0; z-index: 50; border-bottom: 1px solid transparent; transition: background .3s, border-color .3s; }
+.nav.solid { background: rgb(11 12 15 / .78); backdrop-filter: blur(14px) saturate(1.3); border-color: var(--line); }
+.nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 16px; text-decoration: none; }
+.nav-links { display: flex; align-items: center; gap: 28px; font-size: var(--t-small); color: var(--fg-2); }
+.nav-links a { text-decoration: none; transition: color .2s; }
+.nav-links a:hover, .nav-links a.on { color: var(--fg); }
+.nav-gh { display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line-strong); color: var(--fg); transition: border-color .2s, background .2s; }
+.nav-gh:hover { background: var(--raised); border-color: #414854; }
+@media (max-width: 760px) { .nav-links .opt { display: none; } }
 
-/* ---------- Nav ---------- */
-.nav {
-  position: fixed; top: 3px; inset-inline: 0; z-index: 50;
-  transition: background .3s, border-color .3s, backdrop-filter .3s;
-  border-bottom: 1px solid transparent;
-}
-.nav.solid { background: rgb(11 12 15 / 0.72); backdrop-filter: blur(14px) saturate(1.4); border-color: var(--line); }
-.nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 56px; }
-.brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; }
-.nav-links { display: flex; align-items: center; gap: 26px; font-size: 14px; color: var(--fg-2); }
-.nav-links a:hover { color: var(--fg); }
-.btn {
-  display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px;
-  border-radius: 8px; border: 1px solid var(--line-strong); background: var(--raised);
-  color: var(--fg); font: 500 14px/1 var(--sans); cursor: pointer;
-  transition: background .15s, border-color .15s, transform .1s;
-}
-.btn:hover { background: #22262d; border-color: #3b414b; }
-.btn:active { transform: scale(0.97); }
-.btn.primary { background: var(--accent); color: var(--accent-fg); border-color: transparent; }
-.btn.primary:hover { background: #74d3c5; }
-@media (max-width: 720px) { .nav-links .hide-sm { display: none; } }
+/* ---------- the tape: the one signature motif ---------- */
+.tape { position: relative; height: 28px; display: flex; align-items: flex-end; gap: 3px; overflow: hidden; }
+.tape i { flex: none; width: 3px; height: 8px; border-radius: 1px; background: var(--line-strong); }
+.tape i.p { height: 16px; background: #454c58; }
+.tape i.l { background: var(--low); }
+.tape i.r { height: 13px; background: var(--high); }
+.tape i.h { height: 26px; background: var(--accent); }
 
-/* ---------- Hero ---------- */
-.hero { position: relative; padding: 150px 0 40px; isolation: isolate; }
-.hero::before { /* faint instrument grid */
-  content: ""; position: absolute; inset: 0; z-index: -2;
-  background-image:
-    linear-gradient(to right, rgb(255 255 255 / 0.035) 1px, transparent 1px),
-    linear-gradient(to bottom, rgb(255 255 255 / 0.035) 1px, transparent 1px);
-  background-size: 64px 64px;
-  mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, #000 30%, transparent 75%);
-}
-.hero::after { /* one soft light, like a cockpit at night */
-  content: ""; position: absolute; z-index: -1; left: 50%; top: 260px; width: min(1100px, 100%); height: 640px;
-  transform: translateX(-50%);
-  background: radial-gradient(closest-side, rgb(92 196 181 / 0.09), transparent);
-  filter: blur(20px);
-}
-.eyebrow {
-  display: inline-flex; align-items: center; gap: 10px; padding: 6px 12px 6px 8px;
-  border: 1px solid var(--line-strong); border-radius: 999px; background: rgb(18 20 24 / 0.7);
-  font: 500 12.5px/1 var(--mono); color: var(--fg-2);
-}
-.rec { width: 8px; height: 8px; border-radius: 50%; background: var(--high); box-shadow: 0 0 0 0 rgb(240 112 106 / .6); animation: rec 1.8s infinite; }
-@keyframes rec { 0% { box-shadow: 0 0 0 0 rgb(240 112 106 / .55); } 70% { box-shadow: 0 0 0 9px rgb(240 112 106 / 0); } 100% { box-shadow: 0 0 0 0 rgb(240 112 106 / 0); } }
-.hero-copy { text-align: center; display: grid; justify-items: center; gap: 26px; }
-.hero h1 {
-  font-size: clamp(44px, 8.2vw, 104px); line-height: 0.98; letter-spacing: -0.045em; font-weight: 600;
-  max-width: 13ch;
-}
-.hero h1 .dim { color: var(--muted); }
-.hero .lede { font-size: clamp(17px, 2vw, 20px); line-height: 1.55; color: var(--fg-2); max-width: 600px; }
-.ctas { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+/* ---------- hero ---------- */
+.hero { padding-top: clamp(132px, 16vw, 200px); }
+.hero-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 32px 64px; align-items: end; }
+.meta { font: 500 var(--m-13)/1 var(--mono); color: var(--muted); display: flex; flex-wrap: wrap; gap: 8px 18px; margin-bottom: 36px; }
+.meta span { display: inline-flex; align-items: center; gap: 8px; }
+.meta .live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--high); }
+.hero h1 { font-size: var(--t-display); line-height: .96; letter-spacing: -0.045em; }
+.hero h1 em { font-style: normal; color: var(--muted); }
+.hero-side { display: grid; gap: 28px; padding-bottom: 10px; }
+.lede { font-size: clamp(18px, 1.6vw, 20px); line-height: 1.55; color: var(--fg-2); max-width: 30em; }
+.install { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 22px; }
 .cmd {
-  display: inline-flex; align-items: center; gap: 12px; height: 46px; padding: 0 8px 0 16px;
-  border-radius: 10px; background: var(--surface); border: 1px solid var(--line-strong);
-  font: 500 15px/1 var(--mono); color: var(--fg); cursor: pointer;
-  transition: border-color .15s, background .15s;
+  display: inline-flex; align-items: center; gap: 14px; height: 50px; padding: 0 8px 0 18px; border-radius: 10px;
+  background: var(--fg); color: #0b0c0f; border: 0; cursor: pointer; font: 600 16px/1 var(--mono);
+  transition: transform .15s var(--ease), background .2s, border-color .2s;
 }
-.cmd:hover { border-color: var(--accent); }
-.cmd .p { color: var(--muted); }
-.cmd .copy { display: inline-grid; place-items: center; height: 32px; padding: 0 10px; border-radius: 7px; background: var(--raised); color: var(--fg-2); font: 500 12px/1 var(--sans); }
-.cmd.copied .copy { background: var(--accent-soft); color: var(--accent); }
-.cmd.big { height: 54px; font-size: 17px; }
-.cta-alt { height: 46px; padding: 0 18px; border-radius: 10px; font-size: 15px; }
-.fine { font-size: 13px; color: var(--muted); }
-.fine b { color: var(--fg-2); font-weight: 500; }
+.cmd:hover { background: #fff; }
+.cmd:active { transform: scale(.98); }
+.cmd .p { opacity: .45; }
+.cmd .copy { display: inline-grid; place-items: center; height: 34px; padding: 0 11px; border-radius: 7px; background: rgb(11 12 15 / .08); font: 500 12px/1 var(--sans); }
+.cmd.copied .copy { background: var(--accent); color: var(--accent-fg); }
+.cmd.ghost { background: transparent; color: var(--fg); border: 1px solid var(--line-strong); }
+.cmd.ghost:hover { border-color: var(--accent); background: transparent; }
+.cmd.ghost .copy { background: var(--raised); color: var(--fg-2); }
+.tlink { font-size: var(--t-small); color: var(--fg-2); text-decoration: none; border-bottom: 1px solid var(--line-strong); padding-bottom: 2px; transition: color .2s, border-color .2s; }
+.tlink:hover { color: var(--fg); border-color: var(--accent); }
+@media (max-width: 900px) { .hero-grid { grid-template-columns: 1fr; } }
 
-/* ---------- Live recorder console ---------- */
-.console-wrap { margin-top: 72px; perspective: 1800px; }
+/* console: overlaps the fold, offset right */
+.console-wrap { margin-top: clamp(56px, 7vw, 96px); margin-left: clamp(0px, 14vw, 200px); margin-right: calc(-1 * clamp(0px, 3vw, 40px)); position: relative; z-index: 2; }
 .console {
-  position: relative; max-width: 980px; margin-inline: auto;
   border: 1px solid var(--line-strong); border-radius: 14px; overflow: hidden;
-  background: linear-gradient(180deg, #121418, #0e1013);
-  box-shadow: 0 40px 120px -30px rgb(0 0 0 / .9), 0 0 0 1px rgb(255 255 255 / .03) inset;
+  background: linear-gradient(180deg, #13161a, #0e1013);
+  box-shadow: 0 50px 120px -40px rgb(2 6 8 / .95), 0 1px 0 rgb(255 255 255 / .04) inset;
 }
-.console-bar {
-  display: flex; align-items: center; gap: 14px; padding: 12px 16px;
-  border-bottom: 1px solid var(--line); font: 500 12.5px/1 var(--mono); color: var(--muted);
-}
-.console-bar .title { color: var(--fg-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.console-bar .right { margin-left: auto; display: flex; gap: 14px; align-items: center; white-space: nowrap; }
-.live { color: var(--high); display: inline-flex; align-items: center; gap: 7px; }
-.ctape { position: relative; display: flex; align-items: flex-end; gap: 3px; height: 30px; padding: 0 16px 8px; border-bottom: 1px solid var(--line); background: var(--sunken); }
+.console-bar { display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-bottom: 1px solid var(--line); font: 500 var(--m-12)/1 var(--mono); color: var(--muted); }
+.console-bar .ttl { color: var(--fg-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.console-bar .right { margin-left: auto; display: flex; gap: 14px; white-space: nowrap; }
+.rec { color: var(--high); display: inline-flex; align-items: center; gap: 7px; }
+.rec::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: blink 1.6s infinite; }
+@keyframes blink { 50% { opacity: .25; } }
+.ctape { display: flex; align-items: flex-end; gap: 3px; height: 30px; padding: 0 16px 8px; border-bottom: 1px solid var(--line); background: var(--sunken); }
 .ctape i { width: 4px; height: 7px; background: var(--line-strong); border-radius: 1px; opacity: 0; transform: scaleY(0); transform-origin: bottom; transition: opacity .3s, transform .4s var(--ease); }
 .ctape i.in { opacity: 1; transform: none; }
-.ctape i.prompt { height: 14px; background: #3d4450; }
+.ctape i.prompt { height: 14px; background: #454c58; }
 .ctape i.low { background: var(--low); }
 .ctape i.high { background: var(--high); height: 12px; }
 .ctape i.now { background: var(--accent); }
-.console-body { display: grid; grid-template-columns: 1.25fr 1fr; min-height: 388px; }
-.events { padding: 10px 8px; border-right: 1px solid var(--line); font: 13px/1 var(--mono); }
-.ev {
-  display: grid; grid-template-columns: 70px 18px minmax(0, 1fr) auto; align-items: center; gap: 10px;
-  height: 34px; padding: 0 10px; border-radius: 6px; color: var(--fg-2);
-  opacity: 0; transform: translateY(6px); transition: opacity .35s var(--ease), transform .35s var(--ease), background .3s;
-  white-space: nowrap;
-}
+.console-body { display: grid; grid-template-columns: 1.25fr 1fr; min-height: 400px; }
+.events { padding: 10px 8px; border-right: 1px solid var(--line); font: var(--m-13)/1 var(--mono); }
+.ev { display: grid; grid-template-columns: 70px 18px minmax(0, 1fr) auto; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border-radius: 6px; color: var(--fg-2); opacity: 0; transform: translateY(6px); transition: opacity .35s var(--ease), transform .35s var(--ease), background .3s; white-space: nowrap; }
 .ev.in { opacity: 1; transform: none; }
-.ev .t { color: var(--muted); font-size: 12px; }
+.ev .t { color: var(--muted); font-size: var(--m-12); }
 .ev .k { width: 18px; height: 18px; border-radius: 4px; display: grid; place-items: center; background: var(--raised); color: var(--muted); font-size: 10px; }
 .ev .k.p { background: var(--accent-soft); color: var(--accent); }
 .ev .k.w { background: var(--ok-soft); color: var(--ok); }
@@ -190,238 +174,177 @@ p { margin: 0; }
 .ev.sel { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
 .ev.alarm { animation: alarm 1.2s var(--ease); }
 @keyframes alarm { 0%, 30% { background: rgb(240 112 106 / .22); } 100% { background: var(--accent-soft); } }
-.chip { font: 500 11px/1 var(--mono); padding: 4px 7px; border-radius: 4px; display: inline-flex; align-items: center; gap: 5px; }
+.chip { font: 500 11px/1 var(--mono); padding: 4px 7px; border-radius: 4px; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
 .chip::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
 .chip.low { background: var(--low-soft); color: var(--low); }
-.chip.medium { background: var(--medium-soft); color: var(--medium); }
 .chip.high { background: var(--high-soft); color: var(--high); }
 .chip.ok { background: var(--ok-soft); color: var(--ok); }
 .chip.ok::before { content: "✓"; width: auto; height: auto; background: none; font-size: 10px; }
-.chip.bad { background: var(--high-soft); color: var(--high); }
-.chip.bad::before { content: "✕"; width: auto; height: auto; background: none; font-size: 10px; }
-.chip.critical { background: var(--critical); color: #fff; }
-.chip.critical::before { background: #fff; }
-.fail { color: var(--high); font-size: 13px; }
-.pass { color: var(--ok); font-size: 13px; }
+.fail { color: var(--high); } .pass { color: var(--ok); }
 .detail { padding: 18px; display: grid; align-content: start; gap: 14px; font-size: 13px; }
-.detail .idle { color: var(--muted); font: 12.5px/1.6 var(--mono); }
+.detail .idle { color: var(--muted); font: var(--m-12)/1.6 var(--mono); }
 .detail .pane { display: grid; gap: 14px; opacity: 0; transform: translateY(8px); transition: opacity .4s var(--ease), transform .4s var(--ease); }
 .detail .pane.in { opacity: 1; transform: none; }
-.flags { border-radius: 8px; background: rgb(240 112 106 / .08); border: 1px solid rgb(240 112 106 / .18); padding: 12px; display: grid; gap: 10px; }
-.flag { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; align-items: start; }
-.flag code { font-size: 12.5px; color: var(--fg); }
+.detail .lbl { font: 500 var(--m-12)/1 var(--mono); color: var(--muted); }
+.flags { border-radius: 8px; background: rgb(240 112 106 / .08); border: 1px solid rgb(240 112 106 / .2); padding: 12px; display: grid; gap: 10px; }
+.flags.lowf { background: rgb(142 166 200 / .07); border-color: rgb(142 166 200 / .2); }
+.flag { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; }
+.flag code { font-size: var(--m-12); color: var(--fg); }
 .flag p { grid-column: 2; color: var(--fg-2); font-size: 12px; line-height: 1.45; }
-.box { border-radius: 8px; background: var(--sunken); border: 1px solid var(--line); padding: 10px 12px; font: 12.5px/1.65 var(--mono); color: var(--fg-2); overflow: hidden; }
+.box { border-radius: 8px; background: var(--sunken); border: 1px solid var(--line); padding: 10px 12px; font: var(--m-12)/1.7 var(--mono); color: var(--fg-2); overflow: hidden; }
 .box .hl { color: var(--fg); }
 .mask { background: var(--raised); color: var(--muted); border-radius: 3px; padding: 0 4px; }
-.console-foot {
-  display: flex; flex-wrap: wrap; gap: 8px 28px; padding: 12px 16px; border-top: 1px solid var(--line);
-  font: 12.5px/1 var(--mono); color: var(--muted);
-}
+.console-foot { display: flex; flex-wrap: wrap; gap: 8px 28px; padding: 12px 16px; border-top: 1px solid var(--line); font: var(--m-12)/1 var(--mono); color: var(--muted); }
 .console-foot b { color: var(--fg); font-weight: 500; }
 .console-foot .r b { color: var(--high); }
 @media (max-width: 820px) {
+  .console-wrap { margin-left: 0; margin-right: 0; }
   .console-body { grid-template-columns: 1fr; }
   .events { border-right: 0; border-bottom: 1px solid var(--line); }
-  .detail { min-height: 260px; }
+  .detail { min-height: 270px; }
   .ev { grid-template-columns: 62px 18px minmax(0, 1fr) auto; gap: 8px; }
-  .console-bar .right .hide-sm { display: none; }
+  .console-bar .right .opt { display: none; }
 }
 
-/* ---------- Sections ---------- */
-section { position: relative; }
-.sec { padding: clamp(96px, 14vw, 180px) 0; }
-.kicker { font: 500 13px/1 var(--mono); color: var(--accent); margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
-.kicker::before { content: ""; width: 18px; height: 1px; background: currentColor; }
-.h2 { font-size: clamp(34px, 5.4vw, 64px); line-height: 1.02; letter-spacing: -0.035em; max-width: 18ch; }
-.sub code { font-size: 0.88em; color: var(--fg); background: var(--raised); padding: 1px 6px; border-radius: 4px; }
-.sub { margin-top: 22px; font-size: clamp(16px, 1.7vw, 19px); color: var(--fg-2); max-width: 58ch; line-height: 1.6; }
+/* sources line under the hero */
+.sources { display: grid; grid-template-columns: var(--rail) minmax(0, 1fr); gap: 10px 32px; margin-top: 56px; padding: 22px 0 clamp(64px, 8vw, 104px); border-top: 1px solid var(--line); }
+.sources p { color: var(--fg-2); font-size: var(--t-small); max-width: 62em; }
+.sources b { color: var(--fg); font-weight: 500; }
+.sources .early { color: var(--muted); }
+@media (max-width: 760px) { .sources { grid-template-columns: 1fr; } }
+
+/* ---------- chapters: a flight log down the left rail ---------- */
+.chapter { padding: var(--sec-top) 0 var(--sec-bottom); border-top: 1px solid var(--line); }
+.log { display: grid; grid-template-columns: var(--rail) minmax(0, 1fr); gap: 0 32px; }
+.mark { position: sticky; top: 96px; align-self: start; display: grid; gap: 6px; font: 500 var(--m-13)/1.2 var(--mono); }
+.mark .n { color: var(--accent); }
+.mark .w { color: var(--muted); }
+.mark .ts { color: var(--faint); font-size: var(--m-12); }
+.h2 { font-size: var(--t-h2); line-height: 1; letter-spacing: -0.04em; max-width: 15ch; }
+.h2.wide { max-width: 20ch; }
+.sub { margin-top: 26px; color: var(--fg-2); font-size: clamp(17px, 1.5vw, 19px); line-height: 1.6; max-width: 36em; }
+.sub.small { font-size: var(--t-small); margin-top: 14px; }
+.sub code, .note code, .facts code { font-size: .86em; color: var(--fg); background: var(--raised); padding: 1px 6px; border-radius: 4px; }
+.h3 { font-size: var(--t-h3); letter-spacing: -0.02em; line-height: 1.2; }
+@media (max-width: 760px) {
+  .log { grid-template-columns: 1fr; }
+  .mark { position: static; grid-auto-flow: column; justify-content: start; gap: 12px; margin-bottom: 24px; }
+  .mark .ts { display: none; }
+}
 
 /* reveal */
-.rv { opacity: 0; transform: translateY(24px); transition: opacity .9s var(--ease), transform .9s var(--ease); }
+.rv { opacity: 0; transform: translateY(22px); transition: opacity .9s var(--ease), transform .9s var(--ease); }
 .rv.in { opacity: 1; transform: none; }
-.rv.d1 { transition-delay: .08s; } .rv.d2 { transition-delay: .16s; } .rv.d3 { transition-delay: .24s; }
+.d1 { transition-delay: .08s; } .d2 { transition-delay: .16s; } .d3 { transition-delay: .24s; }
 
-/* ---------- Film: the demo, tilting into place ---------- */
-.film { padding: 40px 0 0; }
-.film-stage { perspective: 2200px; }
-.film-frame {
-  position: relative; max-width: 1120px; margin-inline: auto; border-radius: 14px; overflow: hidden;
-  border: 1px solid var(--line-strong); background: var(--surface);
-  box-shadow: 0 60px 140px -40px rgb(0 0 0 / .95);
-  transform-origin: 50% 0%;
-  transform: rotateX(var(--tilt, 24deg)) scale(var(--sc, .9));
-  will-change: transform;
-}
-.film-frame video { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: var(--sunken); }
-.film-cap { text-align: center; margin-top: 22px; }
+/* frames: real-size product shots */
+.frame { position: relative; border-radius: 12px; overflow: hidden; border: 1px solid var(--line-strong); background: var(--surface); box-shadow: 0 50px 120px -50px rgb(2 6 8 / .95); }
+.frame img, .frame video { width: 100%; }
 
-/* ---------- Questions ---------- */
-.qs { display: grid; gap: 0; margin-top: 64px; border-top: 1px solid var(--line); }
-.q { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 24px 48px; padding: 30px 0; border-bottom: 1px solid var(--line); align-items: baseline; }
-.q h3 { font-size: clamp(22px, 2.8vw, 34px); letter-spacing: -0.025em; line-height: 1.15; font-weight: 500; }
-.q h3 .n { font: 500 13px/1 var(--mono); color: var(--muted); margin-right: 14px; vertical-align: middle; }
-.q p { color: var(--fg-2); font-size: 16px; }
-.q p code { font-size: 14px; color: var(--fg); background: var(--raised); padding: 1px 6px; border-radius: 4px; }
-@media (max-width: 760px) { .q { grid-template-columns: 1fr; gap: 10px; } }
-
-/* ---------- Story: sticky screen ---------- */
-.story { display: grid; grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr); gap: 56px; margin-top: 40px; }
-.chapters { display: grid; }
-.chapter { min-height: 78vh; display: grid; align-content: center; gap: 16px; padding: 40px 0; opacity: .28; transition: opacity .5s var(--ease); }
-.chapter.on { opacity: 1; }
-.chapter .num { font: 500 13px/1 var(--mono); color: var(--muted); }
-.chapter.on .num { color: var(--accent); }
-.chapter h3 { font-size: clamp(28px, 3.4vw, 42px); line-height: 1.05; letter-spacing: -0.03em; }
-.chapter p { color: var(--fg-2); font-size: 17px; max-width: 44ch; }
-.chapter ul { margin: 4px 0 0; padding: 0; list-style: none; display: grid; gap: 8px; color: var(--fg-2); font-size: 15px; }
-.chapter li { display: flex; gap: 10px; }
-.chapter li::before { content: ""; flex: none; margin-top: 10px; width: 10px; height: 1px; background: var(--muted); }
-.keys { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; color: var(--muted); font-size: 13px; }
-kbd { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 4px; border: 1px solid var(--line-strong); border-bottom-width: 2px; background: var(--raised); color: var(--fg-2); font-size: 12px; }
-.screen-col { position: relative; }
-.screen {
-  position: sticky; top: max(84px, calc(50vh - 230px));
-  border-radius: 12px; border: 1px solid var(--line-strong); overflow: hidden; background: var(--surface);
-  box-shadow: 0 50px 120px -40px rgb(0 0 0 / .9);
-}
-.screen .chrome { display: flex; align-items: center; gap: 7px; height: 34px; padding: 0 12px; border-bottom: 1px solid var(--line); background: var(--sunken); }
-.screen .chrome i { width: 10px; height: 10px; border-radius: 50%; background: var(--line-strong); }
-.screen .chrome span { margin-left: 10px; font: 12px/1 var(--mono); color: var(--muted); transition: opacity .3s; }
-.shots { position: relative; aspect-ratio: 16 / 9; background: var(--bg); }
-.shots img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top left; opacity: 0; transform: scale(1.03); transition: opacity .7s var(--ease), transform 1.2s var(--ease); }
-.shots img.on { opacity: 1; transform: none; }
-.shots img.tui { object-fit: contain; background: #0d0f12; }
-.mshot { display: none; }
+/* 01 replay */
+.film { margin-top: 64px; }
+.film video { aspect-ratio: 16 / 9; object-fit: cover; background: var(--sunken); }
+.vbtn { position: absolute; right: 14px; bottom: 14px; display: inline-flex; align-items: center; height: 34px; padding: 0 12px; border-radius: 8px; border: 1px solid rgb(255 255 255 / .12); background: rgb(11 12 15 / .72); backdrop-filter: blur(8px); color: var(--fg); font: 500 13px/1 var(--sans); cursor: pointer; transition: background .2s; }
+.vbtn:hover { background: rgb(26 29 34 / .9); }
+.notes { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 24px 48px; margin-top: 40px; }
+.note { display: grid; gap: 8px; align-content: start; padding-top: 16px; border-top: 1px solid var(--line-strong); }
+.note h3 { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+.note p { color: var(--fg-2); font-size: var(--t-small); line-height: 1.55; }
+.keys { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; color: var(--muted); font-size: 14px; margin-top: 4px; }
+kbd { display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 6px; border-radius: 5px; border: 1px solid var(--line-strong); border-bottom-width: 2px; background: var(--raised); color: var(--fg-2); font-size: 12px; }
+.bleed { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: 48px; align-items: center; margin-top: clamp(80px, 10vw, 128px); }
+.bleed .frame { margin-right: calc((min(var(--wrap), 100vw - 2 * var(--gutter)) - 100vw) / 2); border-right: 0; border-radius: 12px 0 0 12px; }
 @media (max-width: 900px) {
-  .story { grid-template-columns: 1fr; gap: 0; }
-  .screen-col { display: none; }
-  .chapter { min-height: 0; opacity: 1; padding: 36px 0; }
-  .mshot { display: block; margin-top: 8px; border-radius: 10px; border: 1px solid var(--line-strong); overflow: hidden; }
+  .notes { grid-template-columns: 1fr; }
+  .bleed { grid-template-columns: 1fr; }
+  .bleed .frame { margin-right: 0; border-right: 1px solid var(--line-strong); border-radius: 12px; }
 }
 
+/* 02 claims: the second hero moment */
+.claims-top .h2 { max-width: 13ch; }
+.claims-top .sub { margin-top: 26px; }
+.claims-shot { margin-top: 56px; display: grid; grid-template-columns: minmax(0, 670px) minmax(0, 1fr); gap: 48px; align-items: start; }
+.claims-shot .frame { box-shadow: 0 50px 120px -50px rgb(240 112 106 / .22), 0 50px 120px -50px rgb(2 6 8 / .9); }
+.kinds div { display: flex; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.kinds div:first-child { border-top: 1px solid var(--line); }
+.kinds code { color: var(--fg); font-size: var(--m-13); }
+.kinds span { color: var(--muted); font: var(--m-12)/1.6 var(--mono); }
+@media (max-width: 900px) { .claims-shot { grid-template-columns: 1fr; } }
 
-/* ---------- Agents strip ---------- */
-.agents { margin-top: 64px; text-align: center; }
-.agents .label { display: block; margin-bottom: 18px; }
-.agent-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
-.agent { display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line-strong); background: rgb(18 20 24 / .7); font-size: 14px; color: var(--fg); }
-.agent .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); }
-.agent.early { color: var(--fg-2); border-style: dashed; }
-.agent.early .dot { background: var(--muted); }
-.agents .fine { margin-top: 14px; }
-
-/* ---------- Claims ---------- */
-.claims-grid { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 56px; align-items: start; margin-top: 8px; }
-.claims-grid .shot { position: sticky; top: max(84px, calc(50vh - 240px)); margin-top: 120px; }
-@media (max-width: 900px) { .claims-grid { grid-template-columns: 1fr; gap: 36px; } .claims-grid .shot { position: static; margin-top: 0; } }
-.verdicts { display: grid; gap: 12px; margin-top: 34px; }
-.verdict { border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface); padding: 14px 16px; display: grid; gap: 8px; }
-.verdict .q { font-size: 15px; color: var(--fg); display: block; padding: 0; border: 0; }
-.verdict .why { font-size: 13px; color: var(--fg-2); }
-.verdict .run { font: 12.5px/1 var(--mono); color: var(--muted); display: flex; justify-content: space-between; gap: 10px; }
-.verdict .run b { color: var(--fg); font-weight: 500; }
-.verdict.bad { border-color: rgb(240 112 106 / .35); box-shadow: inset 2px 0 0 var(--high); }
-.verdict.good { box-shadow: inset 2px 0 0 var(--ok); }
-.vhead { display: flex; align-items: center; gap: 10px; font: 12px/1 var(--mono); color: var(--muted); }
-.shot { border-radius: 12px; border: 1px solid var(--line-strong); overflow: hidden; box-shadow: 0 50px 120px -40px rgb(0 0 0 / .9); }
-.kinds { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
-.kinds code { font-size: 12.5px; padding: 5px 9px; border-radius: 6px; background: var(--raised); color: var(--fg-2); }
-
-/* ---------- Risk rules ---------- */
-.rules { margin-top: 56px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
-.rule { background: var(--bg); padding: 22px 20px; display: grid; gap: 10px; align-content: start; transition: background .25s; position: relative; }
-.rule:hover { background: var(--surface); }
-.rule::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--sev); opacity: 0; transition: opacity .25s; }
-.rule:hover::before { opacity: 1; }
+/* 03 rulebook */
+.rulebook { margin-top: 56px; border-top: 1px solid var(--line-strong); }
+.rule { display: grid; grid-template-columns: 3px minmax(0, 210px) 72px minmax(0, 1fr) minmax(0, 240px); gap: 0 24px; align-items: baseline; padding: 15px 0; border-bottom: 1px solid var(--line); transition: background .2s; }
+.rule:hover { background: rgb(255 255 255 / .018); }
+.rule::before { content: ""; align-self: stretch; background: var(--sev); border-radius: 2px; }
 .rule[data-sev="low"] { --sev: var(--low); } .rule[data-sev="medium"] { --sev: var(--medium); }
 .rule[data-sev="high"] { --sev: var(--high); } .rule[data-sev="critical"] { --sev: var(--critical); }
-.rule code { font-size: 13.5px; color: var(--fg); }
-.rule p { font-size: 13.5px; color: var(--fg-2); line-height: 1.5; }
-.rule .ex { font: 12px/1.4 var(--mono); color: var(--muted); }
-.rule.note { grid-column: span 3; align-content: center; background: var(--sunken); }
-.rule.note p { color: var(--muted); font: 13px/1.6 var(--mono); }
-@media (max-width: 1000px) { .rules { grid-template-columns: repeat(2, minmax(0, 1fr)); } .rule.note { grid-column: span 1; } }
-@media (max-width: 560px) { .rules { grid-template-columns: 1fr; } }
-.rule-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.rule code { font-size: var(--m-13); color: var(--fg); }
+.rule .sev { font: 500 var(--m-12)/1 var(--mono); color: var(--sev); }
+.rule p { font-size: var(--t-small); color: var(--fg-2); line-height: 1.5; }
+.rule .ex { font: var(--m-12)/1.5 var(--mono); color: var(--muted); overflow-wrap: anywhere; }
+.rulebook-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 32px; margin-top: 18px; font: var(--m-12)/1.6 var(--mono); color: var(--muted); }
+@media (max-width: 900px) {
+  .rule { grid-template-columns: 3px minmax(0, 1fr) auto; gap: 6px 16px; }
+  .rule::before { grid-row: span 3; }
+  .rule p, .rule .ex { grid-column: 2 / -1; }
+}
 
-/* ---------- Costs band ---------- */
-.split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 64px; align-items: center; }
-@media (max-width: 900px) { .split { grid-template-columns: 1fr; gap: 40px; } .lead-sm { order: -1; } }
-.bignum { font: 600 clamp(64px, 10vw, 132px)/0.9 var(--mono); letter-spacing: -0.05em; font-variant-numeric: tabular-nums; }
-.bignum small { display: block; margin-top: 14px; font: 500 13px/1 var(--mono); color: var(--muted); letter-spacing: 0; }
-.bars { display: grid; gap: 14px; margin-top: 34px; }
-.bar { display: grid; grid-template-columns: 150px 1fr 70px; gap: 14px; align-items: center; font: 13px/1 var(--mono); color: var(--fg-2); }
-.bar .track { height: 6px; border-radius: 3px; background: var(--raised); overflow: hidden; }
-.bar .fill { height: 100%; width: 0; background: color-mix(in srgb, var(--fg) 55%, transparent); border-radius: 3px; transition: width 1.4s var(--ease); }
-.bar .v { text-align: right; color: var(--fg); }
-.costs-img { border-radius: 12px; border: 1px solid var(--line-strong); overflow: hidden; box-shadow: 0 50px 120px -40px rgb(0 0 0 / .9); transform: rotate(-1.2deg); }
-
-/* ---------- Receipt ---------- */
-.receipt { border-radius: 12px; border: 1px solid var(--line-strong); background: var(--surface); overflow: hidden; }
-.receipt-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); font-size: 13px; color: var(--fg-2); }
-.avatar { width: 22px; height: 22px; border-radius: 50%; background: var(--raised); display: grid; place-items: center; }
-.receipt-body { padding: 20px 22px 22px; font-size: 14px; line-height: 1.65; color: var(--fg-2); display: grid; gap: 10px; }
-.receipt-body h4 { margin: 0 0 4px; font-size: 17px; color: var(--fg); font-weight: 600; }
+/* 04 outputs: three unequal panels */
+.outputs { margin-top: 56px; display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); grid-template-areas: "costs receipt" "term receipt"; gap: 20px; align-items: start; }
+.out { border: 1px solid var(--line-strong); border-radius: 12px; background: var(--surface); overflow: hidden; }
+.out-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 4px 16px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+.out-head h3 { font-size: 15px; font-weight: 600; }
+.out-head span { font: var(--m-12)/1.4 var(--mono); color: var(--muted); }
+.out.costs { grid-area: costs; } .out.receipt { grid-area: receipt; } .out.term { grid-area: term; background: #0d0f12; }
+.out img { width: 100%; }
+.receipt-body { padding: 20px 20px 22px; font-size: 14px; line-height: 1.65; color: var(--fg-2); display: grid; gap: 12px; }
+.receipt-body h4 { margin: 0; font-size: 17px; color: var(--fg); font-weight: 600; }
 .receipt-body b { color: var(--fg); font-weight: 600; }
-.receipt-body code { font-size: 12.5px; background: var(--raised); color: var(--fg); padding: 1px 5px; border-radius: 4px; }
-.receipt-body ul { margin: 0; padding-left: 20px; }
+.receipt-body code { font-size: 12px; background: var(--raised); color: var(--fg); padding: 1px 5px; border-radius: 4px; }
+.receipt-body ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 6px; }
 .receipt-body sub { color: var(--muted); font-size: 12px; }
-.yaml { margin-top: 28px; }
-.yaml pre { margin: 0; font-size: 13px; line-height: 1.7; color: var(--fg-2); }
-.yaml .c { color: var(--muted); } .yaml .k { color: var(--fg); } .yaml .s { color: var(--accent); }
-
-/* ---------- Privacy ---------- */
-.privacy { text-align: center; overflow: hidden; }
-.privacy .h2 { margin-inline: auto; max-width: 16ch; }
-.privacy .sub { margin-inline: auto; }
-.local {
-  margin: 64px auto 0; display: inline-flex; align-items: center; gap: 18px; padding: 18px 26px;
-  border-radius: 14px; border: 1px solid var(--line-strong); background: var(--surface); font: 500 clamp(18px, 3vw, 30px)/1 var(--mono);
+.yaml { margin: 0 20px 20px; border-radius: 8px; background: var(--sunken); border: 1px solid var(--line); padding: 12px 14px; font: var(--m-12)/1.7 var(--mono); color: var(--fg-2); white-space: pre; overflow-x: auto; }
+.yaml .c { color: var(--muted); } .yaml .s { color: var(--accent); }
+.cmds { margin-top: 56px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 48px; }
+.cmds div { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 16px; padding: 13px 0; border-bottom: 1px solid var(--line); font-size: var(--t-small); }
+.cmds code { color: var(--fg); font-size: var(--m-13); }
+.cmds span { color: var(--muted); }
+@media (max-width: 900px) {
+  .outputs { grid-template-columns: 1fr; grid-template-areas: "costs" "receipt" "term"; }
+  .cmds { grid-template-columns: 1fr; }
 }
-.local .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 18px var(--ok); }
-.facts { margin-top: 64px; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 32px; text-align: left; }
-.fact { border-top: 1px solid var(--line-strong); padding-top: 18px; display: grid; gap: 8px; }
-.fact h3 { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
-.fact p { color: var(--fg-2); font-size: 14.5px; }
 
-/* ---------- Terminal TUI band ---------- */
-.term { border-radius: 12px; overflow: hidden; border: 1px solid var(--line-strong); box-shadow: 0 50px 120px -40px rgb(0 0 0 / .9); background: #0d0f12; }
-.cmdlist { margin-top: 28px; display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
-.cmdlist div { background: var(--surface); padding: 12px 16px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; font-size: 13.5px; }
-.cmdlist code { color: var(--fg); }
-.cmdlist span { color: var(--muted); }
+/* 05 local */
+.local-line { margin-top: 48px; display: flex; flex-wrap: wrap; align-items: center; gap: 14px 28px; }
+.addr { display: inline-flex; align-items: center; gap: 14px; font: 500 clamp(22px, 3.2vw, 36px)/1 var(--mono); letter-spacing: -0.02em; }
+.addr::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 16px rgb(76 195 138 / .7); }
+.local-line .muted { font-size: var(--t-small); }
+.facts { margin: 48px 0 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 48px; max-width: 980px; }
+.facts li { padding: 16px 0; border-bottom: 1px solid var(--line); color: var(--fg-2); font-size: var(--t-small); }
+.facts b { color: var(--fg); font-weight: 600; }
+@media (max-width: 760px) { .facts { grid-template-columns: 1fr; } }
 
-/* ---------- Final CTA ---------- */
-.final { text-align: center; padding: clamp(120px, 16vw, 220px) 0 clamp(100px, 12vw, 160px); position: relative; isolation: isolate; overflow: hidden; }
-.final::before {
-  content: ""; position: absolute; inset: auto 0 0 0; height: 100%; z-index: -1;
-  background: radial-gradient(ellipse 60% 55% at 50% 100%, rgb(92 196 181 / .10), transparent 70%);
-}
-.final h2 { font-size: clamp(48px, 9vw, 120px); line-height: .95; letter-spacing: -0.05em; }
-.final .ctas { margin-top: 44px; }
-.final .fine { margin-top: 20px; }
-.endtape { margin: 90px auto 0; display: flex; gap: 3px; justify-content: center; align-items: flex-end; height: 26px; }
-.endtape i { width: 3px; height: 8px; background: var(--line-strong); border-radius: 1px; }
-.endtape i.p { height: 16px; background: #3d4450; }
-.endtape i.r { background: var(--high); height: 12px; }
-.endtape i.h { background: var(--accent); height: 22px; }
-
-footer { border-top: 1px solid var(--line); padding: 30px 0 40px; color: var(--muted); font-size: 13px; }
-footer .wrap { display: flex; flex-wrap: wrap; gap: 14px 28px; justify-content: space-between; align-items: center; }
-footer nav { display: flex; gap: 22px; flex-wrap: wrap; }
+/* ---------- closing ---------- */
+.closing { padding: var(--sec-top) 0 0; border-top: 1px solid var(--line); }
+.closing h2 { font-size: var(--t-display); line-height: .95; letter-spacing: -0.05em; }
+.closing .install { margin-top: 44px; }
+.closing .fine { margin-top: 22px; color: var(--muted); font-size: var(--t-small); }
+.endtape { margin-top: clamp(96px, 12vw, 160px); padding: 0 var(--gutter); position: relative; }
+.endtape .now { position: absolute; right: var(--gutter); bottom: 36px; font: 500 var(--m-12)/1 var(--mono); color: var(--accent); }
+footer { border-top: 1px solid var(--line); padding: 28px 0 40px; color: var(--muted); font-size: 14px; }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 14px 28px; justify-content: space-between; }
+footer nav { display: flex; flex-wrap: wrap; gap: 22px; }
+footer a { text-decoration: none; transition: color .2s; }
 footer a:hover { color: var(--fg); }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
   .rv, .ev, .ctape i, .detail .pane { opacity: 1 !important; transform: none !important; }
-  .film-frame { transform: none !important; }
 }
 </style>
 </head>
 <body>
-
-<div class="tape-top" id="tapeTop" aria-hidden="true"></div>
+<a class="skip" href="#main">Skip to content</a>
 
 <header class="nav" id="nav">
   <div class="wrap">
@@ -435,12 +358,11 @@ footer a:hover { color: var(--fg); }
       Afteraction
     </a>
     <nav class="nav-links" aria-label="Primary">
-      <a class="hide-sm" href="#features">Features</a>
-      <a class="hide-sm" href="#claims">Claims</a>
-      <a class="hide-sm" href="#risks">Risks</a>
-      <a class="hide-sm" href="https://www.npmjs.com/package/afteraction">npm</a>
-      <a class="hide-sm" href="#privacy">Privacy</a>
-      <a class="btn" href="https://github.com/meypoo/afteraction">
+      <a class="opt" href="#replay">Replay</a>
+      <a class="opt" href="#claims">Claims</a>
+      <a class="opt" href="#risks">Risks</a>
+      <a class="opt" href="#local">Local</a>
+      <a class="nav-gh" href="https://github.com/meypoo/afteraction">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
         GitHub
       </a>
@@ -448,28 +370,29 @@ footer a:hover { color: var(--fg); }
   </div>
 </header>
 
-<main id="top">
+<main id="main">
 
-  <!-- ============ HERO ============ -->
-  <section class="hero">
+  <!-- hero -->
+  <section class="hero" id="top">
     <div class="wrap">
-      <div class="hero-copy">
-        <span class="eyebrow rv"><span class="rec" aria-hidden="true"></span>afteraction 0.1.0 · now on npm</span>
-        <h1 class="rv d1">The black box for your <span class="dim">coding agent.</span></h1>
-        <p class="lede rv d2">See exactly what your agent did: every command, file, risk and dollar, and whether its claims hold up. Replayed on your own machine.</p>
-        <div class="ctas rv d3">
-          <button class="cmd" data-copy="npx afteraction" aria-label="Copy npx afteraction"><span><span class="p">$ </span>npx afteraction</span><span class="copy">Copy</span></button>
-          <a class="btn cta-alt" href="#film">Watch the replay</a>
+      <p class="meta rv"><span class="live">v0.1.0 on npm</span><span>MIT</span><span>Node 20+</span><span>100% local</span></p>
+      <div class="hero-grid">
+        <h1 class="rv d1">The black box for your <em>coding agent.</em></h1>
+        <div class="hero-side">
+          <p class="lede rv d2">See exactly what your agent did: every command, file, risk and dollar, and whether its claims hold up. Replayed on your own machine.</p>
+          <div class="install rv d3">
+            <button class="cmd" data-copy="npx afteraction" aria-label="Copy npx afteraction"><span><span class="p">$ </span>npx afteraction</span><span class="copy">Copy</span></button>
+            <a class="tlink" href="#replay">Watch a replay</a>
+          </div>
         </div>
-        <p class="fine rv d3">Node 20+ · <b>100% local</b> · no account, no telemetry</p>
       </div>
 
       <div class="console-wrap rv d2">
         <div class="console" id="console" aria-label="Animated example of Afteraction replaying a session">
           <div class="console-bar">
-            <span class="live"><span class="rec" aria-hidden="true"></span>REPLAY</span>
-            <span class="title">acme-shop · feat/stripe-webhooks</span>
-            <span class="right"><span class="hide-sm">Claude Code</span><span>claude-opus-5-5</span></span>
+            <span class="rec">REPLAY</span>
+            <span class="ttl">acme-shop · feat/stripe-webhooks</span>
+            <span class="right"><span class="opt">Claude Code</span><span>claude-opus-5-5</span></span>
           </div>
           <div class="ctape" id="ctape" aria-hidden="true"></div>
           <div class="console-body">
@@ -484,260 +407,187 @@ footer a:hover { color: var(--fg); }
           </div>
         </div>
       </div>
-      <div class="agents rv">
-        <span class="label">Reads the logs your agents already write</span>
-        <div class="agent-row">
-          <span class="agent"><span class="dot"></span>Claude Code</span>
-          <span class="agent"><span class="dot"></span>Codex</span>
-          <span class="agent"><span class="dot"></span>OpenCode</span>
-          <span class="agent"><span class="dot"></span>Antigravity</span>
-          <span class="agent early"><span class="dot"></span>Gemini CLI</span>
-          <span class="agent early"><span class="dot"></span>Cursor</span>
-          <span class="agent early"><span class="dot"></span>Copilot</span>
-          <span class="agent early"><span class="dot"></span>Cline · Roo · Kilo</span>
-          <span class="agent early"><span class="dot"></span>Aider</span>
-          <span class="agent early"><span class="dot"></span>Continue</span>
-        </div>
-        <p class="fine">Dashed: early support, built from each tool's source and not yet tested on real sessions.</p>
+
+      <div class="sources rv">
+        <span class="mono muted">Reads logs from</span>
+        <p><b>Claude Code, Codex, OpenCode</b> and <b>Antigravity</b>. <span class="early">Early support, built from each tool's source and not yet tested on real sessions: Gemini CLI, Cursor, GitHub Copilot, Cline, Roo Code, Kilo Code, Aider and Continue.</span></p>
       </div>
     </div>
   </section>
 
-  <!-- ============ WHY ============ -->
-  <section class="sec" id="why">
-    <div class="wrap">
-      <p class="kicker rv">After the flight</p>
-      <h2 class="h2 rv d1">Agents run for hours. Their logs are JSONL nobody reads.</h2>
-      <p class="sub rv d2">When the run is over and the diff looks fine, the real questions are still open. Afteraction turns those logs into answers.</p>
-      <div class="qs">
-        <div class="q rv"><h3><span class="n">01</span>What did it run?</h3><p>Every shell command with its output, exit code and duration, in order. Dangerous ones are flagged.</p></div>
-        <div class="q rv"><h3><span class="n">02</span>What did it read and change?</h3><p>Every file touched, with read, write and edit counts, a combined diff, and a flag the moment it opened <code>.env</code>.</p></div>
-        <div class="q rv"><h3><span class="n">03</span>What did it cost?</h3><p>Estimated spend per session, day, project and model, so you can see which task burned the tokens.</p></div>
-        <div class="q rv"><h3><span class="n">04</span>Did "tests pass" actually happen?</h3><p>Every claim in the agent's summary, checked against the test, build and lint runs that came before it.</p></div>
-        <div class="q rv"><h3><span class="n">05</span>How was this PR produced?</h3><p>Not just what's in the diff. A redacted receipt of the session, ready to paste into the pull request.</p></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ FILM ============ -->
-  <section class="film" id="film">
-    <div class="wrap">
-      <div class="film-stage">
-        <div class="film-frame" id="filmFrame">
-          <video src="assets/demo.mp4" poster="assets/demo-poster.jpg" autoplay muted loop playsinline preload="metadata" aria-label="Screen recording of Afteraction: replaying a session, opening a flagged cat .env, a supported and a contradicted claim, then the Risks and Costs pages"></video>
+  <!-- 01 replay -->
+  <section class="chapter" id="replay">
+    <div class="wrap log">
+      <div class="mark" aria-hidden="true"><span class="n">01</span><span class="w">Replay</span><span class="ts">10:12:00</span></div>
+      <div>
+        <h2 class="h2 rv">Every command, file and dollar, in order.</h2>
+        <p class="sub rv d1">Coding agents run for hours and leave JSONL nobody reads. Afteraction turns those logs into a timeline you can step through: prompts, messages, commands with their output, file reads, diffs, and what each call cost.</p>
+        <div class="frame film rv">
+          <video id="film" src="assets/demo.mp4" poster="assets/demo-poster.jpg" muted loop playsinline preload="metadata" aria-label="Screen recording of Afteraction replaying a session, opening a flagged cat .env, a supported and a contradicted claim, then the Risks and Costs pages"></video>
+          <button class="vbtn" id="vbtn" type="button" aria-pressed="false">Pause</button>
         </div>
-      </div>
-      <p class="film-cap label rv">npx afteraction --demo · real UI, sample sessions</p>
-    </div>
-  </section>
-
-  <!-- ============ STORY ============ -->
-  <section class="sec" id="features">
-    <div class="wrap">
-      <p class="kicker rv">The instrument</p>
-      <h2 class="h2 rv d1">Calm and precise. Loud only about risk.</h2>
-      <div class="story">
-        <div class="chapters" id="chapters">
-          <article class="chapter" data-shot="0" data-path="localhost:4317/sessions">
-            <span class="num">01 · Sessions</span>
-            <h3>Every run, across every project.</h3>
-            <p>Search by prompt or command, filter by project, date and risk, and see the estimated cost of each session at a glance.</p>
-            <img class="mshot" src="assets/sessions.png" alt="Sessions list with cost and risk columns" loading="lazy">
-          </article>
-          <article class="chapter" data-shot="1" data-path="localhost:4317/sessions/de30a001">
-            <span class="num">02 · Replay</span>
-            <h3>Step through the flight.</h3>
-            <p>A timeline of prompts, messages, commands, reads and edits beside the full detail of each one: output, diffs, message text. Secrets stay masked until you reveal them.</p>
-            <div class="keys"><kbd>j</kbd><kbd>k</kbd> step <kbd>r</kbd> next risk <kbd>space</kbd> play it back</div>
-            <img class="mshot" src="assets/replay.png" alt="Replay of a session with a flagged cat .env command" loading="lazy">
-          </article>
-          <article class="chapter" data-shot="2" data-path="localhost:4317/costs">
-            <span class="num">03 · Costs</span>
-            <h3>Know which task burned the tokens.</h3>
-            <p>Estimated spend by day, project and model, and the most expensive sessions, from the token counts already in your logs. Light theme included.</p>
-            <img class="mshot" src="assets/costs-light.png" alt="Costs page in the light theme" loading="lazy">
-          </article>
-          <article class="chapter" data-shot="3" data-path="~/code/acme-shop — afteraction tui">
-            <span class="num">04 · Terminal</span>
-            <h3>The same replay, over SSH.</h3>
-            <p><code>afteraction tui</code> opens the same data full-screen in your terminal, with the same keys. No browser needed.</p>
-            <div class="keys"><kbd>/</kbd> filter <kbd>s</kbd> reveal <kbd>esc</kbd> back <kbd>q</kbd> quit</div>
-            <img class="mshot" src="assets/tui.png" alt="afteraction tui showing a session timeline in the terminal" loading="lazy">
-          </article>
-        </div>
-        <div class="screen-col" aria-hidden="true">
-          <div class="screen">
-            <div class="chrome"><i></i><i></i><i></i><span id="shotPath">localhost:4317/sessions</span></div>
-            <div class="shots" id="shots">
-              <img class="on" src="assets/sessions.png" alt="">
-              <img src="assets/replay.png" alt="">
-              <img src="assets/costs-light.png" alt="">
-              <img class="tui" src="assets/tui.png" alt="">
-            </div>
-          </div>
+        <div class="notes">
+          <div class="note rv"><h3>Step through it</h3><p>Play the session back, or move one event at a time.</p><div class="keys"><kbd>j</kbd><kbd>k</kbd> step <kbd>r</kbd> next risk <kbd>space</kbd> play</div></div>
+          <div class="note rv d1"><h3>Secrets stay masked</h3><p>Keys found in output are hidden until you choose to reveal them.</p></div>
+          <div class="note rv d2"><h3>Same view in the terminal</h3><p><code>afteraction tui</code> opens it full-screen, over SSH too.</p></div>
         </div>
       </div>
     </div>
-  </section>
-
-  <!-- ============ CLAIMS ============ -->
-  <section class="sec" id="claims" style="padding-top: 40px">
     <div class="wrap">
-      <div class="claims-grid">
+      <div class="bleed">
         <div>
-          <p class="kicker rv">Claims vs evidence</p>
-          <h2 class="h2 rv d1">"All 9 tests pass." Did they?</h2>
-          <p class="sub rv d2">When the agent says tests pass, the build succeeds, lint is clean or the bug is fixed, Afteraction checks the commands it actually ran before saying so. Each claim is marked supported, contradicted or unverified, with the run that decided it.</p>
-          <div class="verdicts">
-            <div class="verdict bad rv">
-              <div class="vhead"><span class="chip bad">contradicted</span>tests claim · #4</div>
-              <span class="q">"tsc is clean and all 9 tests pass."</span>
-              <span class="why">The last test run before this claim failed (exited 1, 1 failed).</span>
-              <span class="run"><span>#3 <b>$ npx jest src/theme</b></span><span style="color:var(--high)">✕</span></span>
-            </div>
-            <div class="verdict good rv d1">
-              <div class="vhead"><span class="chip ok">supported</span>typecheck claim · #4</div>
-              <span class="q">"tsc is clean and all 9 tests pass."</span>
-              <span class="why">The last typecheck run before this claim passed (exited 0).</span>
-              <span class="run"><span>#2 <b>$ npx tsc --noEmit</b></span><span style="color:var(--ok)">✓</span></span>
-            </div>
-          </div>
-          <div class="kinds rv d2"><code>tests pass</code><code>9/9 passed</code><code>build succeeds</code><code>lint clean</code><code>typecheck clean</code><code>fixed</code></div>
+          <h3 class="h3 rv">Every run, across every project.</h3>
+          <p class="sub small rv d1">Search by prompt or command, filter by agent, project, date and risk, and see what each session would have cost.</p>
         </div>
-        <div class="shot rv d1"><img src="assets/check.png" alt="Afteraction marking a 'tests pass' claim as contradicted by a failed jest run" loading="lazy"></div>
+        <div class="frame rv d1"><img src="assets/crops/sessions.webp" width="1280" height="590" alt="Sessions list with duration, events, tokens, estimated cost and risk for six sessions" loading="lazy"></div>
       </div>
     </div>
   </section>
 
-  <!-- ============ RISKS ============ -->
-  <section class="sec" id="risks" style="padding-top: 40px">
-    <div class="wrap">
-      <p class="kicker rv">Risk flags</p>
-      <h2 class="h2 rv d1">Thirteen rules that catch the moments that matter.</h2>
-      <p class="sub rv d2">Rule-based, deterministic and explainable. Every flagged event says which rule fired and why, and <kbd>r</kbd> jumps straight to the next one.</p>
-      <div class="rules" id="rules"></div>
-    </div>
-  </section>
-
-  <!-- ============ COSTS ============ -->
-  <section class="sec" style="padding-top: 40px">
-    <div class="wrap split">
+  <!-- 02 claims -->
+  <section class="chapter" id="claims">
+    <div class="wrap log">
+      <div class="mark" aria-hidden="true"><span class="n">02</span><span class="w">Claims</span><span class="ts">15:30:41</span></div>
       <div>
-        <p class="kicker rv">Costs</p>
-        <h2 class="h2 rv d1">What that session would have cost.</h2>
-        <p class="sub rv d2">Computed from the token counts in the logs and a bundled price table at API list prices. On a subscription you aren't billed per token, so every figure is labelled <em>estimated, API-equivalent</em>.</p>
-        <div class="rv d2" style="margin-top: 40px">
-          <div class="bignum" id="bigCost">$0.00<small>estimated, across 6 sample sessions</small></div>
-          <div class="bars" id="bars">
-            <div class="bar"><span>acme-shop</span><span class="track"><span class="fill" data-w="100"></span></span><span class="v">$0.55</span></div>
-            <div class="bar"><span>data-pipeline</span><span class="track"><span class="fill" data-w="36"></span></span><span class="v">$0.20</span></div>
-            <div class="bar"><span>mobile-app</span><span class="track"><span class="fill" data-w="7"></span></span><span class="v">$0.04</span></div>
-            <div class="bar"><span>docs-site</span><span class="track"><span class="fill" data-w="1"></span></span><span class="v">&lt;$0.01</span></div>
-          </div>
-          <p class="fine" style="margin-top: 16px">From the sample sessions in <code>afteraction --demo</code>.</p>
+        <div class="claims-top">
+          <h2 class="h2 rv">“All 9 tests pass.” Did they?</h2>
+          <p class="sub rv d1">When the agent says tests pass, the build succeeds or the bug is fixed, Afteraction checks the commands it ran before saying so. Each claim is marked supported, contradicted or unverified, with the run that decided it.</p>
         </div>
-      </div>
-      <div class="costs-img rv d1"><img src="assets/costs-light.png" alt="Costs page showing spend by day, project and model" loading="lazy"></div>
-    </div>
-  </section>
-
-  <!-- ============ RECEIPTS ============ -->
-  <section class="sec" style="padding-top: 40px">
-    <div class="wrap split">
-      <div class="rv">
-        <div class="receipt">
-          <div class="receipt-head"><span class="avatar"><svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><rect x="1.5" y="3.5" width="21" height="17" rx="4.5" fill="#f0592a"/></svg></span><b style="color:var(--fg);font-weight:500">afteraction</b> commented on this pull request</div>
-          <div class="receipt-body">
-            <h4>🛫 Agent session receipt</h4>
-            <p><b>Agent:</b> Claude Code · <b>Model:</b> <code>claude-sonnet-5-5</code> · <b>Duration:</b> 41s · <b>Est. cost:</b> $0.04 (estimated, API-equivalent)</p>
-            <p><b>Prompt:</b> <code>Add a dark mode toggle with a ThemeProvider.</code></p>
-            <p><b>Files changed (1):</b> <code>src/theme/ThemeProvider.tsx</code> (+13/−0)<br><b>Commands run (2):</b> <code>npx tsc --noEmit</code>, <code>npx jest src/theme</code><br><b>Risk flags:</b> none</p>
-            <div><b>🔎 Claims vs evidence (2):</b> 1 contradicted · 1 supported
-              <ul>
-                <li>❌ contradicted · tests · <code>tsc is clean and all 9 tests pass.</code> — The last test run before this claim failed (exited 1, 1 failed). · ran <code>npx jest src/theme</code></li>
-                <li>✅ supported · typecheck · <code>tsc is clean and all 9 tests pass.</code> — The last typecheck run before this claim passed (exited 0). · ran <code>npx tsc --noEmit</code></li>
-              </ul>
-            </div>
-            <sub>Generated locally by afteraction v0.1.0 — transcript not uploaded.</sub>
+        <div class="claims-shot">
+          <div class="frame rv"><img src="assets/crops/claims.webp" width="670" height="280" alt="Two verdicts on the claim 'tsc is clean and all 9 tests pass': contradicted by a failed npx jest run, supported by a passing npx tsc run" loading="lazy"></div>
+          <div class="kinds rv d1">
+            <div><code>tests pass</code><span>last test run</span></div>
+            <div><code>9/9 passed</code><span>pass count</span></div>
+            <div><code>build succeeds</code><span>last build</span></div>
+            <div><code>lint clean</code><span>last lint</span></div>
+            <div><code>typecheck clean</code><span>last typecheck</span></div>
+            <div><code>fixed</code><span>the run after the edit</span></div>
           </div>
         </div>
-      </div>
-      <div class="lead-sm">
-        <p class="kicker rv">Receipts</p>
-        <h2 class="h2 rv d1">Show your work on the pull request.</h2>
-        <p class="sub rv d2"><code>afteraction receipt latest</code> writes a Markdown summary of a session, with secrets and home paths redacted. Paste it into a PR, or let the experimental GitHub Action post it for you.</p>
-        <div class="box yaml rv d3"><pre><span class="c"># .github/workflows/receipt.yml</span>
-<span class="k">on:</span> pull_request
-<span class="k">jobs:</span>
-  <span class="k">receipt:</span>
-    <span class="k">runs-on:</span> ubuntu-latest
-    <span class="k">steps:</span>
-      - <span class="k">uses:</span> actions/checkout@v4
-      - <span class="k">uses:</span> <span class="s">meypoo/afteraction@v0.1.0</span>
-        <span class="k">with:</span>
-          <span class="k">log-path:</span> .afteraction/session.jsonl</pre></div>
       </div>
     </div>
   </section>
 
-  <!-- ============ TERMINAL ============ -->
-  <section class="sec" style="padding-top: 40px">
-    <div class="wrap split">
+  <!-- 03 risks -->
+  <section class="chapter" id="risks">
+    <div class="wrap log">
+      <div class="mark" aria-hidden="true"><span class="n">03</span><span class="w">Risks</span><span class="ts">10:13:32</span></div>
       <div>
-        <p class="kicker rv">In the terminal</p>
-        <h2 class="h2 rv d1">Every view has a command.</h2>
-        <p class="sub rv d2">Script it, pipe it, or stay in the shell. Session ids can be the full id, a unique prefix, or <code>latest</code>.</p>
-        <div class="cmdlist rv d2">
-          <div><code>afteraction tui latest</code><span>open the newest session full-screen</span></div>
-          <div><code>afteraction list --since 7d --risk high</code><span>find the risky runs</span></div>
-          <div><code>afteraction risks</code><span>flagged events, grouped by rule</span></div>
-          <div><code>afteraction claims latest</code><span>"tests pass", checked against what ran</span></div>
+        <h2 class="h2 wide rv">Thirteen rules for the moments that matter.</h2>
+        <p class="sub rv d1">Deterministic and explainable. Every flagged event says which rule fired and why.</p>
+        <div class="rulebook rv">
+          <div class="rule" data-sev="critical"><code>rm-root-or-home</code><span class="sev">critical</span><p>Recursive forced delete of /, the home directory, a drive root, or * at the project root</p><span class="ex">rm -rf ~</span></div>
+          <div class="rule" data-sev="high"><code>destructive-rm</code><span class="sev">high</span><p>Recursive forced delete of something other than a build directory</p><span class="ex">rm -rf src</span></div>
+          <div class="rule" data-sev="high"><code>pipe-to-shell</code><span class="sev">high</span><p>Downloaded script piped straight into a shell or interpreter</p><span class="ex">curl -fsSL …/install.sh | sh</span></div>
+          <div class="rule" data-sev="high"><code>git-force</code><span class="sev">high</span><p>Force push, hard reset or forced clean</p><span class="ex">git push --force-with-lease</span></div>
+          <div class="rule" data-sev="high"><code>secret-file-read</code><span class="sev">high</span><p>Read a file that usually holds secrets (.env, keys, credentials)</p><span class="ex">cat .env</span></div>
+          <div class="rule" data-sev="high"><code>secret-in-output</code><span class="sev">high</span><p>API key pattern in command output, written content or a tool result</p><span class="ex">sk_live_…</span></div>
+          <div class="rule" data-sev="high"><code>db-destructive</code><span class="sev">high</span><p>DROP TABLE, TRUNCATE, or DELETE FROM without WHERE</p><span class="ex">DROP TABLE events</span></div>
+          <div class="rule" data-sev="medium"><code>git-history-rewrite</code><span class="sev">medium</span><p>Rebase, amend or filter-branch (rewrites history)</p><span class="ex">git rebase origin/main</span></div>
+          <div class="rule" data-sev="medium"><code>sudo</code><span class="sev">medium</span><p>Command run with elevated privileges</p><span class="ex">sudo apt install …</span></div>
+          <div class="rule" data-sev="medium"><code>outside-project-write</code><span class="sev">medium</span><p>File written or edited outside the project directory</p><span class="ex">~/.config/loader/config.toml</span></div>
+          <div class="rule" data-sev="medium"><code>network-exfil-hint</code><span class="sev">medium</span><p>Data uploaded with curl/wget/Invoke-WebRequest to a non-local host</p><span class="ex">curl -d @data …</span></div>
+          <div class="rule" data-sev="low"><code>package-install</code><span class="sev">low</span><p>Package install (supply-chain awareness)</p><span class="ex">npm install stripe</span></div>
+          <div class="rule" data-sev="low"><code>chmod-permissive</code><span class="sev">low</span><p>World-writable or recursive permission change</p><span class="ex">chmod -R 777 public/uploads</span></div>
+        </div>
+        <div class="rulebook-foot"><span>$ afteraction risks --since 7d</span><span>Rules are heuristics: check each hit before acting on it.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 outputs -->
+  <section class="chapter" id="outputs">
+    <div class="wrap log">
+      <div class="mark" aria-hidden="true"><span class="n">04</span><span class="w">Outputs</span><span class="ts">10:14:04</span></div>
+      <div>
+        <h2 class="h2 wide rv">Costs, receipts and a terminal view.</h2>
+        <p class="sub rv d1">Spend comes from the token counts in the logs at API list prices, so every figure is labelled estimated, API-equivalent. On a subscription you aren't billed per token.</p>
+        <div class="outputs">
+          <article class="out costs rv">
+            <div class="out-head"><h3>Costs</h3><span>by day, project and model</span></div>
+            <img src="assets/crops/costs.webp" width="980" height="640" alt="Costs page: $0.79 estimated across four projects, spend by day, and breakdowns by project and model" loading="lazy">
+          </article>
+          <article class="out receipt rv d1">
+            <div class="out-head"><h3>Receipt</h3><span>afteraction receipt latest</span></div>
+            <div class="receipt-body">
+              <h4>🛫 Agent session receipt</h4>
+              <p><b>Agent:</b> Claude Code · <b>Model:</b> <code>claude-sonnet-5-5</code> · <b>Duration:</b> 41s · <b>Est. cost:</b> $0.04 (estimated, API-equivalent)</p>
+              <p><b>Prompt:</b> <code>Add a dark mode toggle with a ThemeProvider.</code></p>
+              <p><b>Files changed (1):</b> <code>src/theme/ThemeProvider.tsx</code> (+13/−0)<br><b>Commands run (2):</b> <code>npx tsc --noEmit</code>, <code>npx jest src/theme</code><br><b>Risk flags:</b> none</p>
+              <div><b>🔎 Claims vs evidence (2):</b> 1 contradicted · 1 supported
+                <ul>
+                  <li>❌ contradicted · tests · <code>tsc is clean and all 9 tests pass.</code> The last test run before this claim failed (exited 1, 1 failed).</li>
+                  <li>✅ supported · typecheck · the last typecheck run before this claim passed (exited 0).</li>
+                </ul>
+              </div>
+              <sub>Generated locally by afteraction v0.1.0 — transcript not uploaded.</sub>
+            </div>
+            <pre class="yaml"><span class="c"># post it on every PR (experimental)</span>
+- uses: <span class="s">meypoo/afteraction@v0.1.0</span>
+  with:
+    log-path: .afteraction/session.jsonl</pre>
+          </article>
+          <article class="out term rv d2">
+            <div class="out-head"><h3>Terminal</h3><span>afteraction tui</span></div>
+            <img src="assets/tui.png" width="935" height="698" alt="afteraction tui with a flagged cat .env command and its two high-severity rules" loading="lazy">
+          </article>
+        </div>
+        <div class="cmds rv">
+          <div><code>afteraction tui latest</code><span>newest session, full-screen</span></div>
+          <div><code>afteraction claims latest</code><span>claims checked against what ran</span></div>
+          <div><code>afteraction list --since 7d --risk high</code><span>the risky runs</span></div>
           <div><code>afteraction receipt latest -o receipt.md</code><span>a redacted PR summary</span></div>
-          <div><code>afteraction doctor</code><span>log sources, counts, parse warnings</span></div>
+          <div><code>afteraction risks</code><span>flagged events by rule</span></div>
+          <div><code>afteraction doctor</code><span>sources, counts, parse warnings</span></div>
         </div>
       </div>
-      <div class="term rv d1"><img src="assets/tui.png" alt="afteraction tui showing a flagged cat .env command" loading="lazy"></div>
     </div>
   </section>
 
-  <!-- ============ PRIVACY ============ -->
-  <section class="sec privacy" id="privacy">
-    <div class="wrap">
-      <p class="kicker rv" style="justify-content:center">Privacy</p>
-      <h2 class="h2 rv d1">Nothing leaves your machine.</h2>
-      <p class="sub rv d2">Your agent's logs hold your code, your prompts and sometimes your keys. They should stay where they are.</p>
-      <div class="local rv d2"><span class="dot" aria-hidden="true"></span>127.0.0.1:4317</div>
-      <div class="facts">
-        <div class="fact rv"><h3>No network calls</h3><p>No telemetry, no accounts, no cloud. Fonts are bundled, not fetched.</p></div>
-        <div class="fact rv d1"><h3>Local-only server</h3><p>Listens on 127.0.0.1 and rejects non-local <code>Host</code> headers to block DNS rebinding.</p></div>
-        <div class="fact rv d2"><h3>Secrets masked</h3><p>Hidden in the UI until you reveal them, and always redacted in receipts.</p></div>
-        <div class="fact rv d3"><h3>Read-only on your logs</h3><p>Data lives in one SQLite file. <code>afteraction purge</code> clears it; your agent's logs are never touched.</p></div>
+  <!-- 05 local -->
+  <section class="chapter" id="local">
+    <div class="wrap log">
+      <div class="mark" aria-hidden="true"><span class="n">05</span><span class="w">Local</span><span class="ts">127.0.0.1</span></div>
+      <div>
+        <h2 class="h2 rv">Nothing leaves your machine.</h2>
+        <p class="sub rv d1">Your agent's logs hold your code, your prompts and sometimes your keys. They stay where they are.</p>
+        <div class="local-line rv d2"><span class="addr">127.0.0.1:4317</span><span class="muted">opened with a one-off access token</span></div>
+        <ul class="facts">
+          <li class="rv"><b>No network calls.</b> No telemetry, no accounts, no cloud.</li>
+          <li class="rv d1"><b>Local-only server.</b> Rejects non-local <code>Host</code> headers to block DNS rebinding.</li>
+          <li class="rv"><b>Secrets masked.</b> Hidden in the UI until revealed, always redacted in receipts.</li>
+          <li class="rv d1"><b>Read-only on your logs.</b> One SQLite file; <code>afteraction purge</code> clears it.</li>
+        </ul>
       </div>
     </div>
   </section>
 
-  <!-- ============ FINAL ============ -->
-  <section class="final">
-    <div class="wrap">
-      <h2 class="rv">Open the<br>black box.</h2>
-      <div class="ctas rv d1">
-        <button class="cmd big" data-copy="npx afteraction" aria-label="Copy npx afteraction"><span><span class="p">$ </span>npx afteraction</span><span class="copy">Copy</span></button>
-        <button class="cmd big" data-copy="npx afteraction --demo" aria-label="Copy npx afteraction --demo"><span><span class="p">$ </span>npx afteraction --demo</span><span class="copy">Copy</span></button>
+  <!-- closing -->
+  <section class="closing">
+    <div class="wrap log">
+      <div class="mark" aria-hidden="true"><span class="n">06</span><span class="w">Land</span></div>
+      <div>
+        <h2 class="rv">Open the black box.</h2>
+        <div class="install rv d1">
+          <button class="cmd" data-copy="npx afteraction" aria-label="Copy npx afteraction"><span><span class="p">$ </span>npx afteraction</span><span class="copy">Copy</span></button>
+          <button class="cmd ghost" data-copy="npx afteraction --demo" aria-label="Copy npx afteraction --demo"><span><span class="p">$ </span>npx afteraction --demo</span><span class="copy">Copy</span></button>
+        </div>
+        <p class="fine rv d2">Finds your agents' logs on its own, then opens the replay in your browser.</p>
       </div>
-      <p class="fine rv d2">Finds Claude Code, Codex and other agent logs on its own, then opens <b>localhost:4317</b>.</p>
-      <div class="endtape" id="endtape" aria-hidden="true"></div>
     </div>
+    <div class="endtape" aria-hidden="true"><div class="tape" id="endtape"></div><span class="now">now</span></div>
   </section>
 </main>
 
 <footer>
   <div class="wrap">
-    <span>Afteraction · costs are estimates at API list prices</span>
+    <span>Afteraction · MIT · costs are estimates at API list prices</span>
     <nav aria-label="Footer">
       <a href="https://github.com/meypoo/afteraction">GitHub</a>
       <a href="https://www.npmjs.com/package/afteraction">npm</a>
+      <a href="https://github.com/meypoo/afteraction/issues">Issues</a>
       <a href="https://github.com/meypoo/afteraction#commands">Commands</a>
-      <a href="https://github.com/meypoo/afteraction/blob/main/docs/log-formats.md">Log formats</a>
+      <a href="https://github.com/meypoo/afteraction/blob/main/LICENSE">License</a>
     </nav>
   </div>
 </footer>
@@ -747,7 +597,7 @@ footer a:hover { color: var(--fg); }
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const $ = (s, r = document) => r.querySelector(s);
 
-  /* ---------- copy buttons ---------- */
+  /* copy buttons */
   document.querySelectorAll("[data-copy]").forEach((b) => {
     b.addEventListener("click", async () => {
       try { await navigator.clipboard.writeText(b.dataset.copy); } catch { return; }
@@ -757,64 +607,54 @@ footer a:hover { color: var(--fg); }
     });
   });
 
-  /* ---------- reveal on scroll ---------- */
+  /* reveal on scroll */
   const io = new IntersectionObserver((es) => es.forEach((e) => {
     if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
-  }), { threshold: 0.15, rootMargin: "0px 0px -6% 0px" });
+  }), { threshold: 0.12, rootMargin: "0px 0px -6% 0px" });
   document.querySelectorAll(".rv").forEach((el) => io.observe(el));
 
-  /* ---------- scroll tape (top) + nav ---------- */
-  const tapeTop = $("#tapeTop");
-  const N = Math.max(40, Math.min(140, Math.floor(innerWidth / 11)));
-  const riskAt = new Set([Math.round(N * 0.34), Math.round(N * 0.35), Math.round(N * 0.58), Math.round(N * 0.81)]);
-  for (let i = 0; i < N; i++) { const t = document.createElement("i"); if (riskAt.has(i)) t.className = "risk"; tapeTop.appendChild(t); }
-  const ticks = [...tapeTop.children];
+  /* nav: solid after scroll, current chapter highlighted */
   const nav = $("#nav");
+  const onScroll = () => nav.classList.toggle("solid", scrollY > 20);
+  addEventListener("scroll", onScroll, { passive: true }); onScroll();
+  const links = new Map([...document.querySelectorAll(".nav-links a[href^='#']")].map((a) => [a.getAttribute("href").slice(1), a]));
+  const sio = new IntersectionObserver((es) => es.forEach((e) => {
+    const a = links.get(e.target.id);
+    if (a) a.classList.toggle("on", e.isIntersecting);
+  }), { rootMargin: "-45% 0px -50% 0px" });
+  links.forEach((_, id) => { const s = document.getElementById(id); if (s) sio.observe(s); });
 
-  /* ---------- film tilt ---------- */
-  const film = $("#filmFrame");
+  /* demo video: plays while visible, with a pause control; never autoplays under reduced motion */
+  const film = $("#film"), vbtn = $("#vbtn");
+  let userPaused = reduce;
+  const setBtn = () => { vbtn.textContent = film.paused ? "Play" : "Pause"; vbtn.setAttribute("aria-pressed", String(film.paused)); };
+  vbtn.addEventListener("click", () => { if (film.paused) { userPaused = false; film.play(); } else { userPaused = true; film.pause(); } });
+  film.addEventListener("play", setBtn); film.addEventListener("pause", setBtn);
+  new IntersectionObserver((es) => {
+    if (es[0].isIntersecting && !userPaused) film.play().catch(() => {});
+    else if (!es[0].isIntersecting) film.pause();
+  }, { threshold: 0.35 }).observe(film);
+  setBtn();
 
-  let last = -1;
-  function onScroll() {
-    const y = scrollY, max = document.documentElement.scrollHeight - innerHeight;
-    const p = max > 0 ? y / max : 0;
-    const h = Math.min(N - 1, Math.floor(p * N));
-    if (h !== last) {
-      ticks.forEach((t, i) => { t.classList.toggle("on", i < h); t.classList.toggle("head", i === h); });
-      last = h;
-    }
-    nav.classList.toggle("solid", y > 20);
-    if (!reduce && film) {
-      const r = film.parentElement.getBoundingClientRect();
-      const k = Math.min(1, Math.max(0, 1 - (r.top - innerHeight * 0.15) / (innerHeight * 0.75)));
-      film.style.setProperty("--tilt", (24 * (1 - k)).toFixed(2) + "deg");
-      film.style.setProperty("--sc", (0.88 + 0.12 * k).toFixed(3));
-    }
-  }
-  let raf = 0;
-  addEventListener("scroll", () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; onScroll(); }); }, { passive: true });
-  addEventListener("resize", onScroll);
-  onScroll();
-
-  /* ---------- live console: the demo session, replayed ---------- */
+  /* hero console: the demo session, replayed */
   const EV = [
-    { t: "10:12:00", k: "p", i: "›", x: "<b>Add a Stripe webhook endpoint that marks orders paid or failed.</b>", tape: "prompt", tok: 18400, cost: 0.03 },
-    { t: "10:12:08", k: "", i: "≡", x: "I'll look at how the server is wired up first…", tok: 21900, cost: 0.02 },
-    { t: "10:12:14", k: "", i: "◱", x: "Read src/server.ts", tok: 26300, cost: 0.02 },
-    { t: "10:12:23", k: "", i: "$", x: "<b>$ npm install stripe</b>", risk: "low", tape: "low", tok: 31800, cost: 0.03 },
-    { t: "10:12:33", k: "w", i: "+", x: "Write src/webhooks/stripe.ts", tok: 36400, cost: 0.03 },
-    { t: "10:12:42", k: "w", i: "✎", x: "Edit src/server.ts", tok: 40100, cost: 0.02 },
-    { t: "10:13:09", k: "", i: "$", x: "<b>$ npm test</b>", end: '<span class="fail">✗</span>', tok: 45200, cost: 0.03 },
-    { t: "10:13:26", k: "", i: "≡", x: "The test fails because the Stripe client needs a key…", tok: 49900, cost: 0.03 },
-    { t: "10:13:32", k: "", i: "$", x: "<b>$ cat .env</b>", risk: "high", tape: "high", alarm: true, tok: 55400, cost: 0.04 },
-    { t: "10:13:41", k: "w", i: "+", x: "Write test/setup.ts", tok: 59100, cost: 0.02 },
-    { t: "10:13:50", k: "", i: "$", x: "<b>$ npm test</b>", end: '<span class="pass">✓</span>', tok: 63800, cost: 0.02 },
-    { t: "10:14:04", k: "", i: "≡", x: "Done. POST /webhooks/stripe verifies the signature…", end: '<span class="chip ok">claim</span>', tok: 68400, cost: 0.01 },
+    { t: "10:12:00", k: "p", i: "›", x: "<b>Add a Stripe webhook endpoint that marks orders paid or failed.</b>", tape: "prompt" },
+    { t: "10:12:08", k: "", i: "≡", x: "I'll look at how the server is wired up first…" },
+    { t: "10:12:14", k: "", i: "◱", x: "Read src/server.ts" },
+    { t: "10:12:23", k: "", i: "$", x: "<b>$ npm install stripe</b>", risk: "low", tape: "low" },
+    { t: "10:12:33", k: "w", i: "+", x: "Write src/webhooks/stripe.ts" },
+    { t: "10:12:42", k: "w", i: "✎", x: "Edit src/server.ts" },
+    { t: "10:13:09", k: "", i: "$", x: "<b>$ npm test</b>", end: '<span class="fail">✗</span>' },
+    { t: "10:13:26", k: "", i: "≡", x: "The test fails because the Stripe client needs a key…" },
+    { t: "10:13:32", k: "", i: "$", x: "<b>$ cat .env</b>", risk: "high", tape: "high", alarm: true },
+    { t: "10:13:41", k: "w", i: "+", x: "Write test/setup.ts" },
+    { t: "10:13:50", k: "", i: "$", x: "<b>$ npm test</b>", end: '<span class="pass">✓</span>' },
+    { t: "10:14:04", k: "", i: "≡", x: "Done. POST /webhooks/stripe verifies the signature…", end: '<span class="chip ok">claim</span>' },
   ];
   const DETAIL_IDLE = '<p class="idle">Replaying events… the detail pane opens on anything flagged.</p>';
   const DETAIL_ENV = `
     <div class="pane">
-      <span class="label">Command #10 · 2026-10-22 10:13</span>
+      <span class="lbl">Command #10 · 10:13:32</span>
       <div class="flags">
         <div class="flag"><span class="chip high">high</span><code>secret-file-read</code><p>Read a file that usually holds secrets (.env, keys, credentials)</p></div>
         <div class="flag"><span class="chip high">high</span><code>secret-in-output</code><p>API key pattern in command output, written content or a tool result</p></div>
@@ -824,8 +664,8 @@ footer a:hover { color: var(--fg); }
     </div>`;
   const DETAIL_LOW = `
     <div class="pane">
-      <span class="label">Command #4 · 2026-10-22 10:12</span>
-      <div class="flags" style="background:rgb(142 166 200 / .07);border-color:rgb(142 166 200 / .18)">
+      <span class="lbl">Command #3 · 10:12:23</span>
+      <div class="flags lowf">
         <div class="flag"><span class="chip low">low</span><code>package-install</code><p>Package install (supply-chain awareness)</p></div>
       </div>
       <div class="box"><span class="hl">$ npm install stripe</span><br>added 1 package in 2.1s</div>
@@ -858,7 +698,7 @@ footer a:hover { color: var(--fg); }
     for (;;) {
       events.innerHTML = ""; setDetail(DETAIL_IDLE);
       ctTicks.forEach((t) => (t.className = ""));
-      let tok = 0, cost = 0, risks = 0, tick = 0;
+      let risks = 0, tick = 0;
       fE.textContent = "0"; fT.textContent = "0"; fC.textContent = "$0.00"; fR.textContent = "0";
       await wait(500);
       let prev = null;
@@ -871,94 +711,34 @@ footer a:hover { color: var(--fg); }
         row.classList.add("sel"); prev = row;
         // a few ticks per event on the tape, the last one carries the event's colour
         const per = Math.floor(TICKS / EV.length);
-        for (let j = 0; j < per && tick < TICKS; j++, tick++) {
-          const t = ctTicks[tick];
-          t.className = "in" + (j === per - 1 && ev.tape ? " " + ev.tape : "");
-        }
+        for (let j = 0; j < per && tick < TICKS; j++, tick++) ctTicks[tick].className = "in" + (j === per - 1 && ev.tape ? " " + ev.tape : "");
         ctTicks.forEach((t) => t.classList.remove("now"));
         if (tick > 0) ctTicks[tick - 1].classList.add("now");
-        tok = Math.round(497400 * (n + 1) / EV.length); cost = 0.3 * (n + 1) / EV.length; // ends at the session's real totals
-        fE.textContent = String(n + 1); fT.textContent = fmtTok(tok); fC.textContent = "$" + cost.toFixed(2);
+        // ends at the session's real totals: 497.4k tokens, $0.30
+        fE.textContent = String(n + 1); fT.textContent = fmtTok(Math.round(497400 * (n + 1) / EV.length)); fC.textContent = "$" + (0.3 * (n + 1) / EV.length).toFixed(2);
         if (ev.risk) {
           risks += ev.risk === "high" ? 2 : 1; fR.textContent = String(risks);
           setDetail(ev.risk === "high" ? DETAIL_ENV : DETAIL_LOW);
         }
         if (ev.alarm) { row.classList.add("alarm"); await wait(3200); }
         else await wait(ev.risk ? 1700 : 650);
-        if (reduce && n === EV.length - 1) { setDetail(DETAIL_ENV); events.children[8].classList.add("sel"); prev.classList.remove("sel"); }
       }
-      if (reduce) return;
+      if (reduce) { setDetail(DETAIL_ENV); prev.classList.remove("sel"); events.children[8].classList.add("sel"); return; }
       await wait(4200);
     }
   }
   const cio = new IntersectionObserver((es) => { if (es[0].isIntersecting) { play(); cio.disconnect(); } }, { threshold: 0.25 });
   cio.observe($("#console"));
 
-  /* ---------- sticky story ---------- */
-  const shots = [...document.querySelectorAll("#shots img")];
-  const path = $("#shotPath");
-  const chapters = [...document.querySelectorAll(".chapter")];
-  const sio = new IntersectionObserver((es) => es.forEach((e) => {
-    if (!e.isIntersecting) return;
-    chapters.forEach((c) => c.classList.toggle("on", c === e.target));
-    const k = +e.target.dataset.shot;
-    shots.forEach((s, i) => s.classList.toggle("on", i === k));
-    path.textContent = e.target.dataset.path;
-  }), { rootMargin: "-45% 0px -45% 0px" });
-  chapters.forEach((c) => sio.observe(c));
-  chapters[0].classList.add("on");
-
-  /* ---------- risk rules (from packages/core/src/risk.ts) ---------- */
-  const RULES = [
-    ["rm-root-or-home", "critical", "Recursive forced delete of /, the home directory, a drive root, or * at the project root", "rm -rf ~"],
-    ["destructive-rm", "high", "Recursive forced delete of something other than a build directory", "rm -rf src"],
-    ["pipe-to-shell", "high", "Downloaded script piped straight into a shell or interpreter", "curl -fsSL …/install.sh | sh"],
-    ["git-force", "high", "Force push, hard reset or forced clean", "git push --force-with-lease"],
-    ["secret-file-read", "high", "Read a file that usually holds secrets (.env, keys, credentials)", "cat .env"],
-    ["secret-in-output", "high", "API key pattern in command output, written content or a tool result", "sk_live_…"],
-    ["db-destructive", "high", "DROP TABLE, TRUNCATE, or DELETE FROM without WHERE", "DROP TABLE events"],
-    ["git-history-rewrite", "medium", "Rebase, amend or filter-branch (rewrites history)", "git rebase origin/main"],
-    ["sudo", "medium", "Command run with elevated privileges", "sudo apt install …"],
-    ["outside-project-write", "medium", "File written or edited outside the project directory", "~/.config/loader/config.toml"],
-    ["network-exfil-hint", "medium", "Data uploaded with curl/wget/Invoke-WebRequest to a non-local host", "curl -d @data …"],
-    ["package-install", "low", "Package install (supply-chain awareness)", "npm install stripe"],
-    ["chmod-permissive", "low", "World-writable or recursive permission change", "chmod -R 777 public/uploads"],
-  ];
-  const rules = $("#rules");
-  RULES.forEach(([id, sev, desc, ex], i) => {
-    const d = document.createElement("div");
-    d.className = "rule rv" + (i % 3 ? " d" + (i % 3) : "");
-    d.dataset.sev = sev;
-    d.innerHTML = `<div class="rule-head"><code>${id}</code><span class="chip ${sev}">${sev}</span></div><p>${desc}</p><span class="ex">${ex.replace(/</g, "&lt;")}</span>`;
-    rules.appendChild(d); io.observe(d);
-  });
-  const note = document.createElement("div");
-  note.className = "rule note rv";
-  note.innerHTML = "<p>$ afteraction risks --since 7d<br>Rules are heuristics: check each hit before acting on it.</p>";
-  rules.appendChild(note); io.observe(note);
-
-  /* ---------- cost counter + bars ---------- */
-  const big = $("#bigCost"), bars = [...document.querySelectorAll("#bars .fill")];
-  const bio = new IntersectionObserver((es) => {
-    if (!es[0].isIntersecting) return; bio.disconnect();
-    bars.forEach((b) => (b.style.width = b.dataset.w + "%"));
-    const target = 0.79, t0 = performance.now(), dur = reduce ? 0 : 1600;
-    const step = (now) => {
-      const k = dur ? Math.min(1, (now - t0) / dur) : 1, e = 1 - Math.pow(1 - k, 3);
-      big.firstChild.textContent = "$" + (target * e).toFixed(2);
-      if (k < 1) requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
-  }, { threshold: 0.4 });
-  bio.observe($("#bars"));
-
-  /* ---------- end tape ---------- */
+  /* end tape: a session's worth of ticks, the playhead lands at "now" */
   const end = $("#endtape");
-  const pattern = "p..r....p...r.....p..h";
-  for (let i = 0; i < 64; i++) {
-    const ch = pattern[i % pattern.length], t = document.createElement("i");
-    if (ch !== ".") t.className = i === 63 ? "h" : ch === "h" ? "" : ch;
-    if (i === 63) t.className = "h";
+  const n = Math.max(40, Math.floor((end.clientWidth || innerWidth) / 6));
+  for (let i = 0; i < n; i++) {
+    const t = document.createElement("i");
+    if (i === n - 1) t.className = "h";
+    else if (i % 23 === 0) t.className = "p";
+    else if (i % 37 === 11 || i % 53 === 29) t.className = "r";
+    else if (i % 41 === 7) t.className = "l";
     end.appendChild(t);
   }
 })();
