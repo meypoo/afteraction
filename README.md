@@ -26,7 +26,7 @@
 ## Quick start
 
 ```sh
-npx flightrec
+npx @meypoo/flightrec
 ```
 
 That reads your Claude Code session logs, stores them in a local SQLite database and opens a replay UI at
@@ -35,10 +35,10 @@ http://localhost:4317 (the link it opens carries a one-off access token). Nothin
 Want to look around first without touching your own logs?
 
 ```sh
-npx flightrec --demo
+npx @meypoo/flightrec --demo
 ```
 
-Prefer the terminal, or working over SSH? `npx flightrec tui` opens the same data full-screen.
+Prefer the terminal, or working over SSH? `npx @meypoo/flightrec tui` opens the same data full-screen.
 
 ## Why
 

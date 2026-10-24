@@ -17,7 +17,7 @@ inputs:
     description: Session id, unique prefix, or "latest".
     default: latest
   version:
-    description: Exact flightrec version to run from npm. Pinned so a new or compromised release cannot run in your workflow unreviewed; bump it deliberately.
+    description: Exact @meypoo/flightrec version to run from npm. Pinned so a new or compromised release cannot run in your workflow unreviewed; bump it deliberately.
     default: 0.1.0
   github-token:
     description: Token used to post the comment. It only needs pull-requests write. Avoid pull_request_target, which hands this token to runs on untrusted fork code.
@@ -48,7 +48,7 @@ runs:
         if [ -f "$LOG_PATH" ]; then cp -- "$LOG_PATH" "$logs/"; elif [ -d "$LOG_PATH" ]; then cp -R -- "$LOG_PATH"/. "$logs/"; else echo "log-path not found: $LOG_PATH" >&2; exit 1; fi
         [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || { echo "version must be an exact flightrec version like 0.1.0, not '$VERSION'" >&2; exit 1; }
         out="$RUNNER_TEMP/flightrec-receipt.md"
-        fr() { npx --yes "flightrec@$VERSION" --db "$RUNNER_TEMP/flightrec.db" --no-default-sources --source "claude=$RUNNER_TEMP/flightrec-logs/projects" "$@"; }
+        fr() { npx --yes "@meypoo/flightrec@$VERSION" --db "$RUNNER_TEMP/flightrec.db" --no-default-sources --source "claude=$RUNNER_TEMP/flightrec-logs/projects" "$@"; }
         fr ingest
         fr receipt "$SESSION" -o "$out"
         echo "path=$out" >> "$GITHUB_OUTPUT"
