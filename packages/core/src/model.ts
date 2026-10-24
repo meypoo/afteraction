@@ -1,6 +1,16 @@
 // Normalized event model shared by every adapter (SPEC.md §5).
 
-export type SourceId = "claude_code" | "codex" | "antigravity" | "opencode";
+export type SourceId =
+  | "claude_code"
+  | "codex"
+  | "antigravity"
+  | "opencode"
+  | "gemini_cli"
+  | "cursor"
+  | "copilot"
+  | "cline"
+  | "aider"
+  | "continue";
 
 /** Display names, also used by the web UI's copy in packages/web/src/format.ts. */
 export const AGENT_LABELS: Record<SourceId, string> = {
@@ -8,6 +18,12 @@ export const AGENT_LABELS: Record<SourceId, string> = {
   codex: "Codex",
   antigravity: "Antigravity",
   opencode: "OpenCode",
+  gemini_cli: "Gemini CLI",
+  cursor: "Cursor",
+  copilot: "GitHub Copilot",
+  cline: "Cline",
+  aider: "Aider",
+  continue: "Continue",
 };
 
 export type RiskLevel = "none" | "low" | "medium" | "high" | "critical";

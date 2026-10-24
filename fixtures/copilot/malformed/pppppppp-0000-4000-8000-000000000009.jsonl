@@ -1,0 +1,5 @@
+{"kind": 0, "v": {"version": 3, "sessionId": "pppppppp-0000-4000-8000-000000000009", "creationDate": 1768471199000, "initialLocation": "panel", "responderUsername": "GitHub Copilot", "requests": [{"requestId": "x", "timestamp": 1768471200000, "message": {"text": "Hi"}, "response": [{"value": "Hello"}]}]}}
+{broken
+{"kind": 1, "k": ["nope", "deeper"], "v": 1}
+{"kind": 7, "k": ["x"]}
+{"kind": 2, "k": ["requests"], "v": ["not an object"]}

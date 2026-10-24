@@ -1,0 +1,351 @@
+{
+  "session": {
+    "id": "gemini:gggggggg-0000-4000-8000-000000000001",
+    "source": "gemini_cli",
+    "project_path": "/home/user/projects/demo-app",
+    "git_branch": null,
+    "started_at": "2026-01-15T10:00:00.000Z",
+    "ended_at": "2026-01-15T10:05:00.000Z",
+    "model": "gemini-2.5-pro",
+    "title": "Fix the failing login test.",
+    "total_input_tokens": 2000,
+    "total_output_tokens": 270,
+    "total_cache_read_tokens": 1200,
+    "total_cache_write_tokens": 0,
+    "est_cost_usd": null,
+    "max_risk": "none",
+    "source_file": "<fixture>",
+    "source_hash": "<hash>"
+  },
+  "events": [
+    {
+      "id": "gemini:gggggggg-0000-4000-8000-000000000001:0",
+      "session_id": "gemini:gggggggg-0000-4000-8000-000000000001",
+      "seq": 0,
+      "ts": "2026-01-15T10:00:01.000Z",
+      "kind": "user_message",
+      "summary": "Fix the failing login test.",
+      "payload": {
+        "text": "Fix the failing login test."
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "gemini:gggggggg-0000-4000-8000-000000000001:1",
+      "session_id": "gemini:gggggggg-0000-4000-8000-000000000001",
+      "seq": 1,
+      "ts": "2026-01-15T10:00:03.000Z",
+      "kind": "thinking",
+      "summary": "Plan: Read the test, then run it.",
+      "payload": {
+        "text": "Plan: Read the test, then run it."
+      },
+      "tokens_in": 1000,
+      "tokens_out": 120,
+      "cache_read": 200,
+      "cache_write": 0,
+      "usage_extra": null,
+      "model": "gemini-2.5-pro",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "gemini:gggggggg-0000-4000-8000-000000000001:2",
+      "session_id": "gemini:gggggggg-0000-4000-8000-000000000001",
+      "seq": 2,
+      "ts": "2026-01-15T10:00:05.000Z",
+      "kind": "assistant_message",
+      "summary": "I'll look at the test first.",
+      "payload": {
+        "text": "I'll look at the test first."
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "gemini-2.5-pro",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "gemini:gggggggg-0000-4000-8000-000000000001:3",
+      "session_id": "gemini:gggggggg-0000-4000-8000-000000000001",
+      "seq": 3,
+      "ts": "2026-01-15T10:00:06.000Z",
+      "kind": "file_read",
+      "summary": "Read /home/user/projects/demo-app/src/login.test.ts",
+      "payload": {
+        "tool_use_id": "c1",
+        "status": "success",
+        "is_error": false,
+        "path": "/home/user/projects/demo-app/src/login.test.ts"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "gemini-2.5-pro",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "gemini:gggggggg-0000-4000-8000-000000000001:4",
+      "session_id": "gemini:gggggggg-0000-4000-8000-000000000001",
+      "seq": 4,
+      "ts": "2026-01-15T10:00:10.000Z",
+      "kind": "shell_command",
+      "summary": "$ npm test",
+      "payload": {
+        "tool_use_id": "c2",
+        "status": "success",
+        "is_error": false,
+        "command": "npm test",
+        "description": "Run tests",
+        "exit_code": 0,
+        "stdout_excerpt": "3 passing"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "gemini-2.5-pro",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "gemini:gggggggg-0000-4000-8000-000000000001:5",
+      "session_id": "gemini:gggggggg-0000-4000-8000-000000000001",
+      "seq": 5,
+      "ts": "2026-01-15T10:01:01.000Z",
+      "kind": "file_edit",
+      "summary": "Edit /home/user/projects/demo-app/src/login.ts",
+      "payload": {
+        "tool_use_id": "c3",
+        "status": "success",
+        "is_error": false,
+        "path": "/home/user/projects/demo-app/src/login.ts",
+        "old_excerpt": "timeout = 10",
+        "new_excerpt": "timeout = 30",
+        "description": "Raise the timeout",
+        "lines_added": 1,
+        "lines_removed": 1
+      },
+      "tokens_in": 1000,
+      "tokens_out": 150,
+      "cache_read": 1000,
+      "cache_write": 0,
+      "usage_extra": null,
+      "model": "gemini-2.5-pro",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "gemini:gggggggg-0000-4000-8000-000000000001:6",
+      "session_id": "gemini:gggggggg-0000-4000-8000-000000000001",
+      "seq": 6,
+      "ts": "2026-01-15T10:01:02.000Z",
+      "kind": "file_write",
+      "summary": "Write /home/user/projects/demo-app/src/retry.ts",
+      "payload": {
+        "tool_use_id": "c4",
+        "status": "success",
+        "is_error": false,
+        "path": "/home/user/projects/demo-app/src/retry.ts",
+        "content_excerpt": "export const retries = 3;\n",
+        "bytes": 26,
+        "lines_added": 1,
+        "lines_removed": 0
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "gemini-2.5-pro",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "gemini:gggggggg-0000-4000-8000-000000000001:7",
+      "session_id": "gemini:gggggggg-0000-4000-8000-000000000001",
+      "seq": 7,
+      "ts": "2026-01-15T10:01:03.000Z",
+      "kind": "shell_command",
+      "summary": "$ npm run lint",
+      "payload": {
+        "tool_use_id": "c5",
+        "status": "success",
+        "is_error": true,
+        "command": "npm run lint",
+        "cwd": "src",
+        "exit_code": 1,
+        "stdout_excerpt": "",
+        "stderr_excerpt": "lint failed"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "gemini-2.5-pro",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "gemini:gggggggg-0000-4000-8000-000000000001:8",
+      "session_id": "gemini:gggggggg-0000-4000-8000-000000000001",
+      "seq": 8,
+      "ts": "2026-01-15T10:01:04.000Z",
+      "kind": "web_fetch",
+      "summary": "Fetch https://example.com/docs/timeouts",
+      "payload": {
+        "tool_use_id": "c6",
+        "status": "success",
+        "is_error": false,
+        "url": "https://example.com/docs/timeouts",
+        "prompt": "Summarize https://example.com/docs/timeouts please"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "gemini-2.5-pro",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "gemini:gggggggg-0000-4000-8000-000000000001:9",
+      "session_id": "gemini:gggggggg-0000-4000-8000-000000000001",
+      "seq": 9,
+      "ts": "2026-01-15T10:01:05.000Z",
+      "kind": "tool_call",
+      "summary": "glob: No files found",
+      "payload": {
+        "tool_use_id": "c7",
+        "status": "error",
+        "is_error": true,
+        "tool_name": "glob",
+        "input": {
+          "pattern": "**/*.env"
+        },
+        "output_excerpt": "No files found"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "gemini-2.5-pro",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "gemini:gggggggg-0000-4000-8000-000000000001:10",
+      "session_id": "gemini:gggggggg-0000-4000-8000-000000000001",
+      "seq": 10,
+      "ts": "2026-01-15T10:02:00.000Z",
+      "kind": "user_message",
+      "summary": "info: Request cancelled.",
+      "payload": {
+        "text": "Request cancelled.",
+        "meta": true,
+        "level": "info"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "gemini:gggggggg-0000-4000-8000-000000000001:11",
+      "session_id": "gemini:gggggggg-0000-4000-8000-000000000001",
+      "seq": 11,
+      "ts": "2026-01-15T10:02:10.000Z",
+      "kind": "error",
+      "summary": "Error: Quota exceeded.",
+      "payload": {
+        "message": "Quota exceeded."
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "gemini:gggggggg-0000-4000-8000-000000000001:12",
+      "session_id": "gemini:gggggggg-0000-4000-8000-000000000001",
+      "seq": 12,
+      "ts": "2026-01-15T10:02:20.000Z",
+      "kind": "unknown",
+      "summary": "Unknown: unknown message type \"compression\"",
+      "payload": {
+        "reason": "unknown message type \"compression\""
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "gemini:gggggggg-0000-4000-8000-000000000001:13",
+      "session_id": "gemini:gggggggg-0000-4000-8000-000000000001",
+      "seq": 13,
+      "ts": null,
+      "kind": "unknown",
+      "summary": "Unknown: message is not an object",
+      "payload": {
+        "reason": "message is not an object"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "gemini:gggggggg-0000-4000-8000-000000000001:14",
+      "session_id": "gemini:gggggggg-0000-4000-8000-000000000001",
+      "seq": 14,
+      "ts": "2026-01-15T10:03:00.000Z",
+      "kind": "assistant_message",
+      "summary": "Done: the timeout is 30s now.",
+      "payload": {
+        "text": "Done: the timeout is 30s now."
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "gemini-2.5-pro",
+      "risk_level": "none",
+      "risk_rules": []
+    }
+  ]
+}

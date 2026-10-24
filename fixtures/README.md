@@ -105,3 +105,11 @@ id, path, title and text is synthetic (`aaaaaaaa-…-00000000000N` uuids, `c:\Us
   - Session `ses_fixture…0002` (malformed): invalid and non-object message and part JSON, an unknown
     part type, a tool in `error` status, a message `error`, usage with no parts, bad times and tokens,
     an empty title.
+
+### Unverified formats: `gemini-cli/`, `cursor/`, `copilot/`, `cline/`, `aider/`, `continue/`
+
+Hand-written from each tool's source code (see "Unverified formats" in docs/log-formats.md), not
+from real logs; replace them with anonymized real samples once sessions exist. Each folder mirrors the
+tool's own layout and includes malformed or unusual cases (unknown types, non-object entries, broken
+JSON, empty sessions). `cursor/*.sql` are built into `state.vscdb` files by the tests, because database
+files are not committed. `expected/` holds each adapter's normalized snapshot.

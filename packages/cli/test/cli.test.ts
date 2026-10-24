@@ -17,7 +17,7 @@ async function cli(...args: string[]) {
   return { code, out: out.join("\n"), err: err.join("\n") };
 }
 
-const ENV_KEYS = ["HOME", "USERPROFILE", "CODEX_HOME", "XDG_DATA_HOME"] as const;
+const ENV_KEYS = ["HOME", "USERPROFILE", "CODEX_HOME", "XDG_DATA_HOME", "APPDATA", "XDG_CONFIG_HOME", "CONTINUE_GLOBAL_DIR"] as const;
 let savedEnv: Partial<Record<(typeof ENV_KEYS)[number], string>>;
 
 beforeEach(() => {
@@ -29,6 +29,9 @@ beforeEach(() => {
   process.env.HOME = process.env.USERPROFILE = path.join(tmp, "home");
   delete process.env.CODEX_HOME;
   delete process.env.XDG_DATA_HOME;
+  delete process.env.XDG_CONFIG_HOME;
+  delete process.env.CONTINUE_GLOBAL_DIR;
+  process.env.APPDATA = path.join(tmp, "home", "AppData", "Roaming");
 });
 
 afterEach(() => {
@@ -94,7 +97,7 @@ describe("flightrec cli", () => {
     expect(await ids("codex")).toEqual(["codex", "codex"]);
     expect(await ids("claude")).toEqual(["claude"]);
     expect((await cli("list")).out).toContain("Codex");
-    expect((await cli("list", "--agent", "cursor")).code).not.toBe(0);
+    expect((await cli("list", "--agent", "no-such-agent")).code).not.toBe(0);
   });
 
   it("rejects bad filter values", async () => {
@@ -210,7 +213,7 @@ describe("flightrec cli", () => {
 
   it("validates --source", async () => {
     dbArgs = [];
-    const res = await cli("--source", "cursor=/tmp", "ingest");
+    const res = await cli("--source", "no-such-agent=/tmp", "ingest");
     expect(res.code).not.toBe(0);
     expect(res.err).toMatch(/expected name=path/);
   });

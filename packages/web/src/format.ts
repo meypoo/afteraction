@@ -64,6 +64,12 @@ export const AGENT_LABEL: Record<string, string> = {
   codex: "Codex",
   antigravity: "Antigravity",
   opencode: "OpenCode",
+  gemini_cli: "Gemini CLI",
+  cursor: "Cursor",
+  copilot: "GitHub Copilot",
+  cline: "Cline",
+  aider: "Aider",
+  continue: "Continue",
 };
 
 export const str = (v: unknown): string => (typeof v === "string" ? v : "");

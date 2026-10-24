@@ -1,0 +1,181 @@
+{
+  "session": {
+    "id": "<id>",
+    "source": "aider",
+    "project_path": "<repo>",
+    "git_branch": null,
+    "started_at": "<local>",
+    "ended_at": "<local>",
+    "model": "claude-sonnet-5-5",
+    "title": "Add a retry to the login request. Use three attempts.",
+    "total_input_tokens": 13300,
+    "total_output_tokens": 165,
+    "total_cache_read_tokens": 1000,
+    "total_cache_write_tokens": 0,
+    "est_cost_usd": null,
+    "max_risk": "none",
+    "source_file": "<fixture>",
+    "source_hash": "<hash>"
+  },
+  "events": [
+    {
+      "id": "<id>",
+      "session_id": "<id>",
+      "seq": 0,
+      "ts": "<local>",
+      "kind": "user_message",
+      "summary": "Add a retry to the login request. Use three attempts.",
+      "payload": {
+        "text": "Add a retry to the login request.\nUse three attempts."
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "<id>",
+      "session_id": "<id>",
+      "seq": 1,
+      "ts": "<local>",
+      "kind": "assistant_message",
+      "summary": "I'll add a retry loop. src/login.py ```python <<<<<<< SEARCH fetch() ======= retry(fetch, 3) >>>>>>> REPLACE ```",
+      "payload": {
+        "text": "I'll add a retry loop.\n\nsrc/login.py\n```python\n<<<<<<< SEARCH\nfetch()\n=======\nretry(fetch, 3)\n>>>>>>> REPLACE\n```"
+      },
+      "tokens_in": 1300,
+      "tokens_out": 120,
+      "cache_read": 1000,
+      "cache_write": 0,
+      "usage_extra": null,
+      "model": "claude-sonnet-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "<id>",
+      "session_id": "<id>",
+      "seq": 2,
+      "ts": "<local>",
+      "kind": "file_edit",
+      "summary": "Edit <repo>/src/login.py",
+      "payload": {
+        "path": "<repo>/src/login.py"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "claude-sonnet-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "<id>",
+      "session_id": "<id>",
+      "seq": 3,
+      "ts": "<local>",
+      "kind": "tool_call",
+      "summary": "git commit abc1234: feat: Add retry to login request",
+      "payload": {
+        "tool_name": "git_commit",
+        "input": {
+          "hash": "abc1234",
+          "message": "feat: Add retry to login request"
+        }
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "claude-sonnet-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "<id>",
+      "session_id": "<id>",
+      "seq": 4,
+      "ts": "<local>",
+      "kind": "shell_command",
+      "summary": "$ pytest",
+      "payload": {
+        "command": "pytest",
+        "cwd": "<repo>"
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": "claude-sonnet-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "<id>",
+      "session_id": "<id>",
+      "seq": 5,
+      "ts": "<local>",
+      "kind": "shell_command",
+      "summary": "$ git status",
+      "payload": {
+        "command": "git status",
+        "cwd": "<repo>",
+        "user_initiated": true
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "<id>",
+      "session_id": "<id>",
+      "seq": 6,
+      "ts": "<local>",
+      "kind": "user_message",
+      "summary": "(empty prompt)",
+      "payload": {
+        "text": ""
+      },
+      "tokens_in": null,
+      "tokens_out": null,
+      "cache_read": null,
+      "cache_write": null,
+      "usage_extra": null,
+      "model": null,
+      "risk_level": "none",
+      "risk_rules": []
+    },
+    {
+      "id": "<id>",
+      "session_id": "<id>",
+      "seq": 7,
+      "ts": "<local>",
+      "kind": "assistant_message",
+      "summary": "Is there anything else?",
+      "payload": {
+        "text": "Is there anything else?"
+      },
+      "tokens_in": 12000,
+      "tokens_out": 45,
+      "cache_read": 0,
+      "cache_write": 0,
+      "usage_extra": null,
+      "model": "claude-sonnet-5-5",
+      "risk_level": "none",
+      "risk_rules": []
+    }
+  ]
+}

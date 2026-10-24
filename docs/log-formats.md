@@ -9,6 +9,7 @@ observation, it says so.
 | Claude Code | 27 files, 56,416 lines, versions `2.1.229` – `2.1.304`, Windows 11, entrypoints `cli` and `claude-desktop`. 0 lines failed to parse as JSON. |
 | OpenCode | 1 real session on `1.19.4` (one SQLite database for all sessions), 2026-10-23. |
 | Google Antigravity | 9 conversations (2025-11 – 2026-09). Conversation files are encrypted; 1 has a readable `transcript.jsonl` (138 lines, 0 parse errors), the rest are metadata only (2026-10-23). |
+| Gemini CLI, Cursor, GitHub Copilot (VS Code), Cline / Roo Code / Kilo Code, Aider, Continue | **Not yet verified against real logs.** Formats taken from each tool's own code (see "Unverified formats" below), 2026-10-24. Copilot was also checked against 2 small real chats. |
 | Codex | 24 files from Codex Desktop `0.163.0-alpha.11.2`, Windows 11, inspected 2026-10-23. 22 were imports of Claude Code sessions. No Codex CLI rollouts on this machine; CLI-only shapes are from Codex's open-source schema. |
 
 ---
@@ -494,6 +495,97 @@ Tools seen: `run_command`, `view_file`, `write_to_file` (`IsArtifact: true` for 
 - Cost is shown as unknown ("—"), never $0, because no token usage is logged.
 - If Antigravity later writes readable transcripts somewhere else, add a reader next to
   `parseTranscript` in `packages/core/src/adapters/antigravity.ts`.
+
+---
+
+## Unverified formats (from source code, 2026-10-24)
+
+These adapters were written before any real session existed on the author's machine, from each
+tool's own code: the installed build where one was on the machine, the public repository otherwise.
+Their fixtures are hand-written in those shapes. Treat every statement here as unverified until a real
+session has been ingested, then replace it with what the real logs show.
+
+### Gemini CLI
+
+Source: installed `@google/gemini-cli` 0.18.4 (`ChatRecordingService`, `tools/*`).
+
+- `~/.gemini/tmp/<sha256 of project root>/chats/session-<time>-<id8>.json`, one JSON object per
+  session, rewritten in place: `{sessionId, projectHash, startTime, lastUpdated, messages[]}`.
+- Message: `{id, timestamp, type: "user" | "gemini" | "info" | "error" | "warning", content}`; `gemini`
+  messages add `model`, `thoughts[{subject, description, timestamp}]`, `tokens{input, output, cached,
+  thoughts, tool, total}` and `toolCalls[{id, name, args, result, status, timestamp, resultDisplay}]`.
+- Tools: `run_shell_command {command, description, dir_path}` (result text `Command: … Output: …
+  Error: … Exit Code: …`), `read_file {file_path}`, `write_file {file_path, content}`,
+  `replace {file_path, old_string, new_string, instruction}`, `web_fetch {prompt}`, others.
+- The project root is stored only as its hash; the adapter recovers it by hashing directories the
+  session's tools used. `input` includes cached tokens; thoughts are counted as output.
+
+### Cursor
+
+Source: installed Cursor 2.1.39 bundle, plus the real (empty-draft) `state.vscdb` on this machine.
+
+- `<User>/globalStorage/state.vscdb`, table `cursorDiskKV(key, value)`:
+  `composerData:<id>` = `{composerId, name, createdAt, lastUpdatedAt (ms), modelConfig.modelName,
+  fullConversationHeadersOnly[{bubbleId, type}]}` (observed); older chats keep `conversation[]` inline
+  (seen in Cursor's migration code). Bubbles: `bubbleId:<composerId>:<bubbleId>` =
+  `{type: 1 user | 2 assistant, text, thinking.text, tokenCount{inputTokens, outputTokens},
+  toolFormerData{tool (enum), name, toolCallId, status, rawArgs, params, result}, createdAt}`.
+  The bubble key format is from public notes; it was not found in the minified bundle.
+- Workspace folder: `<User>/workspaceStorage/<hash>/state.vscdb` key `composer.composerData` lists
+  `allComposers[].composerId` (observed); `workspace.json` gives the folder.
+- All 25 chats on this machine are empty drafts, which discovery skips.
+
+### GitHub Copilot (VS Code chat)
+
+Source: installed VS Code workbench bundle; 2 small real chats on this machine.
+
+- `<User>/workspaceStorage/<hash>/chatSessions/<id>.jsonl` (and `globalStorage/emptyWindowChatSessions/`).
+  Newer files are a mutation log: `{kind: 0, v}` whole state, `{kind: 1, k: path, v}` set,
+  `{kind: 2, k, v, i?}` truncate the array at `i` then push `v`, `{kind: 3, k}` delete. Older `.json`
+  files are the state itself; VS Code can leave both after migrating, and the `.jsonl` wins.
+- State: `{sessionId, creationDate, lastMessageDate, customTitle, requests[]}`; request: `{timestamp,
+  modelId ("copilot/<model>"), message.text, response[], result.errorDetails, isCanceled}`.
+- Response parts: markdown `{value}` (no `kind`), `thinking`, `toolInvocationSerialized {toolId,
+  invocationMessage, pastTenseMessage, resultDetails, toolSpecificData}` (terminal: `commandLine.original`,
+  `terminalCommandState{exitCode, duration}`, `terminalCommandOutput.text`), `textEditGroup {uri, edits}`;
+  `progressMessage`, `mcpServersStarting`, `codeblockUri`, `undoStop` carry no action.
+- No token usage is stored, so cost is unknown.
+
+### Cline, Roo Code, Kilo Code
+
+Source: Cline repository (`apps/vscode/src/shared/ExtensionMessage.ts`, `core/storage/disk.ts`).
+
+- `<editor User>/globalStorage/<extension id>/tasks/<taskId>/` (also `~/.cline/data/tasks/` for the
+  CLI): `ui_messages.json` (array of `{ts, type: "say" | "ask", say | ask, text, partial, modelInfo}`),
+  `api_conversation_history.json`, `task_metadata.json` (`model_usage[{model_id, …}]`).
+- `api_req_started` text is JSON `{tokensIn, tokensOut, cacheWrites, cacheReads, cost}`; `tool` text is
+  JSON `{tool: readFile | editedExistingFile | newFileCreated | webFetch | …, path, diff, content}`;
+  `command` / `command_output` carry the command and its output (no exit code).
+- The working directory is taken from `# Current Working Directory (…)` in the first API request.
+- Roo Code and Kilo Code are forks assumed to share the layout; their titles get a `[Roo]`/`[Kilo]` prefix.
+
+### Aider
+
+Source: Aider repository (`aider/io.py`, `aider/coders/base_coder.py`).
+
+- `.aider.chat.history.md` in each repository Aider ran in; discovery searches the home folder
+  (3 levels, skipping hidden folders and `node_modules`). One run per `# aider chat started at <local
+  time>` header, so paths are `<file>#<run>`.
+- `#### ` lines are prompts (`/run x` and `!x` are commands), `> ` lines are Aider's notices
+  (`Model:`/`Main model:`, `Tokens: N sent, N cache write, N cache hit, N received.`, `Applied edit to
+  <file>`, `Commit <hash> <msg>`, `Running <cmd>`), anything else is the model's reply. Only the run's
+  start time is recorded.
+
+### Continue
+
+Source: Continue repository (`core/index.d.ts`, `core/tools/builtIn.ts`).
+
+- `~/.continue/sessions/<sessionId>.json`: `{sessionId, title, workspaceDirectory, chatModelTitle,
+  history[{message{role, content, toolCalls, usage}, toolCallStates[{toolCallId, toolCall, status,
+  parsedArgs, output}], reasoning}]}`; `sessions.json` gives `dateCreated`. Messages have no timestamps.
+- Tools: `read_file`, `create_new_file`, `single_find_and_replace`, `multi_edit`, `edit_existing_file`,
+  `run_terminal_command`, `fetch_url_content`, others as tool calls. `chatModelTitle` is a display name,
+  so it may not match a price.
 
 ---
 

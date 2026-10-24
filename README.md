@@ -92,6 +92,12 @@ masked secrets, `esc` goes back and `q` quits. It needs an interactive terminal;
 | Codex (CLI and Desktop) | `~/.codex/sessions/` | Supported; sessions Codex imported from other agents are skipped |
 | OpenCode | `~/.local/share/opencode/opencode.db` | Supported (prompts, replies, reasoning, commands, file reads; other tools listed as tool calls) |
 | Google Antigravity | `~/.gemini/antigravity/` | Full timeline where Antigravity wrote a readable `transcript.jsonl`; otherwise title, project, times and plan documents only, because conversation files are encrypted. No token or cost data |
+| Gemini CLI | `~/.gemini/tmp/*/chats/` | Unverified: built from Gemini CLI's source, not yet tested on real sessions |
+| Cursor | Cursor's `globalStorage/state.vscdb` | Unverified: built from Cursor's code, not yet tested on real chats |
+| GitHub Copilot (VS Code) | VS Code's `workspaceStorage/*/chatSessions/` | Unverified: built from VS Code's code, checked on two small chats. No token or cost data |
+| Cline, Roo Code, Kilo Code | the extension's `globalStorage/…/tasks/` in VS Code, Cursor, Windsurf and others | Unverified: built from Cline's source, not yet tested on real tasks |
+| Aider | `.aider.chat.history.md` in your repositories (searched under your home folder) | Unverified: built from Aider's source, not yet tested on real history files |
+| Continue | `~/.continue/sessions/` | Unverified: built from Continue's source, not yet tested on real sessions |
 
 ## Commands
 
