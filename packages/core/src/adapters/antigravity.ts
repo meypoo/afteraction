@@ -198,6 +198,9 @@ function capStrings(v: unknown, depth = 0): unknown {
   return v;
 }
 
+/** Last path segment for either separator: logs keep the paths of the OS that wrote them. */
+const fileName = (p: string) => p.split(/[\\/]/).pop() ?? p;
+
 const lineCount = (s: string) => (s ? s.split("\n").length - (s.endsWith("\n") ? 1 : 0) : 0);
 
 function toolDraft(name: string, rawArgs: unknown, ts: string | null, line: Obj): Draft {
@@ -227,7 +230,7 @@ function toolDraft(name: string, rawArgs: unknown, ts: string | null, line: Obj)
       const content = str(a.CodeContent) ?? "";
       // Artifacts (plans, task lists, walkthroughs) live in Antigravity's own folder, not the project.
       if (a.IsArtifact === true) {
-        return draft("tool_call", `Artifact ${path.basename(p)}`, { path: p, artifact: true, input: capStrings(a) });
+        return draft("tool_call", `Artifact ${fileName(p)}`, { path: p, artifact: true, input: capStrings(a) });
       }
       return draft("file_write", `Write ${p}`, {
         path: p,
